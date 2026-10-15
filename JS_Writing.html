@@ -7,6 +7,49 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const count=s=>(String(s||'').trim().match(/\b[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*\b/gu)||[]).length;
 const limits={1:[1,5],2:[20,30],3:[30,40],4:[0,0]};
 const names={1:'Short answers',2:'Form response',3:'Chat room',4:'Emails'};
+
+/* Reusable frameworks. Only [[...]] spans are changed between prompts.
+   HTML generated from these strings is escaped before highlighting. */
+const WRITING_FRAMEWORKS={
+  'W4-001': "Hi [[friend's name]],\n\nHave you heard about [[the club announcement]]? I feel [[feeling]] because [[reason]]. Perhaps we could [[suggestion 1]] or [[suggestion 2]]. What do you think?\n\nBest wishes,\n[[your name]]",
+  'W4-002': "Dear [[Club Manager]],\n\nI am writing in response to [[the recent announcement or issue]]. As a member, I feel [[feeling]] because [[reason / impact]].\n\nI would like to suggest several practical solutions. First, we could [[suggestion 1]]. This would help [[benefit 1]]. Second, the club could [[suggestion 2]], which would [[benefit 2]]. Finally, I recommend [[suggestion 3]] to [[goal]].\n\nI believe these changes would [[positive outcome]]. Thank you for considering my suggestions. I look forward to hearing from you.\n\nYours sincerely,\n[[your name]]",
+  'W4-003': "Dear [[Club Manager]],\n\nI am writing to share my views on [[the club's plan or announcement]]. I believe this is [[opinion]] because [[reason]], and I feel [[feeling]] about it.\n\nTo make the plan successful, I suggest [[suggestion 1]]. This would help us [[benefit 1]]. In addition, we could [[suggestion 2]] to [[benefit 2]]. These steps would [[expected result]].\n\nI would be happy to [[offer of support]] if needed. Thank you for considering my suggestions, and I look forward to hearing your thoughts.\n\nYours sincerely,\n[[your name]]"
+};
+const SHORT_FRAMEWORKS={
+  1:"[[Direct answer: 1–5 words]]",
+  2:"I [[answer / opinion]] because [[main reason]]. It also [[one benefit or extra detail]].",
+  3:"Hi [[name]]! [[Direct answer]]. I [[reason or explanation]] because [[details]]. For example, [[personal example]]."
+};
+function frameworkFor(q){return WRITING_FRAMEWORKS[q.id]||SHORT_FRAMEWORKS[q.part]||'';}
+function renderFramework(q){
+  const raw=frameworkFor(q);
+  return esc(raw).replace(/\[\[([^\]]+)\]\]/g,'<span class="writing-variable" title="Thay theo đề mới">[['+'$1'+']]</span>');
+}
+function renderMarkedModel(q){
+  // Conservatively highlight actual content that changes. The model is otherwise untouched.
+  const fragments={
+    'W1-001':['exercise before work'], 'W1-002':['Da Nang'],
+    'W1-003':['sunny'], 'W1-004':['watched a film'],
+    'W2-001':['travelling','discover new cultures and meet interesting people','relax and learn more about the world'],
+    'W2-002':['join the reading club','sharing ideas about books','improve my English and make friends'],
+    'W3-001':['visiting historical places and quiet beaches','learn about local culture and relax','visited Da Nang with my family'],
+    'W3-002':['travelling is very popular in my country','families visit beaches or mountain towns','reduce stress and explore new places'],
+    'W3-003':['autumn','the weather is cool and pleasant','go for walks and enjoy outdoor activities with my family','have picnics in a nearby park'],
+    'W4-001':['Anna','complaints concerning our club\'s evening concerts','worried','enjoy music without disturbing our neighbours','finish concerts earlier','use a quieter venue','Yen'],
+    'W4-002':['Club Manager','the recent complaints from residents who live near our music club','concerned about the situation','concerts should bring enjoyment without disturbing the local community','schedule concerts earlier in the evening','residents can rest at night','improve sound insulation','choose a more suitable venue','meeting local residents','listen to their concerns','a positive relationship with our neighbours','Yen'],
+    'W4-003':['Club Manager','the club\'s plan to organise more activities this year','valuable opportunity to bring members together','excited','holding a short meeting to collect ideas from members','understand which activities people are most interested in','promote our events through social media','invite volunteers','increase participation without creating unnecessary costs','help with planning or communication','Yen']
+  };
+  let out=esc(q.model);const parts=(fragments[q.id]||[]).sort((a,b)=>b.length-a.length);
+  // Mark text via literal escaped substrings, without processing user-supplied HTML.
+  const protect=[];
+  parts.forEach(s=>{const safe=esc(s);const i=out.indexOf(safe);if(i<0)return;
+     const token='##WRITINGMARK'+protect.length+'##';
+     out=out.slice(0,i)+token+out.slice(i+safe.length);
+     protect.push('<span class="writing-variable" title="Nội dung thay đổi theo đề">'+safe+'</span>');
+  });
+  return out.replace(/##WRITINGMARK(\d+)##/g,(_,i)=>protect[Number(i)]);
+}
+
 function display(){
 if(!state.data)return;
 el('writingParts').innerHTML=[1,2,3,4].map(p=>'<button type="button" class="writing-part '+(state.part===p?'active':'')+'" data-wpart="'+p+'"><strong>Part '+p+'</strong>'+names[p]+'<small style="display:block;margin-top:8px">'+state.data.items.filter(q=>q.part===p).length+' bài</small></button>').join('');
@@ -21,12 +64,13 @@ const key='aptis-writing-draft-'+q.id;
 let draft='';try{draft=localStorage.getItem(key)||''}catch(e){}
 state.seconds=0;clearInterval(state.timer);
 const lim=q.part===4?(q.id==='W4-001'?[40,50]:[120,150]):limits[q.part];
-el('writingWorkspace').innerHTML='<div class="global-kicker">PART '+q.part+' · '+esc(q.topic)+'</div><h2>'+esc(q.topic)+'</h2><div class="writing-prompt">'+esc(q.prompt)+'</div><p class="writing-info">'+esc(q.guidance)+' · <strong>'+lim[0]+'–'+lim[1]+' words</strong></p><label for="writingAnswer"><strong>Bài viết của bạn</strong></label><textarea id="writingAnswer" spellcheck="true" placeholder="Type your answer here...">'+esc(draft)+'</textarea><div class="writing-toolbar"><strong id="writingCount">0 words</strong><span id="writingTimer">00:00</span><button class="writing-action" id="writingClock" type="button">Bắt đầu tính giờ</button><button class="writing-action" id="writingCheck" type="button">Kiểm tra độ dài</button><button class="writing-action writing-primary" id="writingModelBtn" type="button">Xem bài mẫu</button></div><p id="writingFeedback" role="status"></p><details><summary>Cấu trúc gợi ý</summary><div class="writing-model">'+esc(q.template)+'</div></details><div id="writingModel" hidden><h3>Bài mẫu tham khảo</h3><div class="writing-model">'+esc(q.model)+'</div><p class="writing-info">Nguồn: '+esc(q.sourceLabel)+'</p></div>';
+el('writingWorkspace').innerHTML='<div class="global-kicker">PART '+q.part+' · '+esc(q.topic)+'</div><h2>'+esc(q.topic)+'</h2><div class="writing-prompt">'+esc(q.prompt)+'</div><p class="writing-info">'+esc(q.guidance)+' · <strong>'+lim[0]+'–'+lim[1]+' words</strong></p><label for="writingAnswer"><strong>Bài viết của bạn</strong></label><textarea id="writingAnswer" spellcheck="true" placeholder="Type your answer here...">'+esc(draft)+'</textarea><div class="writing-toolbar"><strong id="writingCount">0 words</strong><span id="writingTimer">00:00</span><button class="writing-action" id="writingClock" type="button">Bắt đầu tính giờ</button><button class="writing-action" id="writingCheck" type="button">Kiểm tra độ dài</button><button class="writing-action writing-primary" id="writingModelBtn" type="button">Xem bài mẫu</button></div><p id="writingFeedback" role="status"></p><details><summary>Cấu trúc gợi ý</summary><div class="writing-model">'+renderFramework(q)+'</div></details><div id="writingModel" hidden><h3>Bài mẫu tham khảo</h3><p class="writing-legend"><span class="writing-variable">Nội dung tô màu</span> = thay đổi theo đề; phần chữ còn lại là câu khung có thể tái sử dụng.</p><div class="writing-model">'+renderMarkedModel(q)+'</div><h3>Khung chuẩn dùng cho đề khác</h3><div class="writing-model writing-framework">'+renderFramework(q)+'</div><button type="button" class="writing-action" id="writingCopyFramework">Chép khung vào ô luyện viết</button><p class="writing-info">Các ô [[...]] là chỗ điền thông tin theo đề. Kiểm tra giới hạn từ sau khi điền. Nguồn: '+esc(q.sourceLabel)+'</p></div>';
 const box=el('writingAnswer');
 const refresh=()=>{const n=count(box.value);el('writingCount').textContent=n+' words';el('writingCount').style.color=n>=lim[0]&&n<=lim[1]?'#168253':'#aa5b17';try{localStorage.setItem(key,box.value)}catch(e){}};
 box.addEventListener('input',refresh);refresh();
 el('writingCheck').onclick=()=>{const n=count(box.value);el('writingFeedback').textContent=n<lim[0]?'Bạn cần viết thêm '+(lim[0]-n)+' từ.':n>lim[1]?'Bài dài hơn giới hạn '+(n-lim[1])+' từ.':'Độ dài phù hợp. Hãy so lại nội dung và ngữ pháp với bài mẫu.'};
 el('writingModelBtn').onclick=()=>{const node=el('writingModel');node.hidden=!node.hidden;el('writingModelBtn').textContent=node.hidden?'Xem bài mẫu':'Ẩn bài mẫu'};
+el('writingCopyFramework').onclick=()=>{const template=frameworkFor(q);if(box.value.trim() && !window.confirm('Thay bản nháp hiện tại bằng khung chuẩn?'))return;box.value=template;box.dispatchEvent(new Event('input'));box.focus();};
 el('writingClock').onclick=()=>{if(state.timer){clearInterval(state.timer);state.timer=null;el('writingClock').textContent='Tiếp tục';return}state.timer=setInterval(()=>{state.seconds++;const mm=String(Math.floor(state.seconds/60)).padStart(2,'0');const ss=String(state.seconds%60).padStart(2,'0');const node=el('writingTimer');if(node)node.textContent=mm+':'+ss},1000);el('writingClock').textContent='Tạm dừng'};
 }
 function init(){if(!el('writingParts'))return;if(state.data){display();return}if(!(window.google&&google.script&&google.script.run)){el('writingMsg').textContent='Chỉ tải được nội dung khi chạy trong Google Apps Script Web App.';return}google.script.run.withSuccessHandler(data=>{state.data=data;el('writingMsg').textContent=data.available?'Đã tải '+data.items.length+' bài luyện viết. Bản nháp tự lưu trên trình duyệt.':'Chưa có dữ liệu Writing.';display()}).withFailureHandler(e=>{el('writingMsg').textContent='Không tải được Writing: '+(e.message||e)}).getWritingBootstrap();}
