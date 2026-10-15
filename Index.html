@@ -1,139 +1,50 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <base target="_top">
-    <?!= include('CSS'); ?>
-  </head>
-  <body>
-    <div class="animated-background"></div>
-    
-    <div class="app-container">
-      <header>
-        <h1 class="app-title">1000+ CÂU TIẾNG ANH THÔNG DỤNG</h1>
-          <div class="search-box">
-            <input type="text" id="searchInput" placeholder="Tìm kiếm cụm từ...">
-            <button id="searchBtn"><i class="fa fa-search"></i></button>
-          </div>
-            <div class="category-selector">
-              <button class="category-btn active" data-category="all"><i class="fas fa-globe-asia"></i> Tất Cả</button>
-              <button class="category-btn" data-category="Greetings"><i class="fas fa-handshake"></i> Chào Hỏi</button>
-              <button class="category-btn" data-category="Food"><i class="fas fa-utensils"></i> Ẩm Thực</button>
-              <button class="category-btn" data-category="Travel"><i class="fas fa-plane"></i> Du Lịch</button>
-              <button class="category-btn" data-category="Business"><i class="fas fa-briefcase"></i> Công Việc</button>
-              <button class="category-btn" data-category="Daily"><i class="fas fa-calendar-day"></i> Hàng Ngày</button>
-            </div>
-        <div class="action-buttons">
-          <button id="randomPhraseBtn" class="action-btn">
-            <i class="fas fa-random"></i> Ngẫu Nhiên
-          </button>
-        </div>
-      </header>
-      
-      <main>
-        <div class="phrase-container" id="phraseContainer">
-          <!-- Thẻ câu sẽ được hiển thị ở đây -->
-          <div class="loading-animation">
-            <div class="spinner"></div>
-            <p>Đang tải dữ liệu...</p>
-          </div>
-        </div>
-      </main>
-      
-      <footer>
-        <div class="learning-progress">
-          <div class="progress-bar">
-            <div class="progress-fill" style="width: 0%"></div>
-          </div>
-          <p><span id="learnedCount">0</span> / <span id="totalPhrases">0</span> cụm từ đã học</p>
-        </div>
-          <div class="buttons-group">
-            <button class="mode-btn" id="practiceBtn"><i class="fas fa-dumbbell"></i> Luyện Tập</button>
-            <button class="help-btn" id="helpBtn"><i class="fas fa-question-circle"></i> Hướng Dẫn</button>
-          </div>
-      </footer>
-    </div>
-    
-    <!-- Modal Luyện Tập -->
-    <div class="modal" id="practiceModal">
-      <div class="modal-content">
-        <span class="close-modal">&times;</span>
-        <h2>🏋️ Luyện Tập</h2>
-        <div class="practice-area">
-          <div class="practice-mode-selector">
-            <button class="practice-mode-btn active" data-mode="listen">📢 Nghe & Chọn</button>
-            <button class="practice-mode-btn" data-mode="match">🔀 Ghép Cặp</button>
-            <button class="practice-mode-btn" data-mode="fill">🖊 Điền Vào Chỗ Trống</button>
-          </div>
-          <div class="practice-content">
-            <!-- Nội dung luyện tập sẽ được hiển thị ở đây -->
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Modal Hướng Dẫn -->
-    <div class="modal" id="helpModal">
-      <div class="modal-content">
-        <span class="close-modal">&times;</span>
-        <h2>📝 Hướng Dẫn Sử Dụng</h2>
-          <div class="help-content">
-            <div class="help-section">
-              <h3>🔖 Các tính năng chính</h3>
-              <ul>
-                <li><b>Thẻ từ vựng:</b> Hiển thị cụm từ tiếng Anh, phiên âm, nghĩa và hình ảnh minh họa</li>
-                <li><b>Bộ lọc trạng thái học:</b> "Đã Học" hoặc "Chưa Học" để học hiệu quả</li>
-                <li><b>Bộ lọc chủ đề:</b>: Chào Hỏi, Ẩm Thực, Du Lịch, Công Việc, Hàng Ngày</li>
-                <li><b>Phát âm:</b> Nhấn nút <i class="fas fa-volume-up"></i> để nghe phát âm chuẩn của từng cụm từ</li>
-                <li><b>Chọn giọng đọc:</b> Lựa chọn nhiều giọng Nam/Nữ khác nhau (Anh, Mỹ)</li>
-                <li><b>Ngẫu nhiên:</b> Hiển thị cụm từ ngẫu nhiên với phát âm tự động</li>
-                <li><b>Đánh dấu đã học:</b> Theo dõi tiến độ học tập với tính năng đánh dấu</li>
-                <li><b>Luyện tập:</b> Các bài tập tương tác để củng cố kiến thức</li>
-              </ul>
-            </div>
-            
-            <div class="help-section">
-              <h3>✔️ Phương pháp học hiệu quả</h3>
-              <ol>
-                <li>Học từ 10-15 cụm từ mỗi ngày</li>
-                <li>Nghe và lặp lại phát âm nhiều lần</li>
-                <li>Kết hợp bộ lọc trạng thái học và chủ đề để ôn tập hiệu quả</li>
-                <li>Sử dụng chế độ ngẫu nhiên để luyện trí nhớ</li>
-                <li>Sử dụng cả ba chế độ luyện tập để củng cố kiến thức</li>
-                <li>Thực hành sử dụng các cụm từ trong cuộc sống hàng ngày</li>
-                <li>Quay lại ôn tập những cụm từ "Đã Học" thường xuyên</li>
-              </ol>
-            </div>
-          </div>
-      </div>
-    </div>
-    
-    <!-- Template cho thẻ từ vựng -->
-    <template id="phraseCardTemplate">
-      <div class="phrase-card">
-        <div class="phrase-image">
-          <img src="" alt="Phrase illustration">
-          <div class="category-tag"></div>
-        </div>
-        <div class="phrase-content">
-          <h3 class="phrase-english"></h3>
-          <p class="phrase-phonetic"></p>
-          <p class="phrase-translation"></p>
-          <div class="pronunciation-buttons">
-            <button class="pronunciation-btn">
-              <i class="fas fa-volume-up sound-icon"></i> Nghe
-            </button>
-            <button class="pronunciation-slow-btn">
-              <i class="fas fa-walking slow-icon"></i> Chậm
-            </button>
-          </div>
-        </div>
-        <div class="phrase-actions">
-          <button class="mark-learned-btn">Đánh Dấu Đã Học</button>
-        </div>
-      </div>
-    </template>
-    
-    <?!= include('JavaScript'); ?>
-  </body>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="theme-color" content="#f6f7fb">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <?!= include('Styles_Speaking'); ?>
+  <?!= include('Styles_SpeakingPart1'); ?>
+  <?!= include('Styles_SpeakingPart2'); ?>
+  <?!= include('Styles_SpeakingPart3'); ?>
+  <?!= include('Styles_SpeakingPart4'); ?>
+  <?!= include('Styles'); ?>
+  <?!= include('Styles_Home'); ?>
+  <?!= include('Styles_Overview'); ?>
+  <?!= include('Styles_Listening'); ?>
+  <?!= include('Styles_Reading'); ?>
+  <?!= include('Styles_Writing'); ?>
+  <?!= include('Styles_Grammar'); ?>
+</head>
+<body>
+  <div id="globalApp" class="global-app">
+    <?!= include('AppShell'); ?>
+    <main class="global-stage">
+      <div id="page-home" class="app-page active"><?!= include('ViewHome'); ?></div>
+      <div id="page-overview" class="app-page"><?!= include('ViewOverview'); ?></div>
+      <div id="page-speaking" class="app-page"><?!= include('ViewSpeaking'); ?><?!= include('ViewSpeakingPart1'); ?><?!= include('ViewSpeakingPart2'); ?><?!= include('ViewSpeakingPart3'); ?><?!= include('ViewSpeakingPart4'); ?></div>
+      <div id="page-listening" class="app-page"><?!= include('ViewListening'); ?></div>
+      <div id="page-reading" class="app-page"><?!= include('ViewReading'); ?></div>
+      <div id="page-writing" class="app-page"><?!= include('ViewWriting'); ?></div>
+      <div id="page-grammar" class="app-page"><?!= include('ViewGrammar'); ?></div>
+    </main>
+  </div>
+  <?!= include('JS_Speaking'); ?>
+  <?!= include('JS_SpeakingPart1'); ?>
+  <?!= include('JS_SpeakingPart2'); ?>
+  <?!= include('JS_SpeakingPart3'); ?>
+  <?!= include('JS_SpeakingPart4'); ?>
+  <?!= include('JS_Home'); ?>
+  <?!= include('JS_Overview'); ?>
+  <?!= include('JS_Listening'); ?>
+  <?!= include('JS_Reading'); ?>
+  <?!= include('JS_Writing'); ?>
+  <?!= include('JS_Grammar'); ?>
+  <?!= include('AppJS'); ?>
+</body>
 </html>

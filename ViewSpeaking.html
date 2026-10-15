@@ -1,0 +1,403 @@
+<section class="skill-shell speaking-shell app-shell">
+  <div class="skill-page-head">
+    <div><div class="eyebrow">APTIS ESOL · SPEAKING</div><h1>Speaking</h1><p>Learn, shadow, memorize and test yourself across Parts 1–3.</p></div>
+    <div class="skill-head-actions">
+      <button id="progressBtn" class="icon-btn" type="button" title="Speaking progress">▥</button>
+      <button id="audioSettingsBtn" class="icon-btn" type="button" title="Audio">♪</button>
+      <button id="refreshBtn" class="icon-btn" type="button" title="Refresh">↻</button>
+      <span id="syncStatus" class="sync-status" aria-live="polite"></span>
+    </div>
+  </div>
+  <main class="speaking-main">
+      <section id="loadingView" class="panel loading-panel hidden" style="display:none" hidden aria-hidden="true">
+        <div class="spinner"></div>
+        <div><strong>Preparing your study plan</strong><p>Checking database and loading Speaking...</p></div>
+      </section>
+
+      <section id="errorView" class="panel hidden" role="alert">
+        <h2>Cannot load the app</h2>
+        <p id="errorText"></p>
+        <button class="primary-btn" type="button" onclick="window.location.reload()">Reload</button>
+      </section>
+
+      <section id="skillHomeView" class="view hidden">
+        <section class="speaking-overview-hero">
+          <div>
+            <div class="eyebrow">SPEAKING OVERVIEW</div>
+            <h2>Choose a part and practise with purpose.</h2>
+            <p>Each Speaking part has its own practice bank, review queue and progress. Start where you need the most work.</p>
+          </div>
+          <div class="skill-overview-stats">
+            <article><span>Mastered</span><strong id="skillMasteredPct">0%</strong></article>
+            <article><span>Due now</span><strong id="skillDueCount">0</strong></article>
+            <article><span>Needs work</span><strong id="skillWeakCount">0</strong></article>
+          </div>
+        </section>
+
+        <article class="skill-recommendation-card">
+          <div class="skill-rec-icon">◎</div>
+          <div class="skill-rec-copy">
+            <span class="eyebrow">RECOMMENDED NEXT STEP</span>
+            <strong id="skillRecommendationTitle">Continue your Speaking practice</strong>
+            <p id="skillRecommendationText">Choose one part below to continue.</p>
+          </div>
+          <button id="skillRecommendationBtn" class="primary-btn" type="button">Start →</button>
+        </article>
+
+        <section class="speaking-modules-section">
+          <div class="section-title-row">
+            <div><div class="eyebrow">SPEAKING PARTS</div><h3>Learning structure</h3></div>
+            <button id="skillProgressLink" class="text-btn" type="button">View Speaking progress →</button>
+          </div>
+          <div class="speaking-module-grid">
+            <button class="speaking-module-card" data-open-speaking-part="1" type="button">
+              <div class="module-topline"><span class="module-number">Part 1</span><strong id="skillP1Pct">0%</strong></div>
+              <h3>Personal questions</h3>
+              <p>Build clear personal answers and speak naturally for 30 seconds.</p>
+              <div class="module-progress"><span id="skillP1Bar"></span></div>
+              <small id="skillP1Meta">29 questions</small>
+            </button>
+            <button class="speaking-module-card" data-open-speaking-part="2" type="button">
+              <div class="module-topline"><span class="module-number">Part 2</span><strong id="skillP2Pct">0%</strong></div>
+              <h3>Photo topic</h3>
+              <p>Describe one photo, connect it to experience and give a wider opinion.</p>
+              <div class="module-progress"><span id="skillP2Bar"></span></div>
+              <small id="skillP2Meta">Photo topics · 45 seconds</small>
+            </button>
+            <button class="speaking-module-card" data-open-speaking-part="3" type="button">
+              <div class="module-topline"><span class="module-number">Part 3</span><strong id="skillP3Pct">0%</strong></div>
+              <h3>Compare two photos</h3>
+              <p>Compare two pictures clearly using one reusable 45-second framework.</p>
+              <div class="module-progress"><span id="skillP3Bar"></span></div>
+              <small id="skillP3Meta">Comparison topics · 45 seconds</small>
+            </button>
+            <button class="speaking-module-card is-coming" type="button" disabled>
+              <div class="module-topline"><span class="module-number">Part 4</span><span class="module-status">Coming next</span></div>
+              <h3>Extended response</h3>
+              <p>The framework is ready. Content will be added when Part 4 development begins.</p>
+              <div class="module-progress"><span style="width:0"></span></div>
+              <small>Preparation + extended speaking</small>
+            </button>
+          </div>
+        </section>
+      </section>
+
+      <section id="homeView" class="view hidden">
+        <div class="part-switch" role="tablist" aria-label="Speaking part">
+          <button class="part-tab active" data-part="1" type="button"><span>Part 1</span><small>Personal questions · 30s</small></button>
+          <button class="part-tab" data-part="2" type="button"><span>Part 2</span><small>Photo + 2 questions · 45s</small></button>
+          <button class="part-tab" data-part="3" type="button"><span>Part 3</span><small>2 photos · compare · 45s</small></button>
+        </div>
+
+        <article class="welcome-card">
+          <div class="welcome-copy">
+            <span id="heroPill" class="pill">Speaking Part 1</span>
+            <h2 id="heroTitle">Practice a little. Speak with confidence.</h2>
+            <p id="heroText">Learn the structure, listen, repeat and test yourself in one simple flow.</p>
+            <div class="welcome-actions">
+              <button id="continueBtn" class="primary-btn large" type="button">Continue learning</button>
+              <button id="quickStudyBtn" class="secondary-btn large" type="button">Quick review</button>
+            </div>
+          </div>
+          <div class="progress-hero">
+            <div class="progress-ring" id="progressRing"><span id="progressPct">0%</span></div>
+            <small id="progressLabel">mastered</small>
+          </div>
+        </article>
+
+        <section class="today-section">
+          <div class="section-title-row">
+            <div><div class="eyebrow">TODAY</div><h3>What to practise</h3></div>
+            <button id="reviewDueBtn" class="text-btn" type="button">Review due →</button>
+          </div>
+          <div class="focus-grid">
+            <button class="focus-card" data-filter-target="due" type="button"><span class="focus-icon">↻</span><strong id="dueCount">0</strong><span>Due now</span></button>
+            <button class="focus-card" data-filter-target="weak" type="button"><span class="focus-icon">◎</span><strong id="weakCount">0</strong><span>Needs work</span></button>
+            <button class="focus-card" data-filter-target="favorite" type="button"><span class="focus-icon">★</span><strong id="favoriteCount">0</strong><span>Favorites</span></button>
+            <button class="focus-card" data-filter-target="learned" type="button"><span class="focus-icon">✓</span><strong id="learnedCount">0</strong><span>Learned</span></button>
+          </div>
+        </section>
+
+        <section class="library-section">
+          <div class="section-title-row stack-mobile">
+            <div><div class="eyebrow">PRACTICE BANK</div><h3 id="libraryTitle">Speaking Part 1</h3><p class="section-note">Pick one item and continue from where you left off.</p></div>
+            <div class="library-controls">
+              <div class="search-wrap"><span>⌕</span><input id="searchInput" type="search" placeholder="Search..." autocomplete="off"></div>
+              <select id="filterSelect" class="select">
+                <option value="all">All</option>
+                <option value="new">New</option>
+                <option value="learning">Learning</option>
+                <option value="learned">Learned</option>
+                <option value="due">Due now</option>
+                <option value="weak">Needs work</option>
+                <option value="favorite">Favorites</option>
+              </select>
+            </div>
+          </div>
+          <div id="questionList" class="question-list"></div>
+        </section>
+      </section>
+
+      <section id="progressView" class="view hidden">
+        <div class="progress-page-head">
+          <div><div class="eyebrow">SPEAKING PROGRESS</div><h2>Your progress at a glance</h2><p>Parts 1–3 use the same review system, so you can see what is mastered and what needs attention.</p></div>
+          <button id="progressBackBtn" class="secondary-btn" type="button">← Back to practice</button>
+        </div>
+
+        <div class="progress-overview-grid">
+          <article class="progress-stat-card accent"><span>Overall mastered</span><strong id="overallMasteredPct">0%</strong><small id="overallMasteredText">0 of 0 items</small></article>
+          <article class="progress-stat-card"><span>Due now</span><strong id="overallDueCount">0</strong><small>Ready for review</small></article>
+          <article class="progress-stat-card"><span>Needs work</span><strong id="overallWeakCount">0</strong><small>Rated Again or Hard</small></article>
+          <article class="progress-stat-card"><span>Total reviews</span><strong id="overallReviewCount">0</strong><small>Across Speaking</small></article>
+        </div>
+
+        <div class="part-progress-grid">
+          <article class="part-progress-card">
+            <div class="part-progress-head"><div><span class="pill">Part 1</span><h3>Personal questions</h3></div><strong id="p1ProgressPct">0%</strong></div>
+            <div class="wide-progress"><span id="p1ProgressBar"></span></div>
+            <div class="progress-kpis"><span><b id="p1Learned">0</b> mastered</span><span><b id="p1Due">0</b> due</span><span><b id="p1Weak">0</b> needs work</span></div>
+            <button class="text-btn progress-jump" data-jump-part="1" type="button">Open Part 1 →</button>
+          </article>
+          <article class="part-progress-card">
+            <div class="part-progress-head"><div><span class="pill">Part 2</span><h3>Photo topics</h3></div><strong id="p2ProgressPct">0%</strong></div>
+            <div class="wide-progress"><span id="p2ProgressBar"></span></div>
+            <div class="progress-kpis"><span><b id="p2Learned">0</b> topics mastered</span><span><b id="p2Due">0</b> due</span><span><b id="p2Weak">0</b> needs work</span></div>
+            <button class="text-btn progress-jump" data-jump-part="2" type="button">Open Part 2 →</button>
+          </article>
+          <article class="part-progress-card">
+            <div class="part-progress-head"><div><span class="pill">Part 3</span><h3>Compare two photos</h3></div><strong id="p3ProgressPct">0%</strong></div>
+            <div class="wide-progress"><span id="p3ProgressBar"></span></div>
+            <div class="progress-kpis"><span><b id="p3Learned">0</b> topics mastered</span><span><b id="p3Due">0</b> due</span><span><b id="p3Weak">0</b> needs work</span></div>
+            <button class="text-btn progress-jump" data-jump-part="3" type="button">Open Part 3 →</button>
+          </article>
+        </div>
+
+        <article class="progress-tip-card">
+          <div class="progress-tip-icon">◎</div>
+          <div><strong>Recommended routine</strong><p id="progressRecommendation">Review due items first, then practise one new topic.</p></div>
+        </article>
+      </section>
+
+      <section id="studyView" class="view hidden">
+        <div class="study-topline">
+          <button id="backBtn" class="back-btn" type="button">← Practice bank</button>
+          <div class="study-top-actions"><button id="favoriteBtn" class="icon-btn favorite-btn" type="button">☆</button></div>
+        </div>
+
+        <article class="study-card">
+          <div class="study-meta">
+            <span id="questionNumber" class="badge"></span>
+            <span id="statusBadge" class="badge badge-soft">New</span>
+          </div>
+
+          <div id="part2Visual" class="part2-visual hidden">
+            <div id="imagePlaceholder" class="image-placeholder">
+              <div id="sceneIcon" class="scene-icon">🖼️</div>
+              <strong id="imageAlt"></strong>
+              <small id="imageHelp">Source image is prepared automatically from your Speaking Part 2 material.</small>
+            </div>
+            <img id="sceneImage" class="scene-image hidden" alt="">
+          </div>
+
+          <div id="part3Visual" class="part3-visual hidden">
+            <div class="compare-image-card"><span class="compare-label">First picture</span><div id="p3PlaceholderA" class="image-placeholder compact"><div id="p3IconA" class="scene-icon">🖼️</div><strong id="p3AltA"></strong></div><img id="p3ImageA" class="scene-image hidden" alt=""></div>
+            <div class="compare-image-card"><span class="compare-label">Second picture</span><div id="p3PlaceholderB" class="image-placeholder compact"><div id="p3IconB" class="scene-icon">🖼️</div><strong id="p3AltB"></strong></div><img id="p3ImageB" class="scene-image hidden" alt=""></div>
+          </div>
+
+          <div id="promptStepper" class="prompt-stepper hidden">
+            <button class="prompt-step active" data-prompt="1" type="button">1 · Describe</button>
+            <button class="prompt-step" data-prompt="2" type="button">2 · Experience</button>
+            <button class="prompt-step" data-prompt="3" type="button">3 · Opinion</button>
+          </div>
+
+          <h2 id="questionText" class="question-title"></h2>
+
+          <div class="mode-tabs">
+            <button data-mode="learn" class="mode-tab active" type="button"><span>01</span> Learn</button>
+            <button data-mode="shadow" class="mode-tab" type="button"><span>02</span> Shadow</button>
+            <button data-mode="memorize" class="mode-tab" type="button"><span>03</span> Memorize</button>
+            <button data-mode="test" class="mode-tab" type="button"><span>04</span> Test</button>
+          </div>
+
+          <div id="learnMode" class="mode-panel">
+            <div id="part1Hints" class="hint-grid">
+              <div class="mini-card"><span class="mini-label">Time signal</span><strong id="tenseSignal"></strong></div>
+              <div class="mini-card"><span class="mini-label">Grammar focus</span><strong id="tenseName"></strong></div>
+            </div>
+
+            <div id="structureBlock" class="content-block">
+              <span class="block-label">Answer structure</span>
+              <p id="structureText" class="structure-text"></p>
+            </div>
+
+
+            <div id="part2FrameworkBlock" class="part2-description-framework hidden">
+              <div class="part2-framework-head">
+                <div><span class="block-label">Picture description · 45 seconds</span><strong>MUST SAY first. SAY MORE only if you have time.</strong></div>
+                <span class="framework-note">Learn the pattern, then adapt it to a new picture.</span>
+              </div>
+              <article class="p2-speech-block p2-must">
+                <div class="p2-speech-label"><span>1</span><strong>MUST SAY · NÊN CÓ</strong></div>
+                <p id="part2MustSay"></p>
+              </article>
+              <article class="p2-speech-block p2-extra">
+                <div class="p2-speech-label"><span>+</span><strong>SAY MORE · NẾU CÒN THỜI GIAN</strong></div>
+                <p id="part2SayMore"></p>
+              </article>
+            </div>
+
+            <div id="part3FrameworkBlock" class="part3-description-framework hidden">
+              <div class="part3-framework-head">
+                <div>
+                  <span class="block-label">Compare two pictures · 45 seconds</span>
+                  <strong>MUST SAY the comparison spine first. SAY MORE only if you have time.</strong>
+                </div>
+                <span class="framework-note">Common → Picture 1 → Picture 2 → Difference</span>
+              </div>
+
+              <div class="part3-axis-card">
+                <span>MAIN CONTRAST</span>
+                <strong id="part3ComparisonAxis"></strong>
+              </div>
+
+              <div class="part3-must-grid">
+                <article class="p3-speech-block p3-must">
+                  <div class="p3-speech-label"><span>1</span><strong>COMMON POINT · ĐIỂM CHUNG</strong></div>
+                  <p id="part3Common"></p>
+                </article>
+                <article class="p3-speech-block p3-must">
+                  <div class="p3-speech-label"><span>2</span><strong>PICTURE 1 · TRANH 1</strong></div>
+                  <p id="part3PictureA"></p>
+                </article>
+                <article class="p3-speech-block p3-must">
+                  <div class="p3-speech-label"><span>3</span><strong>PICTURE 2 · TRANH 2</strong></div>
+                  <p id="part3PictureB"></p>
+                </article>
+                <article class="p3-speech-block p3-must">
+                  <div class="p3-speech-label"><span>4</span><strong>DIFFERENCE · KHÁC BIỆT</strong></div>
+                  <p id="part3Difference"></p>
+                </article>
+              </div>
+
+              <article class="p3-speech-block p3-extra">
+                <div class="p3-speech-label"><span>+</span><strong>SAY MORE · NẾU CÒN THỜI GIAN</strong></div>
+                <p id="part3SayMore"></p>
+              </article>
+            </div>
+
+            <div id="part1FrameworkBlock" class="part1-framework">
+              <div class="part1-framework-head">
+                <div>
+                  <span class="block-label">30-second answer pattern</span>
+                  <strong id="answerTypeBadge">Focus → Expand → Reason</strong>
+                </div>
+                <span class="framework-note">Learn the ideas, not every word.</span>
+              </div>
+
+              <div class="part1-step-grid">
+                <article class="part1-step-card focus-step">
+                  <span class="step-number">1</span>
+                  <div><span class="step-label">TRỌNG TÂM · FOCUS</span><p id="focusAnswer"></p></div>
+                </article>
+                <article class="part1-step-card expand-step">
+                  <span class="step-number">2</span>
+                  <div><span class="step-label">MỞ RỘNG · EXPAND</span><p id="expandAnswer"></p></div>
+                </article>
+                <article class="part1-step-card reason-step">
+                  <span class="step-number">3</span>
+                  <div><span class="step-label">LÝ DO / CẢM NHẬN · REASON</span><p id="reasonAnswer"></p></div>
+                </article>
+              </div>
+            </div>
+
+            <div id="coreBlock" class="content-block core-block hidden" aria-hidden="true">
+              <span class="block-label">Core sentence</span>
+              <p id="coreAnswer" class="core-text"></p>
+            </div>
+
+            <div class="content-block">
+              <div class="block-row"><span id="fullAnswerLabel" class="block-label">Full answer</span><button id="listenBtn" class="listen-pill" type="button">▶ Listen</button></div>
+              <p id="modelAnswer" class="model-text"></p>
+            </div>
+
+            <div class="content-block keyword-block">
+              <span class="block-label">Memory cues</span>
+              <div id="keywords" class="keyword-chips"></div>
+            </div>
+          </div>
+
+          <div id="shadowMode" class="mode-panel hidden">
+            <div class="mode-intro"><strong>Listen → pause → repeat</strong><span>Focus on rhythm, clear endings and natural linking.</span></div>
+            <div id="shadowSentences" class="shadow-list"></div>
+            <div class="inline-actions"><button id="shadowAllBtn" class="primary-btn" type="button">▶ Shadow all</button><button id="stopSpeechBtn" class="secondary-btn" type="button">■ Stop</button></div>
+          </div>
+
+          <div id="memorizeMode" class="mode-panel hidden">
+            <div class="mode-intro"><strong>Reduce support step by step</strong><span>Move up only when the previous level feels easy.</span></div>
+            <div class="memorize-levels">
+              <button class="level-btn active" data-level="1" type="button">Level 1</button>
+              <button class="level-btn" data-level="2" type="button">Level 2</button>
+              <button class="level-btn" data-level="3" type="button">Keywords</button>
+              <button class="level-btn" data-level="4" type="button">No help</button>
+            </div>
+            <div class="content-block memorize-box"><p id="memorizeText" class="model-text"></p></div>
+            <button id="revealBtn" class="secondary-btn" type="button">Reveal full answer</button>
+          </div>
+
+          <div id="testMode" class="mode-panel hidden">
+            <div class="test-box">
+              <div id="testLabel" class="test-label">APTIS SPEAKING PRACTICE</div>
+              <div id="timer" class="timer">00:30</div>
+              <div class="timer-bar"><div id="timerBar" class="timer-bar-fill"></div></div>
+              <p id="testInstruction" class="test-instruction">Answer aloud without reading the model.</p>
+              <div class="test-actions"><button id="startTimerBtn" class="primary-btn large" type="button">Start test</button><button id="stopTimerBtn" class="secondary-btn large" type="button" disabled>Stop</button></div>
+            </div>
+
+            <div id="selfCheck" class="content-block hidden">
+              <span class="block-label">How did it feel?</span>
+              <p class="helper-text">Choose quickly. The app will schedule the next review.</p>
+              <div class="rating-row">
+                <button class="rating-btn" data-rating="1" type="button"><span>Again</span><small>Forgot most</small></button>
+                <button class="rating-btn" data-rating="2" type="button"><span>Hard</span><small>Needed help</small></button>
+                <button class="rating-btn" data-rating="3" type="button"><span>Good</span><small>Mostly clear</small></button>
+                <button class="rating-btn" data-rating="4" type="button"><span>Easy</span><small>Comfortable</small></button>
+                <button class="rating-btn strong" data-rating="5" type="button"><span>Mastered</span><small>Natural answer</small></button>
+              </div>
+              <button id="showAnswerAfterTest" class="text-btn" type="button">Show model answer</button>
+            </div>
+          </div>
+
+          <footer class="study-footer">
+            <button id="prevQuestionBtn" class="secondary-btn" type="button">← Previous</button>
+            <button id="markLearnedBtn" class="success-btn" type="button">✓ Mark learned</button>
+            <button id="nextQuestionBtn" class="secondary-btn" type="button">Next →</button>
+          </footer>
+        </article>
+      </section>
+    </main>
+  <nav class="bottom-nav">
+      <button class="nav-btn active" data-nav="home" type="button"><span>⌂</span>Home</button>
+      <button class="nav-btn" data-nav="part1" type="button"><span>1</span>Part 1</button>
+      <button class="nav-btn" data-nav="part2" type="button"><span>2</span>Part 2</button>
+      <button class="nav-btn" data-nav="part3" type="button"><span>3</span>Part 3</button>
+      <button class="nav-btn" data-nav="progress" type="button"><span>◔</span>Progress</button>
+      <button class="nav-btn" data-nav="audio" type="button"><span>♫</span>Audio</button>
+    </nav>
+  <div id="audioSheet" class="sheet-backdrop hidden" role="dialog" aria-modal="true">
+      <div class="bottom-sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-heading"><div><div class="eyebrow">AUDIO</div><h3>Voice settings</h3></div><button id="closeAudioBtn" class="icon-btn" type="button">✕</button></div>
+        <label class="setting-row"><span><strong>Accent</strong><small>Filter available English voices</small></span>
+          <select id="accentSelect" class="select"><option value="en-GB">British English</option><option value="en-US">American English</option><option value="en-AU">Australian English</option><option value="en">Any English</option></select>
+        </label>
+        <label class="setting-row vertical"><span><strong>Voice</strong><small>Depends on your device/browser</small></span><select id="voiceSelect" class="select full"></select></label>
+        <div class="setting-row vertical"><span><strong>Speed</strong><small>Used for Listen and Shadow</small></span>
+          <div class="speed-buttons"><button class="speed-btn" data-speed="0.75" type="button">0.75×</button><button class="speed-btn active" data-speed="0.9" type="button">0.90×</button><button class="speed-btn" data-speed="1" type="button">1.00×</button></div>
+        </div>
+        <button id="previewVoiceBtn" class="primary-btn full-btn" type="button">▶ Preview voice</button>
+      </div>
+    </div>
+
+    
+  <div id="toast" class="toast hidden"></div>
+</section>

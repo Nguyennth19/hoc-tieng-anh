@@ -1,0 +1,1354 @@
+<script>
+(function() {
+  'use strict';
+
+  // Stable client cache: do not change this key for ordinary content releases.
+  // This lets a new deployment reuse the last good payload immediately.
+  const CLIENT_CACHE_KEY = 'aptisSpeakingBootstrap:stable';
+  const CLIENT_CACHE_BACKUP_KEY = 'aptisSpeakingBootstrap:lastGood';
+  const LEGACY_CACHE_KEYS = [
+    'aptisSpeakingBootstrap:v3d:p2description-20260929',
+    'aptisSpeakingBootstrap:v3d'
+  ];
+  const CLIENT_CACHE_FRESH_MS = 6 * 60 * 60 * 1000;
+  const CLIENT_CACHE_STALE_MS = 7 * 24 * 60 * 60 * 1000;
+  const LOADER_WATCHDOG_MS = 10000;
+
+  const state = {
+    data: null,
+    hydratedFromCache: false,
+    refreshing: false,
+    activePart: [1,2,3].includes(Number(readLocal('aptisActivePart', '1'))) ? Number(readLocal('aptisActivePart', '1')) : 1,
+    items: [],
+    currentIndex: 0,
+    currentPrompt: 1,
+    currentMode: 'learn',
+    memorizeLevel: 1,
+    timerId: null,
+    timerStartedAt: 0,
+    timerElapsed: 0,
+    timerRunning: false,
+    quickQueue: [],
+    quickPosition: -1,
+    voices: [],
+    audio: {
+      accent: readLocal('aptisAccent', 'en-GB'),
+      voiceURI: readLocal('aptisVoiceURI', ''),
+      rate: Number(readLocal('aptisRate', '0.9')) || 0.9
+    }
+  };
+
+  const $ = id => document.getElementById(id);
+  const $$ = selector => Array.from(document.querySelectorAll(selector));
+
+  let initialized = false;
+
+  document.addEventListener('DOMContentLoaded', init);
+
+  function init() {
+    if (initialized) return;
+    initialized = true;
+    bindEvents();
+    initSpeechVoices();
+
+    const cached = readBootstrapCache();
+    if (cached && cached.data) {
+      state.hydratedFromCache = true;
+      applyBootstrap(cached.data, { fromCache: true, stale: cached.stale });
+      setSyncStatus('Saved data', 'cached');
+
+      // Paint saved UI first, then perform a very light version check.
+      // Full Speaking data is fetched only when the revision changed.
+      setTimeout(checkForUpdatesInBackground, 180);
+    } else {
+      loadData({ force: false, blocking: true });
+    }
+  }
+
+  function enter() {
+    if (!initialized) init();
+    $('studyView').classList.add('hidden');
+    $('progressView').classList.add('hidden');
+    $('homeView').classList.add('hidden');
+    if (state.data) {
+      setLoadingVisible(false);
+      $('errorView').classList.add('hidden');
+      showHome();
+    } else {
+      $('skillHomeView').classList.add('hidden');
+      setLoadingVisible(true);
+    }
+  }
+
+  function bindEvents() {
+    $('refreshBtn').addEventListener('click', forceRefreshFromButton);
+    $('progressBtn').addEventListener('click', showProgress);
+    $('progressBackBtn').addEventListener('click', showHome);
+    $$('.progress-jump').forEach(btn => btn.addEventListener('click', () => { switchPart(Number(btn.dataset.jumpPart)); }));
+    $('continueBtn').addEventListener('click', continueLearning);
+    $('quickStudyBtn').addEventListener('click', startQuickStudy);
+    $('reviewDueBtn').addEventListener('click', startDueReview);
+    $('searchInput').addEventListener('input', renderList);
+    $('filterSelect').addEventListener('change', renderList);
+    $('backBtn').addEventListener('click', showPartHome);
+    $('prevQuestionBtn').addEventListener('click', () => navigateItem(-1));
+    $('nextQuestionBtn').addEventListener('click', () => navigateItem(1));
+    $('markLearnedBtn').addEventListener('click', () => saveProgress(5, 'learned'));
+    $('favoriteBtn').addEventListener('click', toggleFavorite);
+
+    $$('.part-tab').forEach(btn => btn.addEventListener('click', () => switchPart(Number(btn.dataset.part))));
+    $$('[data-open-speaking-part]').forEach(btn => btn.addEventListener('click', () => openPartHome(Number(btn.dataset.openSpeakingPart))));
+    $('skillProgressLink').addEventListener('click', showProgress);
+    $('skillRecommendationBtn').addEventListener('click', openRecommendedSpeakingPart);
+    $$('.prompt-step').forEach(btn => btn.addEventListener('click', () => setPrompt(Number(btn.dataset.prompt))));
+    $$('.mode-tab').forEach(btn => btn.addEventListener('click', () => setMode(btn.dataset.mode)));
+    $$('.level-btn').forEach(btn => btn.addEventListener('click', () => setMemorizeLevel(Number(btn.dataset.level))));
+    $$('.rating-btn').forEach(btn => btn.addEventListener('click', () => finishSelfRating(Number(btn.dataset.rating))));
+    $$('.focus-card').forEach(btn => btn.addEventListener('click', () => applyFilter(btn.dataset.filterTarget)));
+
+    $('listenBtn').addEventListener('click', () => speakText(currentModel()));
+    $('shadowAllBtn').addEventListener('click', shadowAll);
+    $('stopSpeechBtn').addEventListener('click', stopSpeech);
+    $('revealBtn').addEventListener('click', () => {
+      $('memorizeText').textContent = currentModel();
+      toast('Full answer revealed.');
+    });
+
+    $('startTimerBtn').addEventListener('click', startTimer);
+    $('stopTimerBtn').addEventListener('click', () => stopTimer(false));
+    $('showAnswerAfterTest').addEventListener('click', () => {
+      $('showAnswerAfterTest').textContent = currentModel();
+      $('showAnswerAfterTest').disabled = true;
+    });
+
+    $('audioSettingsBtn').addEventListener('click', openAudioSheet);
+    $('closeAudioBtn').addEventListener('click', closeAudioSheet);
+    $('audioSheet').addEventListener('click', e => { if (e.target === $('audioSheet')) closeAudioSheet(); });
+    $('accentSelect').addEventListener('change', () => {
+      state.audio.accent = $('accentSelect').value;
+      writeLocal('aptisAccent', state.audio.accent);
+      populateVoiceSelect();
+    });
+    $('voiceSelect').addEventListener('change', () => {
+      state.audio.voiceURI = $('voiceSelect').value;
+      writeLocal('aptisVoiceURI', state.audio.voiceURI);
+    });
+    $$('.speed-btn').forEach(btn => btn.addEventListener('click', () => setSpeechRate(Number(btn.dataset.speed))));
+    $('previewVoiceBtn').addEventListener('click', () => speakText('Hello. This is your APTIS speaking practice voice.'));
+
+    $$('.nav-btn').forEach(btn => btn.addEventListener('click', () => handleNav(btn.dataset.nav)));
+  }
+
+  function setLoadingVisible(visible) {
+    const el = $('loadingView');
+    if (!el) return;
+    const show = Boolean(visible);
+    el.hidden = !show;
+    el.setAttribute('aria-hidden', show ? 'false' : 'true');
+    el.classList.toggle('hidden', !show);
+    el.style.setProperty('display', show ? 'flex' : 'none', 'important');
+  }
+
+  function setSyncStatus(text, mode) {
+    const el = $('syncStatus');
+    if (!el) return;
+    el.textContent = text || '';
+    el.classList.toggle('is-syncing', mode === 'syncing');
+    el.classList.toggle('is-cached', mode === 'cached');
+  }
+
+  function getCachedRevision_() {
+    if (!state.data || !state.data.app) return '';
+    return String(state.data.app.contentRevision || '');
+  }
+
+  function checkForUpdatesInBackground() {
+    if (state.refreshing) return;
+    setSyncStatus('Checking updates…', 'syncing');
+
+    google.script.run
+      .withSuccessHandler(function(manifest) {
+        const serverRevision = manifest && manifest.contentRevision
+          ? String(manifest.contentRevision)
+          : '';
+        const localRevision = getCachedRevision_();
+
+        // Old cache without revision, or a real content change: refresh once.
+        if (!serverRevision || !localRevision || serverRevision !== localRevision) {
+          setSyncStatus('New content found · updating…', 'syncing');
+          refreshDataInBackground(true);
+          return;
+        }
+
+        setSyncStatus('Up to date', 'cached');
+        setTimeout(function() { setSyncStatus('', ''); }, 1400);
+      })
+      .withFailureHandler(function() {
+        // App remains fully usable from the saved payload.
+        setSyncStatus('Saved data', 'cached');
+      })
+      .getSpeakingCacheManifest();
+  }
+
+  function clearAptisSpeakingBootstrapCache_() {
+    const keys = [CLIENT_CACHE_KEY, CLIENT_CACHE_BACKUP_KEY].concat(LEGACY_CACHE_KEYS);
+    keys.forEach(function(key) {
+      try { localStorage.removeItem(key); } catch (e) {}
+    });
+  }
+
+  function forceRefreshFromButton() {
+    if (state.refreshing) {
+      toast('A refresh is already running.');
+      return;
+    }
+
+    stopTimer(true);
+    stopSpeech();
+
+    // Delete ONLY this app's Speaking payload cache.
+    // Preferences such as accent, voice and active Part are preserved.
+    clearAptisSpeakingBootstrapCache_();
+
+    state.refreshing = true;
+    setLoadingVisible(false);
+    $('errorView').classList.add('hidden');
+    setSyncStatus('Force refreshing…', 'syncing');
+
+    google.script.run
+      .withSuccessHandler(function(data) {
+        state.refreshing = false;
+        setLoadingVisible(false);
+
+        if (!isValidBootstrap(data)) {
+          onError(new Error('Speaking data returned an invalid payload.'), { background: Boolean(state.data) });
+          return;
+        }
+
+        writeBootstrapCache(data);
+        applyBootstrap(data, { fromCache: false, background: true });
+        setSyncStatus('Updated just now', 'cached');
+        toast('Speaking content updated.');
+        setTimeout(function() { setSyncStatus('', ''); }, 1800);
+      })
+      .withFailureHandler(function(err) {
+        state.refreshing = false;
+        setLoadingVisible(false);
+
+        // Keep the already-rendered in-memory copy if refresh fails.
+        if (state.data) {
+          writeBootstrapCache(state.data);
+          setSyncStatus('Refresh failed · using current data', 'cached');
+          toast('Could not refresh. Current data is still available.');
+          return;
+        }
+        onError(err, { background: false });
+      })
+      .forceRefreshSpeaking();
+  }
+
+  function loadData(options) {
+    const opts = options || {};
+    const blocking = opts.blocking !== false && !state.data;
+    stopTimer(true);
+    stopSpeech();
+
+    if (blocking) {
+      setLoadingVisible(true);
+      $('skillHomeView').classList.add('hidden');
+      $('homeView').classList.add('hidden');
+      $('studyView').classList.add('hidden');
+      $('progressView').classList.add('hidden');
+    } else {
+      setLoadingVisible(false);
+      setSyncStatus('Refreshing', 'syncing');
+    }
+    $('errorView').classList.add('hidden');
+    state.refreshing = true;
+
+    // A loader should never occupy the screen forever. If Apps Script is slow,
+    // try the last-good cache and keep the server request running in background.
+    const watchdog = blocking ? setTimeout(function() {
+      if (state.data) {
+        setLoadingVisible(false);
+        return;
+      }
+      const fallback = readBootstrapCache(true);
+      if (fallback && fallback.data) {
+        state.hydratedFromCache = true;
+        applyBootstrap(fallback.data, { fromCache: true, stale: true });
+        setSyncStatus('Saved data · syncing', 'cached');
+      } else {
+        setLoadingVisible(false);
+        setSyncStatus('Still syncing…', 'syncing');
+      }
+    }, LOADER_WATCHDOG_MS) : null;
+
+    google.script.run
+      .withSuccessHandler(function(data) {
+        if (watchdog) clearTimeout(watchdog);
+        onBootstrap(data, { background: !blocking });
+      })
+      .withFailureHandler(function(err) {
+        if (watchdog) clearTimeout(watchdog);
+        onError(err, { background: !blocking });
+      })
+      .getBootstrapData(Boolean(opts.force));
+  }
+
+  function refreshDataInBackground(force) {
+    if (state.refreshing) return;
+    loadData({ force: Boolean(force), blocking: false });
+  }
+
+  function onBootstrap(data, options) {
+    state.refreshing = false;
+    setLoadingVisible(false);
+    if (!isValidBootstrap(data)) {
+      onError(new Error('Speaking data returned an invalid payload.'), { background: Boolean(state.data) });
+      return;
+    }
+    writeBootstrapCache(data);
+    applyBootstrap(data, { fromCache: false, background: options && options.background });
+    if (Array.isArray(data.part3) && data.part3.length >= 32) schedulePart3MediaPreparation_();
+    setSyncStatus('Up to date', 'cached');
+    setTimeout(function() { setSyncStatus('', ''); }, 1600);
+  }
+
+  function applyBootstrap(data, meta) {
+    // Always close blocking UI first, even if the payload is rejected.
+    setLoadingVisible(false);
+    if (!isValidBootstrap(data)) return false;
+    state.data = data;
+    $('appTitle').textContent = data.app.title || 'APTIS B2 Coach';
+    $('errorView').classList.add('hidden');
+    switchPart(state.activePart, true);
+    renderProgressDashboard();
+    renderSkillHome();
+    showHome();
+    if (meta && meta.fromCache) {
+      setSyncStatus(meta.stale ? 'Saved data · refreshing' : 'Saved data', 'cached');
+    }
+    return true;
+  }
+
+  function isValidBootstrap(data) {
+    return Boolean(data && data.app && Array.isArray(data.part1) && Array.isArray(data.part2) && Array.isArray(data.part3));
+  }
+
+  function onError(err, options) {
+    state.refreshing = false;
+    setLoadingVisible(false);
+
+    // Never replace already-rendered cached data with a blocking error screen.
+    if (state.data) {
+      $('errorView').classList.add('hidden');
+      setSyncStatus('Using saved data', 'cached');
+      toast('Could not refresh. Using saved data.');
+      return;
+    }
+
+    const fallback = readBootstrapCache(true);
+    if (fallback && fallback.data && applyBootstrap(fallback.data, { fromCache: true, stale: true })) {
+      setSyncStatus('Using saved data', 'cached');
+      return;
+    }
+
+    $('errorView').classList.remove('hidden');
+    $('errorText').textContent = safeError(err);
+  }
+
+  function readBootstrapCache(allowVeryStale) {
+    const keys = [CLIENT_CACHE_KEY, CLIENT_CACHE_BACKUP_KEY].concat(LEGACY_CACHE_KEYS);
+    for (let i = 0; i < keys.length; i++) {
+      try {
+        const raw = localStorage.getItem(keys[i]);
+        if (!raw) continue;
+        const box = JSON.parse(raw);
+        if (!box || !box.data || !box.savedAt || !isValidBootstrap(box.data)) continue;
+        const age = Date.now() - Number(box.savedAt);
+        const maxAge = allowVeryStale ? CLIENT_CACHE_STALE_MS : CLIENT_CACHE_STALE_MS;
+        if (age > maxAge) continue;
+        return { data: box.data, stale: age > CLIENT_CACHE_FRESH_MS, savedAt: Number(box.savedAt), key: keys[i] };
+      } catch (e) {}
+    }
+    return null;
+  }
+
+  function writeBootstrapCache(data) {
+    if (!isValidBootstrap(data)) return;
+    const payload = JSON.stringify({ savedAt: Date.now(), data: data });
+    try { localStorage.setItem(CLIENT_CACHE_KEY, payload); } catch (e) {}
+    try { localStorage.setItem(CLIENT_CACHE_BACKUP_KEY, payload); } catch (e) {}
+  }
+
+  function persistCurrentBootstrapCache() {
+    if (state.data) writeBootstrapCache(state.data);
+  }
+
+
+  function switchPart(part, keepHome) {
+    state.activePart = [1,2,3].includes(Number(part)) ? Number(part) : 1;
+    writeLocal('aptisActivePart', String(state.activePart));
+    state.items = state.activePart === 3 ? (state.data.part3 || []) : (state.activePart === 2 ? (state.data.part2 || []) : (state.data.part1 || []));
+    state.currentPrompt = 1;
+    state.quickQueue = [];
+    state.quickPosition = -1;
+
+    $$('.part-tab').forEach(btn => btn.classList.toggle('active', Number(btn.dataset.part) === state.activePart));
+    updatePartCopy();
+    renderSummary();
+    renderList();
+    renderProgressDashboard();
+    setActiveNav(state.activePart === 3 ? 'part3' : (state.activePart === 2 ? 'part2' : 'part1'));
+
+    if (!keepHome) showPartHome();
+  }
+
+  function updatePartCopy() {
+    if (state.activePart === 1) {
+      $('heroPill').textContent = 'Speaking Part 1';
+      $('heroTitle').textContent = 'Small practice. Stronger answers.';
+      $('heroText').textContent = 'Build the core sentence first, then speak naturally for 30 seconds.';
+      $('libraryTitle').textContent = '29 personal questions';
+      $('progressLabel').textContent = 'mastered';
+    } else if (state.activePart === 2) {
+      $('heroPill').textContent = 'Speaking Part 2';
+      $('heroTitle').textContent = 'See it. Structure it. Speak for 45 seconds.';
+      $('heroText').textContent = 'Practise 30 exam-based picture types. For now, focus only on describing the picture clearly for 45 seconds.';
+      $('libraryTitle').textContent = (state.items.length || 0) + ' photo topics';
+      $('progressLabel').textContent = 'topics mastered';
+    } else {
+      $('heroPill').textContent = 'Speaking Part 3';
+      $('heroTitle').textContent = 'Compare clearly. Explain naturally.';
+      $('heroText').textContent = 'Compare two pictures using one reusable 45-second framework: common point, picture 1, picture 2 and difference.';
+      $('libraryTitle').textContent = (state.items.length || 0) + ' comparison topics';
+      $('progressLabel').textContent = 'topics mastered';
+    }
+  }
+
+  function computeSummary() {
+    let learned = 0, due = 0, favorite = 0, weak = 0;
+    state.items.forEach(item => {
+      const p = item.progress || {};
+      if (p.status === 'learned') learned++;
+      if (p.favorite) favorite++;
+      if (isDue(p)) due++;
+      if (Number(p.reviewCount || 0) > 0 && Number(p.rating || 0) > 0 && Number(p.rating || 0) <= 2) weak++;
+    });
+    return { learned, due, favorite, weak, percent: state.items.length ? Math.round(learned / state.items.length * 100) : 0 };
+  }
+
+  function renderSummary() {
+    const s = computeSummary();
+    $('learnedCount').textContent = s.learned;
+    $('dueCount').textContent = s.due;
+    $('favoriteCount').textContent = s.favorite;
+    $('weakCount').textContent = s.weak;
+    $('progressPct').textContent = s.percent + '%';
+    $('progressRing').style.background = 'conic-gradient(var(--primary) ' + (s.percent * 3.6) + 'deg, #e7ebf3 0deg)';
+    $('reviewDueBtn').textContent = s.due ? 'Review ' + s.due + ' due →' : 'Review plan →';
+  }
+
+  function renderList() {
+    const list = $('questionList');
+    const filter = $('filterSelect').value;
+    const query = normalize($('searchInput').value);
+    list.innerHTML = '';
+
+    let visible = 0;
+    state.items.forEach((item, index) => {
+      const p = item.progress || {};
+      const searchable = state.activePart === 1 ? item.question : [item.topic].concat(item.questions || []).join(' ');
+
+      if (query && normalize(searchable).indexOf(query) < 0) return;
+      if (!matchesFilter(p, filter)) return;
+      visible++;
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'question-item' + (state.activePart >= 2 ? ' part2-card' : '');
+      btn.addEventListener('click', () => openItem(index));
+
+      const num = document.createElement('div');
+      if (state.activePart >= 2) {
+        num.className = 'topic-thumb';
+        const thumbUrl = state.activePart === 3 ? resolveImageAssetUrl(item.imageA) : resolveImageUrl(item);
+        if (thumbUrl) {
+          num.style.backgroundImage = 'url("' + thumbUrl.replace(/"/g, '%22') + '")';
+          num.setAttribute('aria-label', state.activePart === 3 ? ((item.imageA && item.imageA.imageAlt) || item.topic || 'Topic image') : (item.imageAlt || item.topic || 'Topic image'));
+        } else {
+          num.classList.add('fallback');
+          num.textContent = state.activePart === 3 ? ((item.imageA && item.imageA.sceneIcon) || '🖼️') : (item.sceneIcon || '🖼️');
+        }
+      } else {
+        num.className = 'qnum';
+        num.textContent = String(index + 1).padStart(2, '0');
+      }
+
+      const body = document.createElement('div');
+      const title = document.createElement('div');
+      title.className = 'qtext';
+      title.textContent = state.activePart === 1 ? item.question : item.topic;
+
+      const meta = document.createElement('div');
+      meta.className = 'qmeta';
+      if (state.activePart === 1) {
+        meta.textContent = item.tense || 'Speaking Part 1';
+      } else {
+        const mastered = Number(p.masteredPrompts || 0);
+        const totalPrompts = Number(p.totalPrompts || ((item.promptProgress || []).length || 1));
+        meta.textContent = mastered + '/' + totalPrompts + (totalPrompts === 1 ? ' response mastered · 45 seconds' : ' responses mastered · 45 seconds each');
+        const dots = document.createElement('div');
+        dots.className = 'topic-progress';
+        (item.promptProgress || []).forEach(pp => {
+          const d = document.createElement('span');
+          d.className = 'prompt-dot ' + (pp.status === 'learned' ? 'done' : (pp.status === 'learning' ? 'learning' : ''));
+          dots.appendChild(d);
+        });
+        meta.appendChild(dots);
+      }
+      body.appendChild(title); body.appendChild(meta);
+
+      const right = document.createElement('div');
+      right.innerHTML = '<div class="status-dot ' + escapeHtml(p.status || 'new') + '"></div>' + (p.favorite ? '<div class="qfav">★</div>' : '');
+
+      btn.appendChild(num); btn.appendChild(body); btn.appendChild(right);
+      list.appendChild(btn);
+    });
+
+    if (!visible) {
+      const empty = document.createElement('div');
+      empty.className = 'empty-state';
+      empty.textContent = 'No practice items match this filter.';
+      list.appendChild(empty);
+    }
+  }
+
+  function matchesFilter(p, filter) {
+    if (filter === 'all') return true;
+    if (filter === 'new') return (p.status || 'new') === 'new';
+    if (filter === 'learning') return p.status === 'learning';
+    if (filter === 'learned') return p.status === 'learned';
+    if (filter === 'due') return isDue(p);
+    if (filter === 'weak') return Number(p.reviewCount || 0) > 0 && Number(p.rating || 0) > 0 && Number(p.rating || 0) <= 2;
+    if (filter === 'favorite') return Boolean(p.favorite);
+    return true;
+  }
+
+  function openItem(index) {
+    state.currentIndex = clamp(index, 0, state.items.length - 1);
+    state.currentPrompt = 1;
+    state.currentMode = 'learn';
+    state.memorizeLevel = 1;
+    stopSpeech();
+    stopTimer(true);
+
+    $('skillHomeView').classList.add('hidden');
+    $('homeView').classList.add('hidden');
+    $('studyView').classList.remove('hidden');
+    renderCurrentItem();
+    window.scrollTo({top: 0, behavior: 'smooth'});
+  }
+
+  function renderCurrentItem() {
+    const item = currentItem();
+    if (!item) return;
+
+    const p = item.progress || {};
+    $('statusBadge').textContent = statusLabel(p.status);
+    $('favoriteBtn').textContent = p.favorite ? '★' : '☆';
+    $('favoriteBtn').classList.toggle('active', Boolean(p.favorite));
+
+    const isP2 = state.activePart === 2;
+    const isP3 = state.activePart === 3;
+    const multi = state.activePart >= 2;
+    $('part2Visual').classList.toggle('hidden', !isP2);
+    $('part3Visual').classList.toggle('hidden', !isP3);
+    $('promptStepper').classList.add('hidden');
+    $('part2FrameworkBlock').classList.toggle('hidden', !isP2);
+    $('part3FrameworkBlock').classList.toggle('hidden', !isP3);
+    $('part1Hints').classList.toggle('hidden', multi);
+    $('part1FrameworkBlock').classList.toggle('hidden', multi);
+    $('coreBlock').classList.add('hidden');
+
+    if (isP2) {
+      $('questionNumber').textContent = 'Part 2 · Topic ' + (state.currentIndex + 1) + '/' + state.items.length;
+      renderPart2Image(item);
+      $('part2MustSay').textContent = item.mustSay || '';
+      $('part2SayMore').textContent = item.sayMore || '';
+      $('fullAnswerLabel').textContent = 'Full 45-second answer';
+      $('structureBlock').classList.remove('hidden');
+    } else if (isP3) {
+      $('questionNumber').textContent = 'Part 3 · Topic ' + (state.currentIndex + 1) + '/' + state.items.length;
+      renderPart3Images(item);
+      $('part3ComparisonAxis').textContent = item.comparisonAxis || item.commonPoint || '';
+      $('part3Common').textContent = item.mustCommon || '';
+      $('part3PictureA').textContent = item.mustPictureA || '';
+      $('part3PictureB').textContent = item.mustPictureB || '';
+      $('part3Difference').textContent = item.mustDifference || '';
+      $('part3SayMore').textContent = item.sayMore || '';
+      $('fullAnswerLabel').textContent = 'Full 45-second answer';
+      $('structureBlock').classList.remove('hidden');
+    } else {
+      $('questionNumber').textContent = 'Part 1 · Question ' + (state.currentIndex + 1) + '/' + state.items.length;
+      $('tenseSignal').textContent = item.tenseSignal || '—';
+      $('tenseName').textContent = item.tense || '—';
+      $('coreAnswer').textContent = item.core || '';
+      $('answerTypeBadge').textContent = item.answerType || 'Focus → Expand → Reason';
+      $('focusAnswer').textContent = item.focus || item.core || '';
+      $('expandAnswer').textContent = item.expand || '';
+      $('reasonAnswer').textContent = item.reason || '';
+      $('fullAnswerLabel').textContent = 'Full 30-second answer';
+      $('structureBlock').classList.add('hidden');
+    }
+
+    renderPromptContent();
+    setMode('learn');
+    setMemorizeLevel(1);
+    syncFooter();
+  }
+
+  function renderPart2Image(item) {
+    $('sceneIcon').textContent = item.sceneIcon || '🖼️';
+    $('imageAlt').textContent = item.imageAlt || item.topic || 'Speaking Part 2 practice image';
+    const url = resolveImageUrl(item);
+    const img = $('sceneImage');
+    const placeholder = $('imagePlaceholder');
+
+    img.onerror = function() {
+      img.classList.add('hidden');
+      placeholder.classList.remove('hidden');
+    };
+
+    if (url) {
+      img.src = url;
+      img.alt = item.imageAlt || item.topic || '';
+      img.classList.remove('hidden');
+      placeholder.classList.add('hidden');
+    } else {
+      img.removeAttribute('src');
+      img.classList.add('hidden');
+      placeholder.classList.remove('hidden');
+    }
+  }
+
+  function resolveImageUrl(item) {
+    if (item.imageUrl && /^https?:\/\//i.test(item.imageUrl)) return item.imageUrl;
+    if (item.imageDriveId) return 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(item.imageDriveId) + '&sz=w1200';
+    return '';
+  }
+
+  function resolveImageAssetUrl(asset) {
+    if (!asset) return '';
+    if (asset.imageUrl && /^https?:\/\//i.test(asset.imageUrl)) return asset.imageUrl;
+    if (asset.imageDriveId) return 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(asset.imageDriveId) + '&sz=w1200';
+    return '';
+  }
+
+  function renderPart3Images(item) {
+    renderCompareImage('A', item.imageA || {});
+    renderCompareImage('B', item.imageB || {});
+  }
+
+  function renderCompareImage(slot, asset) {
+    const img = $('p3Image' + slot);
+    const ph = $('p3Placeholder' + slot);
+    $('p3Icon' + slot).textContent = asset.sceneIcon || '🖼️';
+    $('p3Alt' + slot).textContent = asset.imageAlt || 'Comparison image';
+    const url = resolveImageAssetUrl(asset);
+    img.onerror = function() { img.classList.add('hidden'); ph.classList.remove('hidden'); };
+    if (url) {
+      img.src = url; img.alt = asset.imageAlt || ''; img.classList.remove('hidden'); ph.classList.add('hidden');
+    } else {
+      img.removeAttribute('src'); img.classList.add('hidden'); ph.classList.remove('hidden');
+    }
+  }
+
+  function renderPromptStepper() {
+    const labels = state.activePart === 3
+      ? ['1 · Describe both', '2 · Compare', '3 · Opinion']
+      : ['1 · Describe', '2 · Experience', '3 · Opinion'];
+    $$('.prompt-step').forEach((btn, i) => {
+      btn.classList.toggle('active', Number(btn.dataset.prompt) === state.currentPrompt);
+      btn.textContent = labels[i] || btn.textContent;
+    });
+  }
+
+  function setPrompt(n) {
+    if (state.activePart < 2) return;
+    const item = currentItem();
+    const maxPrompts = Math.max(1, (item && item.questions ? item.questions.length : 1));
+    state.currentPrompt = clamp(n, 1, maxPrompts);
+    stopSpeech();
+    stopTimer(true);
+    renderPromptStepper();
+    renderPromptContent();
+    setMode('learn');
+  }
+
+  function renderPromptContent() {
+    const item = currentItem();
+    if (!item) return;
+
+    $('questionText').textContent = currentQuestionText();
+    $('modelAnswer').textContent = currentModel();
+    $('structureText').textContent = currentStructure();
+    renderKeywords(currentKeywords());
+    renderShadow();
+    renderMemorize();
+    resetTimerDisplay();
+
+    $('testLabel').textContent = state.activePart === 3 ? 'APTIS PART 3 · COMPARE TWO PICTURES' : (state.activePart === 2 ? 'APTIS PART 2 · PICTURE DESCRIPTION' : 'APTIS PART 1 PRACTICE');
+
+    const seconds = currentTimerSeconds();
+    $('testInstruction').textContent = state.activePart === 2
+      ? 'Describe the picture for up to ' + seconds + ' seconds. Say the yellow MUST SAY block first; add the blue SAY MORE ideas only if there is time.'
+      : (state.activePart === 3
+        ? 'Compare the two pictures for up to ' + seconds + ' seconds. Follow COMMON → PICTURE 1 → PICTURE 2 → DIFFERENCE first; add the blue SAY MORE idea only if there is time.'
+        : 'Answer aloud without reading the model. Keep speaking until the timer ends.');
+    $('startTimerBtn').textContent = 'Start ' + seconds + '-second test';
+    $('showAnswerAfterTest').textContent = 'Show model answer';
+    $('showAnswerAfterTest').disabled = false;
+  }
+
+  function renderKeywords(text) {
+    const box = $('keywords');
+    box.innerHTML = '';
+    splitKeywords(text).forEach(k => {
+      const chip = document.createElement('span');
+      chip.className = 'keyword-chip';
+      chip.textContent = k;
+      box.appendChild(chip);
+    });
+  }
+
+  function renderShadow() {
+    const box = $('shadowSentences');
+    box.innerHTML = '';
+    splitSentences(currentModel()).forEach(sentence => {
+      const row = document.createElement('div');
+      row.className = 'shadow-sentence';
+      const btn = document.createElement('button');
+      btn.type = 'button'; btn.textContent = '▶';
+      btn.addEventListener('click', () => speakText(sentence));
+      const div = document.createElement('div');
+      div.textContent = sentence;
+      row.appendChild(btn); row.appendChild(div); box.appendChild(row);
+    });
+  }
+
+  async function shadowAll() {
+    stopSpeech();
+    const sentences = splitSentences(currentModel());
+    for (const sentence of sentences) {
+      try {
+        await speakTextPromise(sentence);
+        await wait(800);
+      } catch (e) { break; }
+    }
+  }
+
+  function setMode(mode) {
+    state.currentMode = mode;
+    $$('.mode-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
+    ['learn','shadow','memorize','test'].forEach(name => $(name + 'Mode').classList.toggle('hidden', name !== mode));
+    if (mode === 'test') resetTimerDisplay();
+  }
+
+  function setMemorizeLevel(level) {
+    state.memorizeLevel = level;
+    $$('.level-btn').forEach(btn => btn.classList.toggle('active', Number(btn.dataset.level) === level));
+    renderMemorize();
+  }
+
+  function renderMemorize() {
+    const model = currentModel();
+    let text = model;
+    if (state.memorizeLevel === 1) text = makeCloze(model, 5);
+    else if (state.memorizeLevel === 2) text = makeCloze(model, 3);
+    else if (state.memorizeLevel === 3) text = currentKeywords();
+    else if (state.memorizeLevel === 4) text = 'Speak from memory. No text support.';
+    $('memorizeText').textContent = text;
+  }
+
+  function makeCloze(text, everyN) {
+    let count = 0;
+    return String(text || '').replace(/[A-Za-z][A-Za-z'-]*/g, word => {
+      count++;
+      if (word.length <= 2) return word;
+      return count % everyN === 0 ? '_____' : word;
+    });
+  }
+
+  function currentItem() { return state.items[state.currentIndex] || null; }
+  function currentQuestionText() {
+    const item = currentItem();
+    return state.activePart >= 2 ? (item.questions[state.currentPrompt - 1] || '') : (item.question || '');
+  }
+  function currentModel() {
+    const item = currentItem();
+    return state.activePart >= 2 ? (item.models[state.currentPrompt - 1] || '') : (item.model || '');
+  }
+  function currentKeywords() {
+    const item = currentItem();
+    return state.activePart >= 2 ? (item.keywords[state.currentPrompt - 1] || '') : (item.keywords || '');
+  }
+  function currentStructure() {
+    const item = currentItem();
+    return state.activePart >= 2 ? (item.structures[state.currentPrompt - 1] || '') : '';
+  }
+  function currentProgress() {
+    const item = currentItem();
+    if (state.activePart >= 2) {
+      const prompts = item.promptProgress || [];
+      return prompts[state.currentPrompt - 1] || prompts[0] || item.progress || {};
+    }
+    return item.progress;
+  }
+  function currentProgressId() {
+    const item = currentItem();
+    return state.activePart >= 2 ? item.id + '-' + state.currentPrompt : item.id;
+  }
+  function currentTimerSeconds() {
+    if (!state.data || !state.data.app || !state.data.app.timers) return state.activePart >= 2 ? 45 : 30;
+    if (state.activePart === 3) return Number(state.data.app.timers.part3 || 45);
+    return state.activePart === 2 ? Number(state.data.app.timers.part2 || 45) : Number(state.data.app.timers.part1 || 30);
+  }
+
+  function saveProgress(rating, status) {
+    const item = currentItem();
+    const p = currentProgress() || {};
+    const id = currentProgressId();
+
+    google.script.run
+      .withSuccessHandler(result => {
+        if (state.activePart >= 2) {
+          item.promptProgress[state.currentPrompt - 1] = result.progress;
+          recalcPart2Aggregate(item);
+        } else {
+          item.progress = result.progress;
+        }
+        renderSummary();
+        $('statusBadge').textContent = statusLabel(item.progress.status);
+        renderList();
+        persistCurrentBootstrapCache();
+        toast(status === 'learned' ? 'Marked as learned.' : 'Progress saved.');
+      })
+      .withFailureHandler(err => toast('Could not save progress: ' + safeError(err)))
+      .saveQuestionProgress({
+        questionId: id,
+        status: status,
+        rating: rating,
+        reviewCount: Number(p.reviewCount || 0),
+        note: p.note || '',
+        favorite: false
+      });
+  }
+
+  function finishSelfRating(rating) {
+    const item = currentItem();
+    const p = currentProgress() || {};
+    const id = currentProgressId();
+    const seconds = currentTimerSeconds();
+    const completedFullTime = state.timerElapsed >= seconds - 1;
+    const status = rating >= 5 ? 'learned' : 'learning';
+
+    google.script.run.withFailureHandler(() => {}).saveAttempt({
+      questionId: id,
+      elapsedSeconds: Math.round(state.timerElapsed),
+      selfRating: rating,
+      completedFullTime: completedFullTime,
+      note: '',
+      part: state.activePart,
+      promptIndex: state.activePart >= 2 ? state.currentPrompt : 0
+    });
+
+    google.script.run
+      .withSuccessHandler(result => {
+        if (state.activePart >= 2) {
+          item.promptProgress[state.currentPrompt - 1] = result.progress;
+          recalcPart2Aggregate(item);
+        } else {
+          item.progress = result.progress;
+        }
+        renderSummary();
+        renderList();
+        $('statusBadge').textContent = statusLabel(item.progress.status);
+        resetTimerDisplay();
+        persistCurrentBootstrapCache();
+        toast('Saved. Next review scheduled.');
+        const maxPrompts = state.activePart >= 2 ? Math.max(1, (item.questions || []).length) : 1;
+        if (state.activePart >= 2 && state.currentPrompt < maxPrompts && rating >= 3) {
+          setTimeout(() => {
+            setPrompt(state.currentPrompt + 1);
+            toast('Next response · ' + state.currentPrompt + '/' + maxPrompts);
+          }, 400);
+        } else if (state.quickQueue.length && state.quickPosition >= 0) {
+          setTimeout(advanceQuickStudy, 400);
+        }
+      })
+      .withFailureHandler(err => toast('Could not save progress: ' + safeError(err)))
+      .saveQuestionProgress({
+        questionId: id,
+        status: status,
+        rating: rating,
+        reviewCount: Number(p.reviewCount || 0),
+        note: p.note || '',
+        favorite: false
+      });
+  }
+
+  function recalcPart2Aggregate(item) {
+    const prompts = item.promptProgress || [];
+    const learned = prompts.filter(p => p.status === 'learned').length;
+    const reviewed = prompts.reduce((sum,p) => sum + Number(p.reviewCount || 0), 0);
+    const ratings = prompts.map(p => Number(p.rating || 0)).filter(Boolean);
+    const dates = prompts.map(p => p.nextReview).filter(Boolean).sort();
+    item.progress = {
+      questionId: item.id,
+      status: learned === prompts.length && prompts.length ? 'learned' : (reviewed > 0 ? 'learning' : 'new'),
+      rating: ratings.length ? Math.min.apply(null, ratings) : 0,
+      reviewCount: reviewed,
+      nextReview: dates[0] || '',
+      favorite: Boolean((item.progress || {}).favorite),
+      masteredPrompts: learned,
+      totalPrompts: prompts.length
+    };
+  }
+
+  function toggleFavorite() {
+    const item = currentItem();
+    const next = !Boolean((item.progress || {}).favorite);
+    $('favoriteBtn').disabled = true;
+    google.script.run
+      .withSuccessHandler(result => {
+        item.progress.favorite = result.progress.favorite;
+        $('favoriteBtn').disabled = false;
+        $('favoriteBtn').textContent = item.progress.favorite ? '★' : '☆';
+        $('favoriteBtn').classList.toggle('active', item.progress.favorite);
+        renderSummary(); renderList();
+        persistCurrentBootstrapCache();
+        toast(next ? 'Saved to Favorites.' : 'Removed from Favorites.');
+      })
+      .withFailureHandler(err => { $('favoriteBtn').disabled = false; toast('Could not update Favorite: ' + safeError(err)); })
+      .setQuestionFavorite(item.id, next);
+  }
+
+  function continueLearning() {
+    let index = state.items.findIndex(item => isDue(item.progress));
+    if (index < 0) index = state.items.findIndex(item => (item.progress || {}).status === 'learning');
+    if (index < 0) index = state.items.findIndex(item => (item.progress || {}).status !== 'learned');
+    if (index < 0) index = 0;
+    openItem(index);
+  }
+
+  function startQuickStudy() {
+    const due = indexedItems(item => isDue(item.progress));
+    const weak = indexedItems(item => {
+      const p = item.progress || {};
+      return Number(p.reviewCount || 0) > 0 && Number(p.rating || 0) > 0 && Number(p.rating || 0) <= 2;
+    });
+    const fresh = indexedItems(item => (item.progress || {}).status !== 'learned');
+    const combined = uniqueByIndex(due.concat(weak, shuffle(fresh)));
+    const pool = combined.length ? combined : state.items.map((item, i) => ({item, i}));
+    state.quickQueue = pool.slice(0, 5).map(x => x.i);
+    state.quickPosition = 0;
+    openItem(state.quickQueue[0]);
+    setMode('test');
+    toast('Quick Review · 1/' + state.quickQueue.length);
+  }
+
+  function advanceQuickStudy() {
+    if (!state.quickQueue.length) return;
+    state.quickPosition++;
+    if (state.quickPosition >= state.quickQueue.length) {
+      state.quickQueue = []; state.quickPosition = -1;
+      showHome(); toast('Quick Review complete.');
+      return;
+    }
+    openItem(state.quickQueue[state.quickPosition]);
+    setMode('test');
+    toast('Quick Review · ' + (state.quickPosition + 1) + '/' + state.quickQueue.length);
+  }
+
+  function startDueReview() {
+    const due = indexedItems(item => isDue(item.progress));
+    if (!due.length) { toast('Nothing is due right now.'); return; }
+    state.quickQueue = due.map(x => x.i);
+    state.quickPosition = 0;
+    openItem(state.quickQueue[0]);
+    setMode('test');
+  }
+
+  function applyFilter(filter) {
+    $('filterSelect').value = filter;
+    $('searchInput').value = '';
+    renderList();
+    document.querySelector('.library-section').scrollIntoView({behavior:'smooth', block:'start'});
+  }
+
+  function navigateItem(delta) {
+    const next = clamp(state.currentIndex + delta, 0, state.items.length - 1);
+    if (next !== state.currentIndex) openItem(next);
+  }
+
+  function syncFooter() {
+    $('prevQuestionBtn').disabled = state.currentIndex <= 0;
+    $('nextQuestionBtn').disabled = state.currentIndex >= state.items.length - 1;
+    $('markLearnedBtn').textContent = state.activePart >= 2 ? '✓ Master this response' : '✓ Mark learned';
+  }
+
+  function showHome() {
+    stopSpeech(); stopTimer(true);
+    $('studyView').classList.add('hidden');
+    $('progressView').classList.add('hidden');
+    $('homeView').classList.add('hidden');
+    $('skillHomeView').classList.remove('hidden');
+    renderSkillHome();
+    setActiveNav('home');
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+
+  function showPartHome() {
+    stopSpeech(); stopTimer(true);
+    $('skillHomeView').classList.add('hidden');
+    $('studyView').classList.add('hidden');
+    $('progressView').classList.add('hidden');
+    $('homeView').classList.remove('hidden');
+    renderSummary();
+    renderList();
+    setActiveNav(state.activePart === 3 ? 'part3' : (state.activePart === 2 ? 'part2' : 'part1'));
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+
+  function openPartHome(part) {
+    if (![1,2,3].includes(Number(part))) return;
+    switchPart(Number(part), true);
+    showPartHome();
+  }
+
+  function renderSkillHome() {
+    if (!state.data) return;
+    const p1 = summarizeItems(state.data.part1 || []);
+    const p2 = summarizeItems(state.data.part2 || []);
+    const p3 = summarizeItems(state.data.part3 || []);
+    const all = [p1,p2,p3];
+    const total = all.reduce((sum,p) => sum + p.total, 0);
+    const learned = all.reduce((sum,p) => sum + p.learned, 0);
+    const due = all.reduce((sum,p) => sum + p.due, 0);
+    const weak = all.reduce((sum,p) => sum + p.weak, 0);
+    const pct = total ? Math.round(learned / total * 100) : 0;
+
+    $('skillMasteredPct').textContent = pct + '%';
+    $('skillDueCount').textContent = due;
+    $('skillWeakCount').textContent = weak;
+
+    [p1,p2,p3].forEach((p,idx) => {
+      const n = idx + 1;
+      $('skillP' + n + 'Pct').textContent = p.percent + '%';
+      $('skillP' + n + 'Bar').style.width = p.percent + '%';
+    });
+    $('skillP1Meta').textContent = p1.total + ' personal questions · 30 seconds';
+    $('skillP2Meta').textContent = p2.total + ' photo topics · 45 seconds';
+    $('skillP3Meta').textContent = p3.total + ' comparison topics · 45 seconds';
+
+    const rec = speakingRecommendation([p1,p2,p3]);
+    $('skillRecommendationTitle').textContent = rec.title;
+    $('skillRecommendationText').textContent = rec.text;
+    $('skillRecommendationBtn').dataset.part = String(rec.part);
+    $('skillRecommendationBtn').textContent = rec.label + ' →';
+  }
+
+  function speakingRecommendation(parts) {
+    for (let i = 0; i < parts.length; i++) {
+      if (parts[i].due > 0) return { part:i+1, label:'Review Part ' + (i+1), title:'Part ' + (i+1) + ' has items due now', text:'Review ' + parts[i].due + ' due item' + (parts[i].due === 1 ? '' : 's') + ' before starting something new.' };
+    }
+    for (let i = 0; i < parts.length; i++) {
+      if (parts[i].weak > 0) return { part:i+1, label:'Strengthen Part ' + (i+1), title:'Strengthen Part ' + (i+1), text:'You have ' + parts[i].weak + ' weaker item' + (parts[i].weak === 1 ? '' : 's') + ' that would benefit from another short practice.' };
+    }
+    const candidates = parts.map((p,i) => ({part:i+1,pct:p.percent,total:p.total})).filter(x => x.total > 0);
+    candidates.sort((a,b) => a.pct - b.pct || a.part - b.part);
+    const target = candidates[0] || {part:1,pct:0};
+    return { part:target.part, label:'Open Part ' + target.part, title:'Build Part ' + target.part + ' next', text:'Your review queue is clear. Add one new practice item and keep the session focused.' };
+  }
+
+  function openRecommendedSpeakingPart() {
+    const part = Number($('skillRecommendationBtn').dataset.part || 1);
+    openPartHome(part);
+  }
+
+  function startTimer() {
+    stopSpeech();
+    const total = currentTimerSeconds();
+    state.timerStartedAt = Date.now();
+    state.timerElapsed = 0;
+    state.timerRunning = true;
+    $('startTimerBtn').disabled = true;
+    $('stopTimerBtn').disabled = false;
+    $('selfCheck').classList.add('hidden');
+    tickTimer(total);
+    state.timerId = setInterval(() => tickTimer(total), 200);
+  }
+
+  function tickTimer(total) {
+    const elapsed = Math.min(total, (Date.now() - state.timerStartedAt) / 1000);
+    state.timerElapsed = elapsed;
+    const remaining = Math.max(0, total - elapsed);
+    $('timer').textContent = formatTime(Math.ceil(remaining));
+    $('timerBar').style.width = Math.max(0, remaining / total * 100) + '%';
+    if (remaining <= 0) stopTimer(false);
+  }
+
+  function stopTimer(silent) {
+    if (state.timerId) clearInterval(state.timerId);
+    state.timerId = null;
+    const wasRunning = state.timerRunning;
+    state.timerRunning = false;
+    $('startTimerBtn').disabled = false;
+    $('stopTimerBtn').disabled = true;
+    if (!silent && wasRunning) { $('selfCheck').classList.remove('hidden'); toast('Time. Rate your answer.'); }
+    if (silent) resetTimerDisplay();
+  }
+
+  function resetTimerDisplay() {
+    const total = currentTimerSeconds();
+    $('timer').textContent = formatTime(total);
+    $('timerBar').style.width = '100%';
+    $('selfCheck').classList.add('hidden');
+  }
+
+  function formatTime(seconds) {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  }
+
+  function initSpeechVoices() {
+    if (!('speechSynthesis' in window)) return;
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    $('accentSelect').value = state.audio.accent;
+    syncSpeedButtons();
+  }
+
+  function loadVoices() {
+    state.voices = window.speechSynthesis.getVoices() || [];
+    populateVoiceSelect();
+  }
+
+  function populateVoiceSelect() {
+    const select = $('voiceSelect');
+    const accent = state.audio.accent || 'en-GB';
+    let voices = state.voices.filter(v => accent === 'en' ? /^en/i.test(v.lang) : v.lang.toLowerCase().startsWith(accent.toLowerCase()));
+    if (!voices.length) voices = state.voices.filter(v => /^en/i.test(v.lang));
+    select.innerHTML = '';
+
+    if (!voices.length) {
+      const opt = document.createElement('option'); opt.value = ''; opt.textContent = 'Browser default English voice'; select.appendChild(opt); return;
+    }
+
+    voices.forEach(v => {
+      const opt = document.createElement('option'); opt.value = v.voiceURI || v.name; opt.textContent = v.name + ' · ' + v.lang; select.appendChild(opt);
+    });
+
+    const storedExists = voices.some(v => (v.voiceURI || v.name) === state.audio.voiceURI);
+    if (!storedExists) {
+      const preferred = voices.find(v => /google|microsoft|samantha|daniel|serena|natural/i.test(v.name)) || voices[0];
+      state.audio.voiceURI = preferred.voiceURI || preferred.name;
+      writeLocal('aptisVoiceURI', state.audio.voiceURI);
+    }
+    select.value = state.audio.voiceURI;
+  }
+
+  function selectedVoice() {
+    return state.voices.find(v => (v.voiceURI || v.name) === state.audio.voiceURI)
+      || state.voices.find(v => v.lang.toLowerCase().startsWith((state.audio.accent || 'en-GB').toLowerCase()))
+      || state.voices.find(v => /^en/i.test(v.lang))
+      || null;
+  }
+
+  function makeUtterance(text) {
+    const u = new SpeechSynthesisUtterance(text);
+    const voice = selectedVoice();
+    if (voice) { u.voice = voice; u.lang = voice.lang; }
+    else u.lang = state.audio.accent === 'en' ? 'en-GB' : state.audio.accent;
+    u.rate = clamp(Number(state.audio.rate || 0.9), 0.5, 1.4);
+    u.pitch = 1;
+    return u;
+  }
+
+  function speakText(text) {
+    if (!('speechSynthesis' in window)) return toast('Text-to-speech is not supported by this browser.');
+    stopSpeech(); window.speechSynthesis.speak(makeUtterance(text));
+  }
+
+  function speakTextPromise(text) {
+    return new Promise((resolve, reject) => {
+      if (!('speechSynthesis' in window)) return reject(new Error('No TTS'));
+      const u = makeUtterance(text); u.onend = resolve; u.onerror = reject; window.speechSynthesis.speak(u);
+    });
+  }
+
+  function stopSpeech() { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); }
+  function openAudioSheet() { $('accentSelect').value = state.audio.accent; populateVoiceSelect(); syncSpeedButtons(); $('audioSheet').classList.remove('hidden'); }
+  function closeAudioSheet() { stopSpeech(); $('audioSheet').classList.add('hidden'); }
+  function setSpeechRate(rate) { state.audio.rate = clamp(rate,0.5,1.4); writeLocal('aptisRate',String(state.audio.rate)); syncSpeedButtons(); }
+  function syncSpeedButtons() { $$('.speed-btn').forEach(btn => btn.classList.toggle('active', Number(btn.dataset.speed) === Number(state.audio.rate))); }
+
+
+  function summarizeItems(items) {
+    let learned = 0, due = 0, weak = 0, reviews = 0;
+    (items || []).forEach(item => {
+      const p = item.progress || {};
+      if (p.status === 'learned') learned++;
+      if (isDue(p)) due++;
+      if (Number(p.reviewCount || 0) > 0 && Number(p.rating || 0) > 0 && Number(p.rating || 0) <= 2) weak++;
+      reviews += Number(p.reviewCount || 0);
+    });
+    return {
+      total: (items || []).length,
+      learned, due, weak, reviews,
+      percent: (items || []).length ? Math.round(learned / items.length * 100) : 0
+    };
+  }
+
+  function renderProgressDashboard() {
+    if (!state.data) return;
+    const p1 = summarizeItems(state.data.part1 || []);
+    const p2 = summarizeItems(state.data.part2 || []);
+    const p3 = summarizeItems(state.data.part3 || []);
+    const total = p1.total + p2.total + p3.total;
+    const learned = p1.learned + p2.learned + p3.learned;
+    const pct = total ? Math.round(learned / total * 100) : 0;
+
+    $('overallMasteredPct').textContent = pct + '%';
+    $('overallMasteredText').textContent = learned + ' of ' + total + ' items';
+    $('overallDueCount').textContent = p1.due + p2.due + p3.due;
+    $('overallWeakCount').textContent = p1.weak + p2.weak + p3.weak;
+    $('overallReviewCount').textContent = p1.reviews + p2.reviews + p3.reviews;
+
+    $('p1ProgressPct').textContent = p1.percent + '%';
+    $('p1ProgressBar').style.width = p1.percent + '%';
+    $('p1Learned').textContent = p1.learned;
+    $('p1Due').textContent = p1.due;
+    $('p1Weak').textContent = p1.weak;
+
+    $('p2ProgressPct').textContent = p2.percent + '%';
+    $('p2ProgressBar').style.width = p2.percent + '%';
+    $('p2Learned').textContent = p2.learned;
+    $('p2Due').textContent = p2.due;
+    $('p2Weak').textContent = p2.weak;
+
+    $('p3ProgressPct').textContent = p3.percent + '%';
+    $('p3ProgressBar').style.width = p3.percent + '%';
+    $('p3Learned').textContent = p3.learned;
+    $('p3Due').textContent = p3.due;
+    $('p3Weak').textContent = p3.weak;
+
+    const due = p1.due + p2.due + p3.due;
+    const weak = p1.weak + p2.weak + p3.weak;
+    $('progressRecommendation').textContent = due
+      ? 'You have ' + due + ' item' + (due === 1 ? '' : 's') + ' due. Review those first, then add one new practice item.'
+      : weak
+        ? 'Nothing is due right now. Revisit ' + weak + ' weaker item' + (weak === 1 ? '' : 's') + ' before learning something new.'
+        : 'Your review queue is clear. Practise one new topic and keep the session short.';
+  }
+
+  function showProgress() {
+    stopSpeech(); stopTimer(true);
+    renderProgressDashboard();
+    $('skillHomeView').classList.add('hidden');
+    $('homeView').classList.add('hidden');
+    $('studyView').classList.add('hidden');
+    $('progressView').classList.remove('hidden');
+    setActiveNav('progress');
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+
+  function handleNav(nav) {
+    if (nav === 'audio') return openAudioSheet();
+    if (nav === 'part1') return switchPart(1);
+    if (nav === 'part2') return switchPart(2);
+    if (nav === 'part3') return switchPart(3);
+    if (nav === 'progress') return showProgress();
+    if (nav === 'home') return showHome();
+  }
+
+  function setActiveNav(nav) { $$('.nav-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.nav === nav)); }
+
+  function indexedItems(predicate) {
+    const out = [];
+    state.items.forEach((item,i) => { if (predicate(item)) out.push({item,i}); });
+    return out;
+  }
+
+  function isDue(p) {
+    if (!p || !p.nextReview) return false;
+    const d = new Date(p.nextReview);
+    return !isNaN(d.getTime()) && d.getTime() <= Date.now();
+  }
+
+  function statusLabel(status) {
+    return status === 'learned' ? 'Learned' : status === 'learning' ? 'Learning' : 'New';
+  }
+
+  function splitKeywords(text) { return String(text || '').split(/\||,|→/).map(x => x.trim()).filter(Boolean); }
+  function splitSentences(text) { return String(text || '').replace(/\n+/g,' ').match(/[^.!?]+[.!?]+|[^.!?]+$/g)?.map(s => s.trim()).filter(Boolean) || [String(text || '')]; }
+  function normalize(value) { return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
+  function safeError(err) { return !err ? 'Unknown error.' : (err.message || String(err)); }
+  function clamp(n,min,max) { return Math.max(min,Math.min(max,n)); }
+  function wait(ms) { return new Promise(resolve => setTimeout(resolve,ms)); }
+  function shuffle(arr) { const a = arr.slice(); for (let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+  function uniqueByIndex(items) { const seen={}; return items.filter(x => seen[x.i] ? false : (seen[x.i]=true)); }
+  function escapeHtml(s) { return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function readLocal(key,fallback) { try { const v=localStorage.getItem(key); return v===null ? fallback : v; } catch(e){ return fallback; } }
+  function writeLocal(key,value) { try { localStorage.setItem(key,value); } catch(e){} }
+
+  window.AptisSpeaking = { enter: enter, showHome: showHome };
+
+  let toastTimer = null;
+  function toast(message) {
+    const el = $('toast');
+    el.textContent = message;
+    el.classList.remove('hidden');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.add('hidden'), 2400);
+  }
+
+
+  let p3MediaPreparationStarted = false;
+  function schedulePart3MediaPreparation_() {
+    if (p3MediaPreparationStarted) return;
+    p3MediaPreparationStarted = true;
+    setTimeout(function() { preparePart3MediaBatchClient_(0); }, 1000);
+  }
+
+  function preparePart3MediaBatchClient_(startIndex) {
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (!result || result.ok === false) {
+          p3MediaPreparationStarted = false;
+          return;
+        }
+        if (!result.done) {
+          setSyncStatus('Preparing Part 3 images…', 'syncing');
+          setTimeout(function() { preparePart3MediaBatchClient_(result.nextIndex || 0); }, 350);
+        } else {
+          setSyncStatus('Part 3 images ready', 'cached');
+          // Refresh once so newly-created Drive IDs appear in thumbnails/cards.
+          setTimeout(function() {
+            p3MediaPreparationStarted = false;
+            refreshDataInBackground(true);
+          }, 500);
+        }
+      })
+      .withFailureHandler(function() {
+        // Content remains usable even if Drive image preparation is interrupted.
+        p3MediaPreparationStarted = false;
+      })
+      .preparePart3MediaBatch(Number(startIndex || 0), 8);
+  }
+
+})();
+</script>

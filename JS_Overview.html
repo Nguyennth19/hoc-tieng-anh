@@ -1,0 +1,15 @@
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  const labels={speaking:'Speaking',listening:'Listening',reading:'Reading',writing:'Writing',grammar:'Grammar & Vocabulary'};
+  function draw(data){
+    data=data||window.__APTIS_OVERVIEW||{}; const o=data.overall||{};
+    if($('ovPct')) $('ovPct').textContent=(o.pct||0)+'%'; if($('ovMasteredText')) $('ovMasteredText').textContent=(o.mastered||0)+' of '+(o.total||0)+' items'; if($('ovDue')) $('ovDue').textContent=o.due||0; if($('ovWeak')) $('ovWeak').textContent=o.weak||0; if($('ovReviews')) $('ovReviews').textContent=o.reviews||0;
+    const grid=$('overviewSkillGrid'); if(grid){grid.innerHTML=''; Object.keys(labels).forEach(k=>{ const s=(data.skills||{})[k]||{}; const a=document.createElement('article'); a.className='overview-skill-card'; a.dataset.route=k; a.innerHTML='<span class="global-kicker">'+labels[k]+'</span><h3>'+(s.total?((s.pct||0)+'% mastered'):'Framework ready')+'</h3><div class="skill-progress"><span style="width:'+(s.pct||0)+'%"></span></div><small>'+(s.mastered||0)+' mastered · '+(s.due||0)+' due</small>'; grid.appendChild(a);});}
+    const r=data.recommendation||{}; const card=$('overviewRecommendation'); if(card){card.querySelector('strong').textContent=r.title||'Recommended focus'; card.querySelector('p').textContent=r.text||'Keep your study sessions short and consistent.';}
+  }
+  function render(){ if(window.__APTIS_OVERVIEW) return draw(window.__APTIS_OVERVIEW); google.script.run.withSuccessHandler(d=>{window.__APTIS_OVERVIEW=d;draw(d);}).withFailureHandler(()=>{}).getAppOverview(); }
+  document.addEventListener('click',e=>{const c=e.target.closest('.overview-skill-card'); if(c&&window.AppRouter) window.AppRouter.open(c.dataset.route);});
+  window.AptisOverview={render,draw};
+})();
+</script>

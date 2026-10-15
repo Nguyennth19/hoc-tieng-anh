@@ -1,0 +1,20 @@
+<script>
+(function(){
+  'use strict';
+  const routes=['home','overview','speaking','listening','reading','writing','grammar'];
+  const $=id=>document.getElementById(id);
+  function open(route){
+    if(!routes.includes(route)) route='home';
+    document.querySelectorAll('.app-page').forEach(x=>x.classList.remove('active'));
+    const page=$('page-'+route); if(page) page.classList.add('active');
+    document.querySelectorAll('.global-nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.route===route));
+    try{history.replaceState(null,'','#'+route);}catch(e){}
+    window.scrollTo({top:0,behavior:'instant'});
+    if(route==='overview' && window.AptisOverview) window.AptisOverview.render();
+    if(route==='speaking' && window.AptisSpeaking) window.AptisSpeaking.enter();
+  }
+  function bind(){ document.addEventListener('click',e=>{ const b=e.target.closest('[data-route]'); if(b){e.preventDefault();open(b.dataset.route);} }); }
+  window.AppRouter={open};
+  document.addEventListener('DOMContentLoaded',()=>{ bind(); const initial=(location.hash||'#home').slice(1); open(routes.includes(initial)?initial:'home'); });
+})();
+</script>

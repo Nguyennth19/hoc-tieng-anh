@@ -1,0 +1,104 @@
+<style>
+/* Speaking Part 1 — Focus → Expand → Reason learning framework */
+.part1-framework{
+  margin-top:14px;
+  padding:18px;
+  border:1px solid #ded9ff;
+  border-radius:20px;
+  background:linear-gradient(180deg,#fbfaff 0%,#f6f4ff 100%);
+}
+.part1-framework-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:14px;
+  margin-bottom:13px;
+}
+.part1-framework-head strong{
+  display:block;
+  margin-top:4px;
+  color:#5548d9;
+  font-size:16px;
+  font-weight:900;
+}
+.framework-note{
+  flex:0 0 auto;
+  padding:7px 10px;
+  border-radius:999px;
+  background:#fff;
+  border:1px solid #e4e0fb;
+  color:#6d7487;
+  font-size:11px;
+  font-weight:800;
+}
+.part1-step-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+}
+.part1-step-card{
+  min-height:145px;
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  padding:15px;
+  border:1px solid var(--border);
+  border-radius:17px;
+  background:#fff;
+}
+.part1-step-card .step-number{
+  width:30px;
+  height:30px;
+  flex:0 0 30px;
+  display:grid;
+  place-items:center;
+  border-radius:10px;
+  font-size:13px;
+  font-weight:900;
+}
+.part1-step-card .step-label{
+  display:block;
+  margin-bottom:7px;
+  color:#7d8699;
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.055em;
+}
+.part1-step-card p{
+  margin:0;
+  color:var(--ink);
+  font-size:15px;
+  line-height:1.62;
+  font-weight:720;
+}
+.part1-step-card.focus-step{
+  border-color:#d9d2ff;
+  background:#f8f6ff;
+}
+.part1-step-card.focus-step .step-number{
+  background:#e9e4ff;
+  color:#5f55e6;
+}
+.part1-step-card.expand-step{
+  border-color:#d7e6fb;
+  background:#f7fbff;
+}
+.part1-step-card.expand-step .step-number{
+  background:#e7f1ff;
+  color:#3974bd;
+}
+.part1-step-card.reason-step{
+  border-color:#d7eadf;
+  background:#f7fcf9;
+}
+.part1-step-card.reason-step .step-number{
+  background:#e6f5eb;
+  color:#338759;
+}
+@media(max-width:760px){
+  .part1-step-grid{grid-template-columns:1fr}
+  .part1-step-card{min-height:0}
+  .part1-framework-head{flex-direction:column}
+  .framework-note{align-self:flex-start}
+}
+</style>

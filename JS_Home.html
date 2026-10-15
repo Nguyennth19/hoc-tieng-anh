@@ -1,0 +1,18 @@
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  function load(){ if(typeof google==='undefined'||!google.script||!google.script.run)return; google.script.run.withSuccessHandler(render).withFailureHandler(()=>{}).getAppOverview(); }
+  function render(data){
+    data=data||{}; const overall=data.overall||{}, speaking=(data.skills||{}).speaking||{}, rec=data.recommendation||{};
+    if($('globalOverallPct')) $('globalOverallPct').textContent=(overall.pct||0)+'%';
+    if($('homeSpeakingBar')) $('homeSpeakingBar').style.width=(speaking.pct||0)+'%';
+    if($('homeSpeakingMeta')) $('homeSpeakingMeta').textContent=(speaking.pct||0)+'% mastered · '+(speaking.due||0)+' due';
+    const box=$('globalRecommendation'); if(box){ box.querySelector('strong').textContent=rec.title||'Continue learning'; box.querySelector('p').textContent=rec.text||'Practise one short session today.'; const btn=box.querySelector('button'); if(btn) btn.dataset.route=rec.skill||'speaking'; }
+    const c=$('globalContinueBtn'); if(c) c.onclick=()=>window.AppRouter.open(rec.skill||'speaking');
+    const ring=document.querySelector('.hero-progress-ring'); if(ring) ring.style.background='conic-gradient(var(--g-purple) '+((overall.pct||0)*3.6)+'deg,#e6e4f4 0)';
+    window.__APTIS_OVERVIEW=data;
+  }
+  document.addEventListener('DOMContentLoaded',load);
+  window.AptisHome={load,render};
+})();
+</script>
