@@ -8,6 +8,12 @@ function getWritingBootstrap_(){
     q.part=Number(q.part)||1;
     return q;
   });
-  return {skill:'writing',available:true,items,modules:[1,2,3,4].map(part=>({part,count:items.filter(q=>q.part===part).length}))};
+  const examSheet=getDatabase_().getSheetByName('WRITING_EXAM_SOURCES');
+  let exams=[];
+  if(examSheet&&examSheet.getLastRow()>1){
+    const data=examSheet.getDataRange().getDisplayValues(),names=data.shift();
+    exams=data.filter(row=>row[0]).map(row=>{const o={};names.forEach((name,i)=>{if(name)o[name]=row[i]||'';});return o;});
+  }
+  return {skill:'writing',available:true,items,exams,modules:[1,2,3,4].map(part=>({part,count:items.filter(q=>q.part===part).length}))};
 }
 function getWritingBootstrap(){return getWritingBootstrap_();}
