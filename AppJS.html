@@ -12,6 +12,7 @@
     window.scrollTo({top:0,behavior:'instant'});
     if(route==='overview' && window.AptisOverview) window.AptisOverview.render();
     if(route==='speaking' && window.AptisSpeaking) window.AptisSpeaking.enter();
+    if(route==='writing' && window.AptisWriting) window.AptisWriting.init();
   }
   function bind(){ document.addEventListener('click',e=>{ const b=e.target.closest('[data-route]'); if(b){e.preventDefault();open(b.dataset.route);} }); }
   window.AppRouter={open};
