@@ -39,7 +39,21 @@ function renderMarkedModel(q){
     'W4-002':['Club Manager','the recent complaints from residents who live near our music club','concerned about the situation','concerts should bring enjoyment without disturbing the local community','schedule concerts earlier in the evening','residents can rest at night','improve sound insulation','choose a more suitable venue','meeting local residents','listen to their concerns','a positive relationship with our neighbours','Yen'],
     'W4-003':['Club Manager','the club\'s plan to organise more activities this year','valuable opportunity to bring members together','excited','holding a short meeting to collect ideas from members','understand which activities people are most interested in','promote our events through social media','invite volunteers','increase participation without creating unnecessary costs','help with planning or communication','Yen']
   };
-  let out=esc(q.model);const parts=(fragments[q.id]||[]).sort((a,b)=>b.length-a.length);
+  let out=esc(q.model);const dynamic=(fragments[q.id]||[]).slice();
+  if(!dynamic.length && /^W4-B\d+-[IF]$/.test(q.id)){
+    const src=String(q.model||'');
+    const patterns=q.id.endsWith('-I')?[
+      /Hi (.*?),/, /Have you heard about (.*?)\?/, /I feel (.*?) because/,
+      /we should (.*?) and (.*?)\./, /Best wishes,\s*([A-Za-z]+)/
+    ]:[
+      /Dear (.*?),/, /announcement about (.*?)\./, /I feel (.*?) about this news/,
+      /First, we could (.*?)\./, /This would help because (.*?)\./,
+      /Second, the club could (.*?), so that (.*?)\./,
+      /Yours sincerely,\s*([A-Za-z]+)/
+    ];
+    patterns.forEach(re=>{const m=src.match(re);if(m)m.slice(1).forEach(v=>{if(v&&v.length>1)dynamic.push(v)})});
+  }
+  const parts=dynamic.sort((a,b)=>b.length-a.length);
   // Mark text via literal escaped substrings, without processing user-supplied HTML.
   const protect=[];
   parts.forEach(s=>{const safe=esc(s);const i=out.indexOf(safe);if(i<0)return;
@@ -73,7 +87,7 @@ function renderPractice(){
    if(!normalized){el('writingPracticeStatus').textContent='Vui lòng nhập hoặc chọn đề bài.';return;}
    const options=state.data.items.filter(q=>q.part===practice.part);
    // Only exact, normalized bank prompts; option selection still requires exact prompt.
-   const q=options.find(x=>normWriting(x.prompt)===normalized);
+   const q=options.find(x=>x.id===practice.selected&&normWriting(x.prompt)===normalized)||options.find(x=>normWriting(x.prompt)===normalized);
    if(!q){el('writingPracticeStatus').textContent='Chưa tìm thấy đề trùng khớp trong ngân hàng đã xác thực. Hãy chọn một đề trong danh sách hoặc kiểm tra lại nội dung đã dán.';el('writingPracticeResult').hidden=true;return;}
    practice.selected=q.id;dropdown.value=q.id;
    el('writingPracticeStatus').textContent='Đã tìm thấy: '+q.id+' · '+q.topic+'. Đây là đáp án tham khảo đã biên soạn, không phải chấm điểm tự động.';
