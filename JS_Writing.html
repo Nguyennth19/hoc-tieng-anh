@@ -1,4 +1,36 @@
 <script>
-/* Permanent Writing client module placeholder. Future versions replace content here, not the filename. */
-window.AptisWriting=window.AptisWriting||{init:function(){}};
+(function(){
+'use strict';
+const state={data:null,part:1,id:null,start:0,timer:null,seconds:0};
+const el=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const count=s=>(String(s||'').trim().match(/\b[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*\b/gu)||[]).length;
+const limits={1:[1,5],2:[20,30],3:[30,40],4:[0,0]};
+const names={1:'Short answers',2:'Form response',3:'Chat room',4:'Emails'};
+function display(){
+if(!state.data)return;
+el('writingParts').innerHTML=[1,2,3,4].map(p=>'<button type="button" class="writing-part '+(state.part===p?'active':'')+'" data-wpart="'+p+'"><strong>Part '+p+'</strong>'+names[p]+'<small style="display:block;margin-top:8px">'+state.data.items.filter(q=>q.part===p).length+' bài</small></button>').join('');
+const items=state.data.items.filter(q=>q.part===state.part);
+el('writingList').innerHTML=items.map(q=>'<button type="button" class="writing-item '+(state.id===q.id?'active':'')+'" data-witem="'+esc(q.id)+'"><strong>'+esc(q.id)+'</strong><div>'+esc(q.topic)+'</div></button>').join('')||'<p>Chưa có dữ liệu.</p>';
+if(!state.id||!items.some(q=>q.id===state.id))state.id=items[0]?.id||null;
+if(state.id)showItem();else el('writingWorkspace').textContent='Chưa có bài.';
+}
+function showItem(){
+const q=state.data.items.find(x=>x.id===state.id);if(!q)return;
+const key='aptis-writing-draft-'+q.id;
+let draft='';try{draft=localStorage.getItem(key)||''}catch(e){}
+state.seconds=0;clearInterval(state.timer);
+const lim=q.part===4?(q.id==='W4-001'?[40,50]:[120,150]):limits[q.part];
+el('writingWorkspace').innerHTML='<div class="global-kicker">PART '+q.part+' · '+esc(q.topic)+'</div><h2>'+esc(q.topic)+'</h2><div class="writing-prompt">'+esc(q.prompt)+'</div><p class="writing-info">'+esc(q.guidance)+' · <strong>'+lim[0]+'–'+lim[1]+' words</strong></p><label for="writingAnswer"><strong>Bài viết của bạn</strong></label><textarea id="writingAnswer" spellcheck="true" placeholder="Type your answer here...">'+esc(draft)+'</textarea><div class="writing-toolbar"><strong id="writingCount">0 words</strong><span id="writingTimer">00:00</span><button class="writing-action" id="writingClock" type="button">Bắt đầu tính giờ</button><button class="writing-action" id="writingCheck" type="button">Kiểm tra độ dài</button><button class="writing-action writing-primary" id="writingModelBtn" type="button">Xem bài mẫu</button></div><p id="writingFeedback" role="status"></p><details><summary>Cấu trúc gợi ý</summary><div class="writing-model">'+esc(q.template)+'</div></details><div id="writingModel" hidden><h3>Bài mẫu tham khảo</h3><div class="writing-model">'+esc(q.model)+'</div><p class="writing-info">Nguồn: '+esc(q.sourceLabel)+'</p></div>';
+const box=el('writingAnswer');
+const refresh=()=>{const n=count(box.value);el('writingCount').textContent=n+' words';el('writingCount').style.color=n>=lim[0]&&n<=lim[1]?'#168253':'#aa5b17';try{localStorage.setItem(key,box.value)}catch(e){}};
+box.addEventListener('input',refresh);refresh();
+el('writingCheck').onclick=()=>{const n=count(box.value);el('writingFeedback').textContent=n<lim[0]?'Bạn cần viết thêm '+(lim[0]-n)+' từ.':n>lim[1]?'Bài dài hơn giới hạn '+(n-lim[1])+' từ.':'Độ dài phù hợp. Hãy so lại nội dung và ngữ pháp với bài mẫu.'};
+el('writingModelBtn').onclick=()=>{const node=el('writingModel');node.hidden=!node.hidden;el('writingModelBtn').textContent=node.hidden?'Xem bài mẫu':'Ẩn bài mẫu'};
+el('writingClock').onclick=()=>{if(state.timer){clearInterval(state.timer);state.timer=null;el('writingClock').textContent='Tiếp tục';return}state.timer=setInterval(()=>{state.seconds++;const mm=String(Math.floor(state.seconds/60)).padStart(2,'0');const ss=String(state.seconds%60).padStart(2,'0');const node=el('writingTimer');if(node)node.textContent=mm+':'+ss},1000);el('writingClock').textContent='Tạm dừng'};
+}
+function init(){if(!el('writingParts'))return;if(state.data){display();return}if(!(window.google&&google.script&&google.script.run)){el('writingMsg').textContent='Chỉ tải được nội dung khi chạy trong Google Apps Script Web App.';return}google.script.run.withSuccessHandler(data=>{state.data=data;el('writingMsg').textContent=data.available?'Đã tải '+data.items.length+' bài luyện viết. Bản nháp tự lưu trên trình duyệt.':'Chưa có dữ liệu Writing.';display()}).withFailureHandler(e=>{el('writingMsg').textContent='Không tải được Writing: '+(e.message||e)}).getWritingBootstrap();}
+document.addEventListener('click',e=>{const p=e.target.closest('[data-wpart]');if(p){state.part=Number(p.dataset.wpart);state.id=null;display()}const q=e.target.closest('[data-witem]');if(q){state.id=q.dataset.witem;display()}});
+window.AptisWriting={init};
+})();
 </script>
