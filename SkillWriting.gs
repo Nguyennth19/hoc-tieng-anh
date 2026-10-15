@@ -31,6 +31,23 @@ function getWritingBootstrap_(){
       });
     });
   }
-  return {skill:'writing',available:true,items,exams,modules:[1,2,3,4].map(part=>({part,count:items.filter(q=>q.part===part).length}))};
+  const refSheet=getDatabase_().getSheetByName('WRITING_REFERENCE_SOURCES');
+  let referenceIndex=[];
+  if(refSheet&&refSheet.getLastRow()>1){
+    referenceIndex=refSheet.getRange(2,1,refSheet.getLastRow()-1,4).getDisplayValues()
+      .map(row=>({sourceId:row[0],sourceTitle:row[1],exerciseNumber:row[2],topic:row[3]}));
+  }
+  return {skill:'writing',available:true,items,exams,referenceIndex,modules:[1,2,3,4].map(part=>({part,count:items.filter(q=>q.part===part).length}))};
 }
 function getWritingBootstrap(){return getWritingBootstrap_();}
+
+/** Read one bounded reference only when selected; never scan all 34 documents during bootstrap. */
+function getWritingReference(sourceId,exerciseNumber,topic){
+  const key=String(sourceId||'').trim(),num=String(exerciseNumber||'').trim(),name=String(topic||'').trim();
+  const sheet=getDatabase_().getSheetByName('WRITING_REFERENCE_SOURCES');
+  if(!sheet)throw new Error('Reference index is not available.');
+  const data=sheet.getDataRange().getDisplayValues(),headers=data.shift();
+  const row=data.find(r=>r[0]===key&&r[2]===num&&r[3]===name);
+  if(!row)throw new Error('Không tìm thấy tài liệu tương ứng.');
+  return {sourceId:key,exerciseNumber:num,topic:name,originalText:row[4],status:row[5],sourceTitle:row[1]};
+}
