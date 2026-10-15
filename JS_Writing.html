@@ -78,6 +78,23 @@ function renderPractice(){
  '<div id="writingPracticeFields"></div><div class="writing-toolbar"><button id="writingPracticeFind" type="button" class="writing-action writing-primary">Hiển thị câu trả lời</button><button id="writingPracticeClear" type="button" class="writing-action">Xóa dữ liệu</button></div>'+
  '<p role="status" id="writingPracticeStatus"></p><div id="writingPracticeResult" hidden></div>';
  const dropdown=el('writingPracticeSelect'),fields=el('writingPracticeFields');
+ const sourceExams=Array.isArray(state.data.exams)?state.data.exams:[];
+ host.insertAdjacentHTML('beforeend','<section class="writing-sources"><h3>Ngân hàng đề gốc – 15 bộ đề tham khảo</h3><p class="writing-info">Chọn đề để điền tự động nội dung gốc của từng Part. Chỉ các bài đã biên soạn đáp án mới có thể hiển thị bài mẫu.</p><select id="writingExamSource"><option value="">-- Chọn bộ đề gốc --</option>'+sourceExams.map(x=>'<option value="'+esc(x.examId)+'">'+esc(x.source)+' · '+esc(x.status)+'</option>').join('')+'</select><pre id="writingExamPreview" class="writing-source-preview" hidden></pre></section>');
+ const sourceSelect=el('writingExamSource');
+ sourceSelect.onchange=()=>{
+   const exam=sourceExams.find(x=>x.examId===sourceSelect.value);
+   if(!exam)return;
+   const sourcePart={1:'part1_original',2:'part2_original',3:'part3_original',4:'part4_original'}[practice.part];
+   const raw=exam[sourcePart]||'';
+   el('writingPracticePrompt').value=raw;
+   if(practice.part===4){el('writingPracticeQ1').value=exam.q1_original||'';el('writingPracticeQ2').value=exam.q2_original||'';}
+   practice.selected=null;
+   el('writingPracticeSelect').value='';
+   el('writingPracticeResult').hidden=true;
+   el('writingPracticeStatus').textContent=raw?'Đã nạp đề gốc '+exam.source+'. '+exam.status+'.':'Nguồn này thiếu Writing Part '+practice.part+'.';
+   const pre=el('writingExamPreview');pre.hidden=false;pre.textContent='NGUỒN: '+exam.source+'\nPHẦN: '+practice.part+'\nTRẠNG THÁI: '+exam.status;
+ };
+
  function peers(q){return state.data.items.filter(x=>x.part===4 && normWriting(x.prompt)===normWriting(q.prompt));}
  function fieldsForPart(){
   const p=practice.part;
