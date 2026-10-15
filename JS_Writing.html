@@ -70,6 +70,24 @@ function renderMarkedModel(q){
 // Closed-bank Part 5. No generative API; match saved prompts only.
 const practice={part:4,selected:null,examId:null};
 function normWriting(s){return String(s||'').normalize('NFKC').toLowerCase().replace(/[’‘]/g,"'").replace(/[^a-z0-9\s']/g,' ').replace(/\s+/g,' ').trim();}
+function matchWritingBank(options,prompt,selectedId){
+  const normalized=normWriting(prompt);
+  if(!normalized)return null;
+  const exact=options.find(x=>x.id===selectedId&&normWriting(x.prompt)===normalized)||options.find(x=>normWriting(x.prompt)===normalized);
+  if(exact)return exact;
+  const stop=new Set('you are a the this that your club member members received email from dear regards best write an to and in of for about what how should do can would could please tell think our we have will who is their also it they there with make give suggest suggestions'.split(' '));
+  const tokens=t=>normWriting(t).split(' ').filter(w=>w.length>3&&!stop.has(w));
+  const a=new Set(tokens(prompt));if(a.size<5)return null;
+  const unique=[...new Map(options.map(x=>[normWriting(x.prompt),x])).values()];
+  const scored=unique.map(x=>{
+    const b=new Set(tokens(x.prompt)),common=[...a].filter(w=>b.has(w)).length;
+    const precision=common/a.size,recall=common/Math.max(1,b.size);
+    return {x,score:2*precision*recall/Math.max(0.0001,precision+recall),common};
+  }).sort((x,y)=>y.score-x.score);
+  const first=scored[0],second=scored[1];
+  if(first&&first.common>=5&&first.score>=0.62&&(!second||first.score-second.score>=0.12))return first.x;
+  return null;
+}
 function renderPractice(){
  const host=el('writingPractice');if(!host||!state.data)return;
  host.innerHTML='<div class="writing-hero"><div class="global-kicker">MODULE 5 · CLOSED QUESTION BANK</div><h2>Bài tập thực hành</h2><p>Điền thông báo, Q1 và Q2 riêng. Bài mẫu chỉ xuất hiện khi tìm thấy tình huống tương ứng trong ngân hàng.</p></div>'+
@@ -132,7 +150,7 @@ function renderPractice(){
     result.hidden=false;status.textContent='Đã tải đáp án luyện tập '+selectedExam.examId+' – Part '+practice.part+'.';return;
   }
   const items=state.data.items.filter(q=>q.part===practice.part);
-  const q=items.find(x=>x.id===practice.selected&&normWriting(x.prompt)===normal)||items.find(x=>normWriting(x.prompt)===normal)||
+  const q=matchWritingBank(items,prompt,practice.selected)||
    (practice.part===4 && /famous film critic/i.test(normal)&&/attract/i.test(normal)?items.find(x=>x.id==='W4-TRAVEL-I'):null);
   if(!q){status.textContent='Chưa tìm thấy đề tương ứng trong dữ liệu Writing. Không tạo bài mẫu suy đoán.';result.hidden=true;return;}
   if(practice.part!==4){result.innerHTML='<h3>Bài trả lời mẫu</h3><div class="writing-model">'+renderMarkedModel(q)+'</div><h3>Khung chuẩn</h3><div class="writing-model writing-framework">'+renderFramework(q)+'</div>';result.hidden=false;status.textContent='Đã nhận diện '+q.id;return;}
