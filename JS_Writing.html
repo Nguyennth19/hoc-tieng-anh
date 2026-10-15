@@ -50,9 +50,42 @@ function renderMarkedModel(q){
   return out.replace(/##WRITINGMARK(\d+)##/g,(_,i)=>protect[Number(i)]);
 }
 
+
+// Closed-bank Part 5. No generative API; match saved prompts only.
+const practice={part:4,selected:null};
+function normWriting(s){return String(s||'').normalize('NFKC').toLowerCase().replace(/[’‘]/g,"'").replace(/[^a-z0-9\s']/g,' ').replace(/\s+/g,' ').trim();}
+function renderPractice(){
+ const host=el('writingPractice');if(!host||!state.data)return;
+ host.innerHTML='<div class="writing-hero"><div class="global-kicker">MODULE 5 · PRACTICE BANK</div><h2>Bài tập thực hành</h2><p>Chỉ sử dụng những đề đã lưu trong ngân hàng Aptis, không dùng AI API.</p></div>'+
+ '<label for="writingPracticePart">Chọn phần thi</label><select id="writingPracticePart">'+[1,2,3,4].map(p=>'<option value="'+p+'" '+(p===practice.part?'selected':'')+'>Writing Part '+p+'</option>').join('')+'</select>'+
+ '<label for="writingPracticeSelect">Chọn đề trong ngân hàng</label><select id="writingPracticeSelect"><option value="">-- Chọn một đề có sẵn hoặc dán nguyên văn câu hỏi --</option></select>'+
+ '<label for="writingPracticePrompt">Nhập hoặc dán câu hỏi / yêu cầu</label><textarea id="writingPracticePrompt" placeholder="Nhập đúng đề trong bộ tài liệu đã lưu. Hệ thống không tự bịa câu trả lời cho đề ngoài ngân hàng."></textarea>'+
+ '<div class="writing-toolbar"><button id="writingPracticeFind" type="button" class="writing-action writing-primary">Hiển thị bài mẫu</button><button id="writingPracticeClear" type="button" class="writing-action">Xóa đề</button></div>'+
+ '<p role="status" id="writingPracticeStatus"></p><div id="writingPracticeResult" hidden></div>';
+ const dropdown=el('writingPracticeSelect');
+ const update=()=>{dropdown.innerHTML='<option value="">-- Chọn đề --</option>'+state.data.items.filter(q=>q.part===practice.part).map(q=>'<option value="'+esc(q.id)+'">'+esc(q.id+' · '+q.topic+' · '+q.prompt.slice(0,115))+'</option>').join('');};
+ update();
+ el('writingPracticePart').onchange=e=>{practice.part=Number(e.target.value);practice.selected=null;update();el('writingPracticePrompt').value='';el('writingPracticeResult').hidden=true;el('writingPracticeStatus').textContent=''};
+ dropdown.onchange=e=>{const q=state.data.items.find(x=>x.id===e.target.value);practice.selected=q?.id||null;el('writingPracticePrompt').value=q?.prompt||'';el('writingPracticeResult').hidden=true;el('writingPracticeStatus').textContent=''};
+ el('writingPracticeClear').onclick=()=>{practice.selected=null;dropdown.value='';el('writingPracticePrompt').value='';el('writingPracticeResult').hidden=true;el('writingPracticeStatus').textContent=''};
+ el('writingPracticeFind').onclick=()=>{
+   const prompt=el('writingPracticePrompt').value.trim(),normalized=normWriting(prompt);
+   if(!normalized){el('writingPracticeStatus').textContent='Vui lòng nhập hoặc chọn đề bài.';return;}
+   const options=state.data.items.filter(q=>q.part===practice.part);
+   // Only exact, normalized bank prompts; option selection still requires exact prompt.
+   const q=options.find(x=>normWriting(x.prompt)===normalized);
+   if(!q){el('writingPracticeStatus').textContent='Chưa tìm thấy đề trùng khớp trong ngân hàng đã xác thực. Hãy chọn một đề trong danh sách hoặc kiểm tra lại nội dung đã dán.';el('writingPracticeResult').hidden=true;return;}
+   practice.selected=q.id;dropdown.value=q.id;
+   el('writingPracticeStatus').textContent='Đã tìm thấy: '+q.id+' · '+q.topic+'. Đây là đáp án tham khảo đã biên soạn, không phải chấm điểm tự động.';
+   el('writingPracticeResult').hidden=false;
+   el('writingPracticeResult').innerHTML='<h3>Full câu trả lời / bài viết mẫu</h3><p class="writing-info">Chữ cam, in đậm: thông tin theo đề. Chữ thường: cấu trúc có thể tái sử dụng.</p><div class="writing-model">'+renderMarkedModel(q)+'</div><h3>Khung chuẩn</h3><div class="writing-model writing-framework">'+renderFramework(q)+'</div><p class="writing-info">Nguồn: '+esc(q.sourceLabel)+'</p>';
+ };
+}
+
 function display(){
 if(!state.data)return;
-el('writingParts').innerHTML=[1,2,3,4].map(p=>'<button type="button" class="writing-part '+(state.part===p?'active':'')+'" data-wpart="'+p+'"><strong>Part '+p+'</strong>'+names[p]+'<small style="display:block;margin-top:8px">'+state.data.items.filter(q=>q.part===p).length+' bài</small></button>').join('');
+if(state.part===5){el('writingParts').innerHTML=[1,2,3,4,5].map(p=>'<button type="button" class="writing-part '+(p===5?'active':'')+'" data-wpart="'+p+'"><strong>'+(p===5?'Mục 5':'Part '+p)+'</strong>'+(p===5?'Bài tập thực hành':names[p])+'</button>').join('');el('writingList').innerHTML='<p>Ngân hàng đề đã xác thực.</p>';el('writingWorkspace').innerHTML='<section id="writingPractice"></section>';renderPractice();return;}
+el('writingParts').innerHTML=[1,2,3,4,5].map(p=>'<button type="button" class="writing-part '+(state.part===p?'active':'')+'" data-wpart="'+p+'"><strong>Part '+p+'</strong>'+(p===5?'Bài tập thực hành':names[p])+'<small style="display:block;margin-top:8px">'+(p===5?state.data.items.length:state.data.items.filter(q=>q.part===p).length)+' bài</small></button>').join('');
 const items=state.data.items.filter(q=>q.part===state.part);
 el('writingList').innerHTML=items.map(q=>'<button type="button" class="writing-item '+(state.id===q.id?'active':'')+'" data-witem="'+esc(q.id)+'"><strong>'+esc(q.id)+'</strong><div>'+esc(q.topic)+'</div></button>').join('')||'<p>Chưa có dữ liệu.</p>';
 if(!state.id||!items.some(q=>q.id===state.id))state.id=items[0]?.id||null;
