@@ -42,7 +42,7 @@ function renderMarkedModel(q){
   if(q.id==='W4-TRAVEL-I')fragments[q.id]=['Anna','famous film critic visiting our club next week','excited','films influence society','advertise the event on social media and invite students','Yen'];
   if(q.id==='W4-TRAVEL-F')fragments[q.id]=['Club Manager','travel club will invite a famous film critic next week','excited','films reflect different cultures','promoting the event on social media','free admission to club members','question-and-answer session','Yen'];
   let out=esc(q.model);const dynamic=(fragments[q.id]||[]).slice();
-  if(!dynamic.length && /^W4-B\d+-[IF]$/.test(q.id)){
+  if(!dynamic.length && /^W4-(?:B\d+|(?:EX|PDF)\d+)-[IF]$/.test(q.id)){
     const src=String(q.model||'');
     const patterns=q.id.endsWith('-I')?[
       /Hi (.*?),/, /Have you heard about (.*?)\?/, /I feel (.*?) because/,
@@ -68,7 +68,7 @@ function renderMarkedModel(q){
 
 
 // Closed-bank Part 5. No generative API; match saved prompts only.
-const practice={part:4,selected:null};
+const practice={part:4,selected:null,examId:null};
 function normWriting(s){return String(s||'').normalize('NFKC').toLowerCase().replace(/[’‘]/g,"'").replace(/[^a-z0-9\s']/g,' ').replace(/\s+/g,' ').trim();}
 function renderPractice(){
  const host=el('writingPractice');if(!host||!state.data)return;
@@ -82,6 +82,7 @@ function renderPractice(){
  host.insertAdjacentHTML('beforeend','<section class="writing-sources"><h3>Ngân hàng đề gốc – 15 bộ đề tham khảo</h3><p class="writing-info">Chọn đề để điền tự động nội dung gốc của từng Part. Chỉ các bài đã biên soạn đáp án mới có thể hiển thị bài mẫu.</p><select id="writingExamSource"><option value="">-- Chọn bộ đề gốc --</option>'+sourceExams.map(x=>'<option value="'+esc(x.examId)+'">'+esc(x.source)+' · '+esc(x.status)+'</option>').join('')+'</select><pre id="writingExamPreview" class="writing-source-preview" hidden></pre></section>');
  const sourceSelect=el('writingExamSource');
  sourceSelect.onchange=()=>{
+   practice.examId=sourceSelect.value||null;
    const exam=sourceExams.find(x=>x.examId===sourceSelect.value);
    if(!exam)return;
    const sourcePart={1:'part1_original',2:'part2_original',3:'part3_original',4:'part4_original'}[practice.part];
@@ -105,13 +106,31 @@ function renderPractice(){
   fieldsForPart();
  }
  update();
- el('writingPracticePart').onchange=e=>{practice.part=Number(e.target.value);practice.selected=null;update();el('writingPracticeResult').hidden=true;el('writingPracticeStatus').textContent=''};
- dropdown.onchange=e=>{const q=state.data.items.find(x=>x.id===e.target.value);practice.selected=q?.id||null;el('writingPracticePrompt').value=q?.prompt||'';if(practice.part===4){el('writingPracticeQ1').value=q?.q1||'Write an email to a friend about your feelings, suggestions and reasons. Write about 50 words.';el('writingPracticeQ2').value=q?.q2||'Write an email to the manager about your opinion and recommendations. Write about 120-150 words.';}el('writingPracticeResult').hidden=true;el('writingPracticeStatus').textContent=''};
- el('writingPracticeClear').onclick=()=>{practice.selected=null;dropdown.value='';fieldsForPart();el('writingPracticeResult').hidden=true;el('writingPracticeStatus').textContent=''};
+ el('writingPracticePart').onchange=e=>{practice.part=Number(e.target.value);practice.selected=null;practice.examId=null;update();el('writingPracticeResult').hidden=true;el('writingPracticeStatus').textContent=''};
+ dropdown.onchange=e=>{practice.examId=null;const q=state.data.items.find(x=>x.id===e.target.value);practice.selected=q?.id||null;el('writingPracticePrompt').value=q?.prompt||'';if(practice.part===4){el('writingPracticeQ1').value=q?.q1||'Write an email to a friend about your feelings, suggestions and reasons. Write about 50 words.';el('writingPracticeQ2').value=q?.q2||'Write an email to the manager about your opinion and recommendations. Write about 120-150 words.';}el('writingPracticeResult').hidden=true;el('writingPracticeStatus').textContent=''};
+ el('writingPracticeClear').onclick=()=>{practice.selected=null;practice.examId=null;dropdown.value='';fieldsForPart();el('writingPracticeResult').hidden=true;el('writingPracticeStatus').textContent=''};
  el('writingPracticeFind').onclick=()=>{
   const prompt=el('writingPracticePrompt').value.trim(),normal=normWriting(prompt);
   const status=el('writingPracticeStatus'),result=el('writingPracticeResult');
   if(!normal){status.textContent='Vui lòng điền nội dung đề bài.';result.hidden=true;return;}
+  const selectedExam=sourceExams.find(x=>x.examId===practice.examId);
+  if(selectedExam&&practice.part<4){
+    let html='<h3>Đề gốc: '+esc(selectedExam.source)+'</h3>';
+    if(practice.part===1){
+      const questions=selectedExam.part1_questions||[],answers=selectedExam.part1_models||[];
+      if(!questions.length||answers.some(a=>!a)){status.textContent='Đề Part 1 này chưa đủ đáp án được kiểm chứng.';result.hidden=true;return;}
+      html+=questions.map((question,i)=>'<div class="writing-response"><strong>Câu '+(i+1)+': '+esc(question)+'</strong><div class="writing-model writing-answer-short">'+esc(answers[i]||'Chưa có đáp án')+'</div></div>').join('');
+    }else if(practice.part===2){
+      if(!selectedExam.part2_model){status.textContent='Chưa có bài mẫu Part 2 cho bộ đề này.';result.hidden=true;return;}
+      html+='<div class="writing-model">'+esc(selectedExam.part2_model)+'</div>';
+    }else if(practice.part===3){
+      const answers=selectedExam.part3_models||[];
+      if(answers.length!==3){status.textContent='Bộ đề này chưa có đủ ba câu trả lời Part 3.';result.hidden=true;return;}
+      html+=answers.map((ans,i)=>'<h3>Câu '+(i+1)+'</h3><div class="writing-model">'+esc(ans)+'</div>').join('');
+    }
+    result.innerHTML=html+'<p class="writing-info">Bài mẫu luyện tập biên soạn theo nguồn đề gốc; không phải đáp án chính thức.</p>';
+    result.hidden=false;status.textContent='Đã tải đáp án luyện tập '+selectedExam.examId+' – Part '+practice.part+'.';return;
+  }
   const items=state.data.items.filter(q=>q.part===practice.part);
   const q=items.find(x=>x.id===practice.selected&&normWriting(x.prompt)===normal)||items.find(x=>normWriting(x.prompt)===normal)||
    (practice.part===4 && /famous film critic/i.test(normal)&&/attract/i.test(normal)?items.find(x=>x.id==='W4-TRAVEL-I'):null);
