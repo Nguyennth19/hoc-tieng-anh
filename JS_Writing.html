@@ -97,6 +97,20 @@ function renderPractice(){
  '<p role="status" id="writingPracticeStatus"></p><div id="writingPracticeResult" hidden></div>';
  const dropdown=el('writingPracticeSelect'),fields=el('writingPracticeFields');
  const sourceExams=Array.isArray(state.data.exams)?state.data.exams:[];
+
+ const extra=state.data.referenceIndex||[];
+ host.insertAdjacentHTML('beforeend','<section class="writing-sources"><h3>Tham khảo 05. Writing</h3><select id="writingExtraSelect"><option value="">Chọn bộ đề tham khảo</option>'+extra.map((o,i)=>'<option value="'+i+'">'+esc(o.sourceTitle+' – '+o.exerciseNumber+' – '+o.topic)+'</option>').join('')+'</select><button class="writing-action" type="button" id="writingExtraView">Đọc nguồn</button><p id="writingExtraStatus"></p><pre id="writingExtraText" class="writing-source-preview" hidden></pre></section>');
+ el('writingExtraView').onclick=()=>{
+  const val=el('writingExtraSelect').value,rec=extra[Number(val)];
+  if(val===''||!rec)return;
+  el('writingExtraStatus').textContent='Đang đọc tài liệu...';
+  google.script.run.withSuccessHandler(out=>{
+    el('writingExtraText').hidden=false;
+    el('writingExtraText').textContent=out.originalText;
+    el('writingExtraStatus').textContent=out.status;
+  }).withFailureHandler(err=>{el('writingExtraStatus').textContent=err.message||String(err)}).getWritingReference(rec.sourceId,rec.exerciseNumber,rec.topic);
+ };
+
  host.insertAdjacentHTML('beforeend','<section class="writing-sources"><h3>Ngân hàng đề gốc – 15 bộ đề tham khảo</h3><p class="writing-info">Chọn đề để điền tự động nội dung gốc của từng Part. Chỉ các bài đã biên soạn đáp án mới có thể hiển thị bài mẫu.</p><select id="writingExamSource"><option value="">-- Chọn bộ đề gốc --</option>'+sourceExams.map(x=>'<option value="'+esc(x.examId)+'">'+esc(x.source)+' · '+esc(x.status)+'</option>').join('')+'</select><pre id="writingExamPreview" class="writing-source-preview" hidden></pre></section>');
  const sourceSelect=el('writingExamSource');
  sourceSelect.onchange=()=>{
