@@ -70,29 +70,42 @@ const practice={part:4,selected:null};
 function normWriting(s){return String(s||'').normalize('NFKC').toLowerCase().replace(/[’‘]/g,"'").replace(/[^a-z0-9\s']/g,' ').replace(/\s+/g,' ').trim();}
 function renderPractice(){
  const host=el('writingPractice');if(!host||!state.data)return;
- host.innerHTML='<div class="writing-hero"><div class="global-kicker">MODULE 5 · PRACTICE BANK</div><h2>Bài tập thực hành</h2><p>Chỉ sử dụng những đề đã lưu trong ngân hàng Aptis, không dùng AI API.</p></div>'+
- '<label for="writingPracticePart">Chọn phần thi</label><select id="writingPracticePart">'+[1,2,3,4].map(p=>'<option value="'+p+'" '+(p===practice.part?'selected':'')+'>Writing Part '+p+'</option>').join('')+'</select>'+
- '<label for="writingPracticeSelect">Chọn đề trong ngân hàng</label><select id="writingPracticeSelect"><option value="">-- Chọn một đề có sẵn hoặc dán nguyên văn câu hỏi --</option></select>'+
- '<label for="writingPracticePrompt">Nhập hoặc dán câu hỏi / yêu cầu</label><textarea id="writingPracticePrompt" placeholder="Nhập đúng đề trong bộ tài liệu đã lưu. Hệ thống không tự bịa câu trả lời cho đề ngoài ngân hàng."></textarea>'+
- '<div class="writing-toolbar"><button id="writingPracticeFind" type="button" class="writing-action writing-primary">Hiển thị bài mẫu</button><button id="writingPracticeClear" type="button" class="writing-action">Xóa đề</button></div>'+
+ host.innerHTML='<div class="writing-hero"><div class="global-kicker">MODULE 5 · CLOSED QUESTION BANK</div><h2>Bài tập thực hành</h2><p>Điền thông báo, Q1 và Q2 riêng. Bài mẫu chỉ xuất hiện khi tìm thấy tình huống tương ứng trong ngân hàng.</p></div>'+
+ '<label for="writingPracticePart">Phần thi</label><select id="writingPracticePart">'+[1,2,3,4].map(p=>'<option value="'+p+'" '+(practice.part===p?'selected':'')+'>Writing Part '+p+'</option>').join('')+'</select>'+
+ '<label for="writingPracticeSelect">Bộ đề đã lưu (có thể chọn để điền nhanh)</label><select id="writingPracticeSelect"></select>'+
+ '<div id="writingPracticeFields"></div><div class="writing-toolbar"><button id="writingPracticeFind" type="button" class="writing-action writing-primary">Hiển thị câu trả lời</button><button id="writingPracticeClear" type="button" class="writing-action">Xóa dữ liệu</button></div>'+
  '<p role="status" id="writingPracticeStatus"></p><div id="writingPracticeResult" hidden></div>';
- const dropdown=el('writingPracticeSelect');
- const update=()=>{dropdown.innerHTML='<option value="">-- Chọn đề --</option>'+state.data.items.filter(q=>q.part===practice.part).map(q=>'<option value="'+esc(q.id)+'">'+esc(q.id+' · '+q.topic+' · '+q.prompt.slice(0,115))+'</option>').join('');};
+ const dropdown=el('writingPracticeSelect'),fields=el('writingPracticeFields');
+ function peers(q){return state.data.items.filter(x=>x.part===4 && normWriting(x.prompt)===normWriting(q.prompt));}
+ function fieldsForPart(){
+  const p=practice.part;
+  fields.innerHTML=p===4?'<label for="writingPracticePrompt">1. Nội dung thư / thông báo của câu lạc bộ</label><textarea id="writingPracticePrompt" placeholder="Dán nội dung Dear Member ... Regards"></textarea><label for="writingPracticeQ1">2. Q1 – Email cho bạn (40–50 từ)</label><textarea id="writingPracticeQ1" placeholder="Dán nguyên câu hỏi Q1"></textarea><label for="writingPracticeQ2">3. Q2 – Email cho quản lý (120–150 từ)</label><textarea id="writingPracticeQ2" placeholder="Dán nguyên câu hỏi Q2"></textarea>':'<label for="writingPracticePrompt">Nhập câu hỏi / yêu cầu đề bài</label><textarea id="writingPracticePrompt" placeholder="Dán câu hỏi từ ngân hàng đã lưu"></textarea>';
+ }
+ function update(){const items=state.data.items.filter(q=>q.part===practice.part && (practice.part!==4 || /informal email/i.test(q.topic)||q.id.endsWith('-I')));
+  dropdown.innerHTML='<option value="">-- Chọn đề hoặc tự dán nội dung --</option>'+items.map(q=>'<option value="'+esc(q.id)+'">'+esc(q.id+' · '+q.topic+' · '+q.prompt.slice(0,85))+'</option>').join('');
+  fieldsForPart();
+ }
  update();
- el('writingPracticePart').onchange=e=>{practice.part=Number(e.target.value);practice.selected=null;update();el('writingPracticePrompt').value='';el('writingPracticeResult').hidden=true;el('writingPracticeStatus').textContent=''};
- dropdown.onchange=e=>{const q=state.data.items.find(x=>x.id===e.target.value);practice.selected=q?.id||null;el('writingPracticePrompt').value=q?.prompt||'';el('writingPracticeResult').hidden=true;el('writingPracticeStatus').textContent=''};
- el('writingPracticeClear').onclick=()=>{practice.selected=null;dropdown.value='';el('writingPracticePrompt').value='';el('writingPracticeResult').hidden=true;el('writingPracticeStatus').textContent=''};
+ el('writingPracticePart').onchange=e=>{practice.part=Number(e.target.value);practice.selected=null;update();el('writingPracticeResult').hidden=true;el('writingPracticeStatus').textContent=''};
+ dropdown.onchange=e=>{const q=state.data.items.find(x=>x.id===e.target.value);practice.selected=q?.id||null;el('writingPracticePrompt').value=q?.prompt||'';if(practice.part===4){el('writingPracticeQ1').value=q?.q1||'Write an email to a friend about your feelings, suggestions and reasons. Write about 50 words.';el('writingPracticeQ2').value=q?.q2||'Write an email to the manager about your opinion and recommendations. Write about 120-150 words.';}el('writingPracticeResult').hidden=true;el('writingPracticeStatus').textContent=''};
+ el('writingPracticeClear').onclick=()=>{practice.selected=null;dropdown.value='';fieldsForPart();el('writingPracticeResult').hidden=true;el('writingPracticeStatus').textContent=''};
  el('writingPracticeFind').onclick=()=>{
-   const prompt=el('writingPracticePrompt').value.trim(),normalized=normWriting(prompt);
-   if(!normalized){el('writingPracticeStatus').textContent='Vui lòng nhập hoặc chọn đề bài.';return;}
-   const options=state.data.items.filter(q=>q.part===practice.part);
-   // Only exact, normalized bank prompts; option selection still requires exact prompt.
-   const q=options.find(x=>x.id===practice.selected&&normWriting(x.prompt)===normalized)||options.find(x=>normWriting(x.prompt)===normalized);
-   if(!q){el('writingPracticeStatus').textContent='Chưa tìm thấy đề trùng khớp trong ngân hàng đã xác thực. Hãy chọn một đề trong danh sách hoặc kiểm tra lại nội dung đã dán.';el('writingPracticeResult').hidden=true;return;}
-   practice.selected=q.id;dropdown.value=q.id;
-   el('writingPracticeStatus').textContent='Đã tìm thấy: '+q.id+' · '+q.topic+'. Đây là đáp án tham khảo đã biên soạn, không phải chấm điểm tự động.';
-   el('writingPracticeResult').hidden=false;
-   el('writingPracticeResult').innerHTML='<h3>Full câu trả lời / bài viết mẫu</h3><p class="writing-info">Chữ cam, in đậm: thông tin theo đề. Chữ thường: cấu trúc có thể tái sử dụng.</p><div class="writing-model">'+renderMarkedModel(q)+'</div><h3>Khung chuẩn</h3><div class="writing-model writing-framework">'+renderFramework(q)+'</div><p class="writing-info">Nguồn: '+esc(q.sourceLabel)+'</p>';
+  const prompt=el('writingPracticePrompt').value.trim(),normal=normWriting(prompt);
+  const status=el('writingPracticeStatus'),result=el('writingPracticeResult');
+  if(!normal){status.textContent='Vui lòng điền nội dung đề bài.';result.hidden=true;return;}
+  const items=state.data.items.filter(q=>q.part===practice.part);
+  const q=items.find(x=>x.id===practice.selected&&normWriting(x.prompt)===normal)||items.find(x=>normWriting(x.prompt)===normal)||
+   (practice.part===4 && /famous film critic/i.test(normal)&&/attract/i.test(normal)?items.find(x=>x.id==='W4-TRAVEL-I'):null);
+  if(!q){status.textContent='Chưa tìm thấy đề tương ứng trong dữ liệu Writing. Không tạo bài mẫu suy đoán.';result.hidden=true;return;}
+  if(practice.part!==4){result.innerHTML='<h3>Bài trả lời mẫu</h3><div class="writing-model">'+renderMarkedModel(q)+'</div><h3>Khung chuẩn</h3><div class="writing-model writing-framework">'+renderFramework(q)+'</div>';result.hidden=false;status.textContent='Đã nhận diện '+q.id;return;}
+  const q1=el('writingPracticeQ1').value.trim(),q2=el('writingPracticeQ2').value.trim();
+  if(!q1||!q2){status.textContent='Vui lòng điền đủ cả Q1 và Q2.';result.hidden=true;return;}
+  // Q1/Q2 must be consistent with the bank's email roles, not an arbitrary new request.
+  if(!/(friend|informal)/i.test(q1)||!/(manager|club|formal)/i.test(q2)){status.textContent='Q1 cần là email cho bạn; Q2 cần là email cho quản lý. Hãy kiểm tra lại đề.';result.hidden=true;return;}
+  const variants=peers(q),informal=variants.find(x=>/informal email/i.test(x.topic)||x.id.endsWith('-I')),formal=variants.find(x=>/formal email/i.test(x.topic)||x.id.endsWith('-F'));
+  if(!informal||!formal){status.textContent='Tình huống này chưa có đủ hai bài mẫu Q1 và Q2 trong ngân hàng.';result.hidden=true;return;}
+  result.innerHTML='<h3>Q1 · Informal email (40–50 words)</h3><div class="writing-model">'+renderMarkedModel(informal)+'</div><h3>Khung Q1</h3><div class="writing-model writing-framework">'+renderFramework(informal)+'</div><h3>Q2 · Formal email (120–150 words)</h3><div class="writing-model">'+renderMarkedModel(formal)+'</div><h3>Khung Q2</h3><div class="writing-model writing-framework">'+renderFramework(formal)+'</div><p class="writing-info">Màu cam đậm = thông tin thay đổi; chữ thường = phần khung mẫu. Nguồn: '+esc(q.sourceLabel)+'</p>';
+  result.hidden=false;status.textContent='Đã nhận diện đề '+q.topic.replace(/ · .*/,'')+' · hai bài viết mẫu.';
  };
 }
 
