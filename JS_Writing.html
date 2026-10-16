@@ -39,6 +39,8 @@ function renderMarkedModel(q){
     'W4-002':['Club Manager','the recent complaints from residents who live near our music club','concerned about the situation','concerts should bring enjoyment without disturbing the local community','schedule concerts earlier in the evening','residents can rest at night','improve sound insulation','choose a more suitable venue','meeting local residents','listen to their concerns','a positive relationship with our neighbours','Yen'],
     'W4-003':['Club Manager','the club\'s plan to organise more activities this year','valuable opportunity to bring members together','excited','holding a short meeting to collect ideas from members','understand which activities people are most interested in','promote our events through social media','invite volunteers','increase participation without creating unnecessary costs','help with planning or communication','Yen']
   };
+  if(q.id==='W4-NATURE-PROJECT-I')fragments[q.id]=['Anna','our club must choose between two local projects','excited','choose the tree-planting project','it helps protect the environment and brings people together','Yen'];
+  if(q.id==='W4-NATURE-PROJECT-F')fragments[q.id]=['Yen','Nature Club','the two proposed local projects','excited','both projects can benefit our community','choose the tree-planting project','it can protect the environment and improve air quality','organize a tree-planting event at the weekend so that both young and old members can participate','bring people together and make our community greener'];
   if(q.id==='W4-TRAVEL-I')fragments[q.id]=['Anna','famous film critic visiting our club next week','excited','films influence society','advertise the event on social media and invite students','Yen'];
   if(q.id==='W4-TRAVEL-F')fragments[q.id]=['Club Manager','travel club will invite a famous film critic next week','excited','films reflect different cultures','promoting the event on social media','free admission to club members','question-and-answer session','Yen'];
   let out=esc(q.model);const dynamic=(fragments[q.id]||[]).slice();
@@ -165,7 +167,8 @@ function renderPractice(){
   }
   const items=state.data.items.filter(q=>q.part===practice.part);
   const q=matchWritingBank(items,prompt,practice.selected)||
-   (practice.part===4 && /famous film critic/i.test(normal)&&/attract/i.test(normal)?items.find(x=>x.id==='W4-TRAVEL-I'):null);
+   (practice.part===4 && /famous film critic/i.test(normal)&&/attract/i.test(normal)?items.find(x=>x.id==='W4-TRAVEL-I'):null)||
+   (practice.part===4 && /tree planting/.test(normal)&&/animal/.test(normal)&&/project/.test(normal)?items.find(x=>x.id==='W4-NATURE-PROJECT-I'):null);
   if(!q){status.textContent='Chưa tìm thấy đề tương ứng trong dữ liệu Writing. Không tạo bài mẫu suy đoán.';result.hidden=true;return;}
   if(practice.part!==4){result.innerHTML='<h3>Bài trả lời mẫu</h3><div class="writing-model">'+renderMarkedModel(q)+'</div><h3>Khung chuẩn</h3><div class="writing-model writing-framework">'+renderFramework(q)+'</div>';result.hidden=false;status.textContent='Đã nhận diện '+q.id;return;}
   const q1=el('writingPracticeQ1').value.trim(),q2=el('writingPracticeQ2').value.trim();
