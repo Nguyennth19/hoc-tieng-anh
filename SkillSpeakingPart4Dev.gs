@@ -1,14 +1,16 @@
 /** APTIS B2 Coach — Part 4 DEV-only adapter.
- * Isolated: reads A4_P4_*_DEV sheets; does not migrate/overwrite PROD or change bootstrap.
- * Requires Script Property APTIS_DEV_DATABASE_ID in an isolated DEV deployment.
- * Never hardcode a PROD or DEV spreadsheet ID in this public repository.
+ * Reads P4_IMPORT_STAGING and writes only P4_PROGRESS / P4_ATTEMPTS.
+ * Uses the existing database resolution in Database.gs.
+ * Unapproved exam sets remain hidden in Exam mode.
  */
 function getPart4DevDatabase_() {
-  const id = String(PropertiesService.getScriptProperties().getProperty('APTIS_DEV_DATABASE_ID') || '').trim();
-  if (!id) throw new Error('DEV setup missing: APTIS_DEV_DATABASE_ID.');
-  const live = String(PropertiesService.getScriptProperties().getProperty('APTIS_DATABASE_ID') || '').trim();
-  if (id === live) throw new Error('Safety stop: DEV spreadsheet matches configured PROD.');
-  return SpreadsheetApp.openById(id);
+  // This file is deployed with the original Apps Script project.
+  // Its configured APTIS_DATABASE_ID is the single source of truth.
+  const db = getDatabase_();
+  if (!db.getSheetByName('P4_IMPORT_STAGING')) {
+    throw new Error('Part 4 staging table is missing from the configured database.');
+  }
+  return db;
 }
 function readPart4DevTable_(name) {
   const sh = getPart4DevDatabase_().getSheetByName(name);
@@ -25,7 +27,7 @@ function readPart4DevTable_(name) {
 /** Read-only DEV payload. QA_HOLD records are visible in learning mode only. */
 function getSpeakingPart4Dev(mode) {
   const choice = mode === 'exam' ? 'exam' : 'learn';
-  const all = readPart4DevTable_('A4_P4_EXAM_DEV');
+  const all = readPart4DevTable_('P4_IMPORT_STAGING');
   const eligible = choice === 'exam'
     ? all.filter(x => x.release_approved === 'YES' && x.qa_status === 'APPROVED')
     : all;
@@ -45,9 +47,9 @@ function getSpeakingPart4Dev(mode) {
 }
 /** DEV-only integrity check; writes nothing. */
 function inspectSpeakingPart4Dev() {
-  const sets = readPart4DevTable_('A4_P4_EXAM_DEV');
-  const templates = readPart4DevTable_('A4_P4_TEMPLATES_DEV');
-  const stories = readPart4DevTable_('A4_P4_STORIES_DEV');
+  const sets = readPart4DevTable_('P4_IMPORT_STAGING');
+  const templates = []; // Optional editorial working bank is not imported into PROD.
+  const stories = []; // Optional editorial working bank is not imported into PROD.
   const ids = sets.map(x => x.exam_set_id);
   return {
     ok: sets.length === 51 && new Set(ids).size === sets.length,
@@ -57,4 +59,37 @@ function inspectSpeakingPart4Dev() {
     missingModels: sets.filter(x => !x.model_q1 || !x.model_q2 || !x.model_q3).length,
     approvedSets: sets.filter(x => x.release_approved === 'YES').length
   };
+}
+
+/** DEV-only attempt storage; never writes to legacy tables. */
+function saveSpeakingPart4DevAttempt(p) {
+ if(!p) throw Error('Missing attempt.');
+ const id=String(p.questionId||''),session=String(p.clientSessionId||'');
+ if(!/^(SPK-P04-T\d{3}-V\d{2}|A\d{2}|S\d{2})$/.test(id)||!/^[A-Za-z0-9_-]{8,90}$/.test(session)) throw Error('Invalid ID.');
+ const elapsed=Number(p.elapsedSeconds),rating=Number(p.selfRating);
+ if(!Number.isFinite(elapsed)||elapsed<0||elapsed>120||!Number.isInteger(rating)||rating<0||rating>5) throw Error('Invalid attempt.');
+ const mode=p.mode==='exam'?'exam':'learn';
+ const q=readPart4DevTable_('P4_IMPORT_STAGING').find(x=>x.exam_set_id===id);
+ if(!q) throw Error('Unknown set.');
+ if(mode==='exam'&&(q.qa_status!=='APPROVED'||q.release_approved!=='YES'))throw Error('Unapproved exam set.');
+ const db=getPart4DevDatabase_(),lock=LockService.getScriptLock();lock.waitLock(10000);
+ try{
+  const a=db.getSheetByName('P4_ATTEMPTS'),pr=db.getSheetByName('P4_PROGRESS');
+  if(!a||!pr)throw Error('DEV progress schema absent.');
+  const prior=a.getDataRange().getValues();
+  for(let i=1;i<prior.length;i++)if(String(prior[i][9])===session)return {ok:true,duplicate:true,attemptId:String(prior[i][0])};
+  const time=new Date(),uuid=Utilities.getUuid(),note=String(p.note||'').slice(0,300).replace(/[\u0000-\u001f]/g,' ');
+  a.appendRow([uuid,time,id,elapsed,elapsed>=115,rating,note,mode,q.story_id,session,q.source_version]);
+  const rows=pr.getDataRange().getValues(),idx=rows.findIndex((x,i)=>i>0&&String(x[0])===id),old=idx>=0?rows[idx]:null,count=Number(old?old[3]:0)+1;
+  const days=rating<=1?0:rating===2?1:rating===3?Math.min(3+count,7):rating===4?Math.min(7+count*2,21):Math.min(14+count*3,45);
+  const due=new Date(time);if(days===0)due.setHours(due.getHours()+6);else{due.setDate(due.getDate()+days);due.setHours(7,0,0,0);}
+  const status=rating>=4?'learned':'learning',row=[id,status,rating,count,time,due,note,old?old[7]===true:false,uuid,q.source_version];
+  if(idx>=0)pr.getRange(idx+1,1,1,row.length).setValues([row]);else pr.appendRow(row);
+  return {ok:true,attemptId:uuid,progress:{questionId:id,status,rating,reviewCount:count,nextReview:due.toISOString()}};
+ }finally{lock.releaseLock();}
+}
+function getSpeakingPart4DevProgress(){
+ const sh=getPart4DevDatabase_().getSheetByName('P4_PROGRESS');
+ if(!sh)throw Error('Missing DEV progress sheet.');
+ return sh.getDataRange().getDisplayValues().slice(1).filter(x=>x[0]).map(x=>({questionId:x[0],status:x[1],rating:Number(x[2])||0,reviewCount:Number(x[3])||0,lastReviewed:x[4],nextReview:x[5]}));
 }
