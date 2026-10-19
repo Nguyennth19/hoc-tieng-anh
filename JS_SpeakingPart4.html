@@ -20,9 +20,12 @@ function renderSet(){
   stopClock();S.phase='ready';S.session=null;S.saved=false;byId('p4Review').hidden=true;byId('p4Saved').textContent='';byId('p4Stage').textContent='Ready';byId('p4Time').textContent='01:00';
   byId('p4Begin').disabled=!S.current;byId('p4Next').disabled=true;byId('p4Stop').disabled=true;
   if(!S.current){byId('p4Content').textContent='No approved exam sets are available. Use Learn mode for drafts.';byId('p4Models').textContent='';return;}
-  byId('p4Content').innerHTML=S.current.questions.map((q,i)=>'<article class="p4dev-question"><b>Q'+(i+1)+'</b>'+escapeHtml(q)+'</article>').join('');
-  if(S.mode==='learn'&&S.current.models){byId('p4Models').innerHTML=S.current.models.map((m,i)=>'<details><summary>Q'+(i+1)+' · Study answer (draft)</summary><p>'+escapeHtml(m)+'</p></details>').join('');}
-  else byId('p4Models').textContent='';
+  byId('p4Content').innerHTML=S.current.questions.map((q,i)=>{
+    const answer=S.mode==='learn'&&S.current.models?S.current.models[i]:'';
+    return '<article class="p4dev-question"><b>Q'+(i+1)+'</b><p class="p4dev-prompt">'+escapeHtml(q)+'</p>'+
+      (answer?'<details class="p4dev-inline-answer"><summary>Study answer (draft) · Q'+(i+1)+'</summary><p>'+escapeHtml(answer)+'</p></details>':'')+'</article>';
+  }).join('');
+  byId('p4Models').textContent='';
   status(S.mode==='learn'?'Study draft · QA status: '+S.current.qaStatus:'Approved test set.');
 }
 function load(){
