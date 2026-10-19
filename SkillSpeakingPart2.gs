@@ -553,12 +553,13 @@ function testSpeakingPart2Release30() {
     if(!r[idx.question1])issues.push(id+':NO_QUESTION');
   });
   const payload=getBootstrapData(true);
-  const result={ok:active.length===30&&issues.length===0&&
-    Array.isArray(payload.part2)&&payload.part2.length===30,
+  const baseline=active.filter(r=>/^SP2-EX-0(0[1-9]|[12][0-9]|30)$/.test(String(r[idx.id])));
+  const result={ok:baseline.length===30&&issues.length===0&&
+    Array.isArray(payload.part2)&&payload.part2.length>=30,
     sheetActive:active.length,bootstrapCount:Array.isArray(payload.part2)?payload.part2.length:-1,
     distinctIds:new Set(active.map(r=>r[idx.id])).size,
     issues:issues,part2Version:PART2_DESCRIPTION_VERSION};
-  result.ok=result.ok&&result.distinctIds===30;
+  result.ok=result.ok&&result.distinctIds===active.length;
   Logger.log(JSON.stringify(result));return result;
 }
 
