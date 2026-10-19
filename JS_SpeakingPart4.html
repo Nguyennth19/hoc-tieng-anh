@@ -2,7 +2,7 @@
 (function(){
 'use strict';
 const byId=id=>document.getElementById(id);
-const S={data:null,current:null,mode:'learn',phase:'ready',deadline:0,timer:null};
+const S={data:null,current:null,mode:'learn',phase:'ready',deadline:0,timer:null,spoken:0,session:null,saved:false,requestSeq:0};
 const qs=(sel,root=document)=>root.querySelector(sel);
 const duration=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
 function stopClock(){if(S.timer){clearInterval(S.timer);S.timer=null;}}
@@ -10,12 +10,13 @@ function status(message){byId('p4Status').textContent=message;}
 function renderClock(){const sec=Math.max(0,Math.ceil((S.deadline-Date.now())/1000));byId('p4Time').textContent=duration(sec);if(sec===0){stopClock();if(S.phase==='prep'){startSpeaking();}else if(S.phase==='speak'){endSpeaking();}}}
 function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function clock(phase,seconds){stopClock();S.phase=phase;S.deadline=Date.now()+seconds*1000;byId('p4Time').textContent=duration(seconds);byId('p4Stage').textContent=phase==='prep'?'Preparation':phase==='speak'?'Speaking':'Ready';S.timer=setInterval(renderClock,200);byId('p4Begin').disabled=true;byId('p4Next').disabled=phase!=='prep';byId('p4Stop').disabled=false;}
-function startSpeaking(){clock('speak',120);status('Speaking: answer all three questions within the same 120-second window.');}
-function endSpeaking(){stopClock();S.phase='done';byId('p4Stage').textContent='Finished';byId('p4Begin').disabled=false;byId('p4Next').disabled=true;byId('p4Stop').disabled=true;status('Practice finished. DEV does not save or record answers.');}
+function startSpeaking(){S.session='p4_'+Date.now()+'_'+Math.random().toString(36).slice(2,12);S.saved=false;clock('speak',120);status('Speaking: answer all three questions within the same 120-second window.');}
+function endSpeaking(){if(S.phase==='speak')S.spoken=Math.max(0,Math.min(120,120-Math.ceil((S.deadline-Date.now())/1000)));stopClock();S.phase='done';byId('p4Review').hidden=!(S.current&&S.session);byId('p4Stage').textContent='Finished';byId('p4Begin').disabled=false;byId('p4Next').disabled=true;byId('p4Stop').disabled=true;status('Practice finished. Rate your performance and save your DEV attempt below. Audio recording is not enabled.');}
 function renderSet(){
   if(!S.data)return;
+  byId('p4Save').disabled=false;
   S.current=S.data.sets.find(x=>x.id===byId('p4Set').value)||S.data.sets[0]||null;
-  stopClock();S.phase='ready';byId('p4Stage').textContent='Ready';byId('p4Time').textContent='01:00';
+  stopClock();S.phase='ready';S.session=null;S.saved=false;byId('p4Review').hidden=true;byId('p4Saved').textContent='';byId('p4Stage').textContent='Ready';byId('p4Time').textContent='01:00';
   byId('p4Begin').disabled=!S.current;byId('p4Next').disabled=true;byId('p4Stop').disabled=true;
   if(!S.current){byId('p4Content').textContent='No approved exam sets are available. Use Learn mode for drafts.';byId('p4Models').textContent='';return;}
   byId('p4Content').innerHTML=S.current.questions.map((q,i)=>'<article class="p4dev-question"><b>Q'+(i+1)+'</b>'+escapeHtml(q)+'</article>').join('');
@@ -24,23 +25,25 @@ function renderSet(){
   status(S.mode==='learn'?'Study draft · QA status: '+S.current.qaStatus:'Approved test set.');
 }
 function load(){
-  stopClock();S.mode=byId('p4Mode').value;status('Loading isolated DEV data...');
+  const requestId=++S.requestSeq;
+  stopClock();S.session=null;byId('p4Review').hidden=true;S.mode=byId('p4Mode').value;status('Loading isolated DEV data...');
   byId('p4Content').textContent='';
   if(typeof google==='undefined'||!google.script||!google.script.run){status('Google Apps Script runtime is not connected.');return;}
   google.script.run.withSuccessHandler(data=>{
+    if(requestId!==S.requestSeq)return;
     if(!data||data.isDev!==true){status('Safety check failed: DEV response required.');return;}
     S.data=data;
     const select=byId('p4Set');select.replaceChildren();
     data.sets.forEach(x=>{const o=document.createElement('option');o.value=x.id;o.textContent=x.id+(x.qaStatus==='QA_HOLD'?' · QA hold':'');select.appendChild(o);});
     renderSet();
     if(S.mode==='exam'&&data.sets.length===0)status('Exam mode locked: no QA-approved sets. All source drafts remain available in Learn mode.');
-  }).withFailureHandler(error=>status('DEV not configured: '+(error?.message||'Unable to load data'))).getSpeakingPart4Dev(S.mode);
+  }).withFailureHandler(error=>{if(requestId===S.requestSeq)status('DEV not configured: '+(error?.message||'Unable to load data'));}).getSpeakingPart4Dev(S.mode);
 }
 function open(){
   const el=byId('speakingPart4Future');if(!el)return;
   el.classList.remove('hidden');load();
 }
-function close(){stopClock();S.phase='ready';byId('speakingPart4Future').classList.add('hidden');}
+function close(){++S.requestSeq;stopClock();S.session=null;S.phase='ready';byId('speakingPart4Future').classList.add('hidden');}
 document.addEventListener('DOMContentLoaded',()=>{
  const card=qs('.speaking-module-card.is-coming');
  if(card&&/Part 4/.test(card.textContent)){card.disabled=false;card.classList.remove('is-coming');const label=qs('.module-status',card);if(label)label.textContent='DEV preview';card.addEventListener('click',open);}
@@ -51,6 +54,29 @@ document.addEventListener('DOMContentLoaded',()=>{
  byId('p4Begin').addEventListener('click',()=>{if(S.current)clock('prep',60);});
  byId('p4Next').addEventListener('click',()=>{if(S.phase==='prep')startSpeaking();});
  byId('p4Stop').addEventListener('click',endSpeaking);
+
+ byId('p4Save').addEventListener('click',()=>{
+   if(!S.current||!S.session||S.saved||S.phase!=='done')return;
+   const setId=S.current.id,sessionId=S.session,mode=S.mode;
+   byId('p4Save').disabled=true;byId('p4Saved').textContent='Saving to DEV only...';
+   google.script.run.withSuccessHandler(result=>{
+     if(S.session!==sessionId||S.current?.id!==setId)return;
+     S.saved=true;byId('p4Saved').textContent='Saved DEV attempt '+(result.attemptId||'')+'.';byId('p4Save').disabled=false;
+   }).withFailureHandler(err=>{
+     if(S.session!==sessionId)return;
+     byId('p4Save').disabled=false;byId('p4Saved').textContent='Save failed: '+(err&&err.message?err.message:'unknown error');
+   }).saveSpeakingPart4DevAttempt({
+     questionId:setId,clientSessionId:sessionId,elapsedSeconds:S.spoken,
+     selfRating:Number(byId('p4Rating').value),note:byId('p4Note').value,mode
+   });
+ });
+ byId('p4Read').addEventListener('click',()=>{
+   google.script.run.withSuccessHandler(items=>{
+     const p=items.find(x=>x.questionId===S.current?.id);
+     byId('p4Saved').textContent=p?'Saved: '+p.status+', rating '+p.rating+', reviews '+p.reviewCount:'No saved progress for this set.';
+   }).withFailureHandler(e=>byId('p4Saved').textContent='Progress check failed: '+e.message).getSpeakingPart4DevProgress();
+ });
+
 });
 window.AptisSpeakingPart4={open,close};
 })();
