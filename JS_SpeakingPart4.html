@@ -7,6 +7,7 @@ const qs=(sel,root=document)=>root.querySelector(sel);
 const duration=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
 function stopClock(){if(S.timer){clearInterval(S.timer);S.timer=null;}}
 function status(message){byId('p4Status').textContent=message;}
+function topicLabel(x){const q=String(x.questions&&x.questions[0]||'').trim();return q.length>94?q.slice(0,91)+'…':q||'Untitled topic';}
 function renderClock(){const sec=Math.max(0,Math.ceil((S.deadline-Date.now())/1000));byId('p4Time').textContent=duration(sec);if(sec===0){stopClock();if(S.phase==='prep'){startSpeaking();}else if(S.phase==='speak'){endSpeaking();}}}
 function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function clock(phase,seconds){stopClock();S.phase=phase;S.deadline=Date.now()+seconds*1000;byId('p4Time').textContent=duration(seconds);byId('p4Stage').textContent=phase==='prep'?'Preparation':phase==='speak'?'Speaking':'Ready';S.timer=setInterval(renderClock,200);byId('p4Begin').disabled=true;byId('p4Next').disabled=phase!=='prep';byId('p4Stop').disabled=false;}
@@ -34,10 +35,30 @@ function load(){
     if(!data||data.isDev!==true){status('Safety check failed: DEV response required.');return;}
     S.data=data;
     const select=byId('p4Set');select.replaceChildren();
-    data.sets.forEach(x=>{const o=document.createElement('option');o.value=x.id;o.textContent=x.id+(x.qaStatus==='QA_HOLD'?' · QA hold':'');select.appendChild(o);});
+    data.sets.forEach(x=>{const o=document.createElement('option');o.value=x.id;o.textContent=topicLabel(x)+(x.qaStatus==='QA_HOLD'?' · QA hold':'');o.title=x.id+' · '+String(x.questions?.[0]||'');select.appendChild(o);});
     renderSet();
     if(S.mode==='exam'&&data.sets.length===0)status('Exam mode locked: no QA-approved sets. All source drafts remain available in Learn mode.');
   }).withFailureHandler(error=>{if(requestId===S.requestSeq)status('DEV not configured: '+(error?.message||'Unable to load data'));}).getSpeakingPart4Dev(S.mode);
+}
+
+function refreshPart4Progress(){
+  const el=byId('p4ProgressStatus');if(!el)return;
+  el.textContent='Loading Part 4 progress…';
+  if(typeof google==='undefined'||!google.script?.run)return;
+  google.script.run.withSuccessHandler(rows=>{
+    const items=Array.isArray(rows)?rows:[];
+    const mastered=items.filter(x=>x.status==='learned').length;
+    const due=items.filter(x=>x.nextReview&&new Date(x.nextReview)<=new Date()).length;
+    const reviews=items.reduce((n,x)=>n+(Number(x.reviewCount)||0),0);
+    const total=51;
+    const pct=Math.round(100*mastered/total);
+    byId('p4ProgressPct').textContent=pct+'%';
+    byId('p4ProgressBar').style.width=pct+'%';
+    byId('p4Learned').textContent=mastered;
+    byId('p4Due').textContent=due;
+    byId('p4Reviews').textContent=reviews;
+    el.textContent=items.length+' of '+total+' topics practised · tracked separately from Parts 1–3.';
+  }).withFailureHandler(err=>{el.textContent='Part 4 progress unavailable: '+(err?.message||'check connection');}).getSpeakingPart4DevProgress();
 }
 function open(){
   const el=byId('speakingPart4Future');if(!el)return;
@@ -52,6 +73,9 @@ document.addEventListener('DOMContentLoaded',()=>{
  const card=qs('.speaking-module-card.is-coming');
  if(card&&/Part 4/.test(card.textContent)){card.disabled=false;card.classList.remove('is-coming');const label=qs('.module-status',card);if(label)label.textContent='DEV preview';card.addEventListener('click',open);}
  byId('p4Close').addEventListener('click',close);
+ byId('p4ProgressOpen')?.addEventListener('click',open);
+ document.querySelectorAll('.bottom-nav [data-nav="progress"]').forEach(x=>x.addEventListener('click',()=>setTimeout(refreshPart4Progress,20)));
+ byId('progressBtn')?.addEventListener('click',()=>setTimeout(refreshPart4Progress,20));
  document.querySelectorAll('.bottom-nav .nav-btn').forEach(b=>b.addEventListener('click',()=>{if(b.dataset.nav==='part4'){open();}else if(!byId('speakingPart4Future').classList.contains('hidden')){close();}},true));
  byId('p4Mode').addEventListener('change',load);
  byId('p4Load').addEventListener('click',load);
@@ -66,7 +90,7 @@ document.addEventListener('DOMContentLoaded',()=>{
    byId('p4Save').disabled=true;byId('p4Saved').textContent='Saving Part 4 progress...';
    google.script.run.withSuccessHandler(result=>{
      if(S.session!==sessionId||S.current?.id!==setId)return;
-     S.saved=true;byId('p4Saved').textContent='Saved Part 4 attempt '+(result.attemptId||'')+'.';byId('p4Save').disabled=false;
+     S.saved=true;refreshPart4Progress();byId('p4Saved').textContent='Saved Part 4 attempt '+(result.attemptId||'')+'.';byId('p4Save').disabled=false;
    }).withFailureHandler(err=>{
      if(S.session!==sessionId)return;
      byId('p4Save').disabled=false;byId('p4Saved').textContent='Save failed: '+(err&&err.message?err.message:'unknown error');
