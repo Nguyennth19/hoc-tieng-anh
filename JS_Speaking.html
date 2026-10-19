@@ -52,6 +52,12 @@
     initSpeechVoices();
 
     const cached = readBootstrapCache();
+    // Part 1 release gate: old cached 29-question payload must not render on V2.
+    if (cached && cached.data && Array.isArray(cached.data.part1) && cached.data.part1.length !== 49) {
+      clearAptisSpeakingBootstrapCache_();
+      loadData({ force: true, blocking: true });
+      return;
+    }
     if (cached && cached.data) {
       state.hydratedFromCache = true;
       applyBootstrap(cached.data, { fromCache: true, stale: cached.stale });
@@ -306,6 +312,13 @@
     setLoadingVisible(false);
     if (!isValidBootstrap(data)) {
       onError(new Error('Speaking data returned an invalid payload.'), { background: Boolean(state.data) });
+      return;
+    }
+    if (data.part1.length !== 49) {
+      setSyncStatus('Part 1 release mismatch: received ' + data.part1.length + '/49. Check deployment and server cache.', 'cached');
+      toast('Part 1 has ' + data.part1.length + '/49 questions. Open the latest deployment or use Refresh.');
+      // Do not overwrite newer saved data with an older server payload.
+      if (!state.data || state.data.part1.length !== 49) applyBootstrap(data, { fromCache: false });
       return;
     }
     writeBootstrapCache(data);
