@@ -77,8 +77,17 @@ function p4RefreshMastery(){
   P4_MASTERY.rows=Array.isArray(items)?items:[];
   const counts=[0,0,0,0];P4_MASTERY.rows.forEach(x=>{const n=Number(x.level)||0;if(n>=0&&n<=3)counts[n]++;});
   byId('p4MasteryOverview').textContent='Mastery across 51 sets: '+counts[3]+' independent · '+counts[2]+' with hints · '+counts[1]+' reading · '+counts[0]+' new';
-  p4SyncMastery();
+  p4SyncMastery();p4DecorateTopics();
  }).withFailureHandler(e=>byId('p4MasterySaved').textContent='Mastery unavailable: '+e.message).getSpeakingPart4Mastery();
+}
+function p4DecorateTopics(){
+ const select=byId('p4Set');if(!S.data||!select)return;
+ Array.from(select.options).forEach(opt=>{
+  const set=S.data.sets.find(x=>x.id===opt.value);
+  const record=P4_MASTERY.rows.find(x=>x.questionId===opt.value);
+  const names=['New','Reading','With hints','Independent'];
+  if(set)opt.textContent=topicLabel(set)+' · '+names[Math.max(0,Math.min(3,Number(record?.level)||0))];
+ });
 }
 function p4SyncMastery(){
  const row=P4_MASTERY.rows.find(x=>x.questionId===S.current?.id);
@@ -100,7 +109,7 @@ function renderSet(){
       (answer?'<details class="p4dev-inline-answer"'+(byId('p4StudyView').value==='recall'?'':' open')+'><summary>Study answer · Q'+(i+1)+'</summary><button type="button" class="p4-listen" data-answer="'+i+'">▶ Listen Q'+(i+1)+'</button><p>'+p4AnswerHtml(answer)+'</p></details>':'')+'</article>';
   }).join('');
   byId('p4Models').textContent='';
-  status(S.mode==='learn'?'Study draft · QA status: '+S.current.qaStatus:'Approved test set.');
+  status(S.mode==='learn'?'Learn by Formula · QA status: '+S.current.qaStatus:'Exam mode · approved test set.');
 }
 function load(){
   const requestId=++S.requestSeq;
