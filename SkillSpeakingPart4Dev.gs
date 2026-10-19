@@ -121,3 +121,35 @@ function getSpeakingPart4DevProgress(){
  if(!sh)throw Error('Missing DEV progress sheet.');
  return sh.getDataRange().getDisplayValues().slice(1).filter(x=>x[0]).map(x=>({questionId:x[0],status:x[1],rating:Number(x[2])||0,reviewCount:Number(x[3])||0,lastReviewed:x[4],nextReview:x[5]}));
 }
+
+/** Independent Part4 memorization records. Never changes legacy progress. */
+function getSpeakingPart4Mastery() {
+ const sh=getPart4DevDatabase_().getSheetByName('P4_MASTERY');
+ if(!sh)throw Error('P4_MASTERY missing');
+ return sh.getDataRange().getDisplayValues().slice(1).filter(r=>r[0]).map(r=>({
+  questionId:r[0],level:Number(r[3])||0,practiceCount:Number(r[6])||0,
+  lastPractice:r[4],lastPracticeMode:r[5]
+ }));
+}
+function saveSpeakingPart4Mastery(p){
+ const id=String(p&&p.questionId||''),level=Number(p&&p.level),mode=String(p&&p.practiceMode||'learn');
+ if(!/^(SPK-P04-T\d{3}-V\d{2}|A\d{2}|S\d{2})$/.test(id)||
+   !Number.isInteger(level)||level<0||level>3||!['learn','recall','exam'].includes(mode))throw Error('Invalid mastery update');
+ const db=getPart4DevDatabase_(),lock=LockService.getScriptLock();lock.waitLock(10000);
+ try{
+  const sh=db.getSheetByName('P4_MASTERY');if(!sh)throw Error('P4_MASTERY missing');
+  const rows=sh.getDataRange().getValues();const ix=rows.findIndex((r,i)=>i>0&&String(r[0])===id);
+  if(ix<1)throw Error('Unknown Part4 set');
+  const row=rows[ix],count=(Number(row[6])||0)+1;
+  sh.getRange(ix+1,4,1,5).setValues([[level,new Date(),mode,count,String(p.note||'').slice(0,200)]]);
+  return {ok:true,questionId:id,level,practiceCount:count};
+ }finally{lock.releaseLock();}
+}
+function testSpeakingPart4LearningTools(){
+ const all=readPart4DevTable_('P4_IMPORT_STAGING'),mastery=getSpeakingPart4Mastery();
+ const ok=all.length===51&&mastery.length===51&&
+ new Set(mastery.map(x=>x.questionId)).size===51&&
+ all.every(x=>mastery.some(m=>m.questionId===x.exam_set_id&&m.level>=0&&m.level<=3));
+ const result={ok,sets:all.length,masteryRows:mastery.length,approved:all.filter(isSpeakingPart4ExamEligible_).length};
+ Logger.log(JSON.stringify(result));return result;
+}
