@@ -11,7 +11,7 @@ function renderClock(){const sec=Math.max(0,Math.ceil((S.deadline-Date.now())/10
 function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function clock(phase,seconds){stopClock();S.phase=phase;S.deadline=Date.now()+seconds*1000;byId('p4Time').textContent=duration(seconds);byId('p4Stage').textContent=phase==='prep'?'Preparation':phase==='speak'?'Speaking':'Ready';S.timer=setInterval(renderClock,200);byId('p4Begin').disabled=true;byId('p4Next').disabled=phase!=='prep';byId('p4Stop').disabled=false;}
 function startSpeaking(){S.session='p4_'+Date.now()+'_'+Math.random().toString(36).slice(2,12);S.saved=false;clock('speak',120);status('Speaking: answer all three questions within the same 120-second window.');}
-function endSpeaking(){if(S.phase==='speak')S.spoken=Math.max(0,Math.min(120,120-Math.ceil((S.deadline-Date.now())/1000)));stopClock();S.phase='done';byId('p4Review').hidden=!S.current;byId('p4Stage').textContent='Finished';byId('p4Begin').disabled=false;byId('p4Next').disabled=true;byId('p4Stop').disabled=true;status('Practice finished. DEV does not save or record answers.');}
+function endSpeaking(){if(S.phase==='speak')S.spoken=Math.max(0,Math.min(120,120-Math.ceil((S.deadline-Date.now())/1000)));stopClock();S.phase='done';byId('p4Review').hidden=!S.current;byId('p4Stage').textContent='Finished';byId('p4Begin').disabled=false;byId('p4Next').disabled=true;byId('p4Stop').disabled=true;status('Practice finished. Rate your performance and save your DEV attempt below. Audio recording is not enabled.');}
 function renderSet(){
   if(!S.data)return;
   S.current=S.data.sets.find(x=>x.id===byId('p4Set').value)||S.data.sets[0]||null;
@@ -24,7 +24,7 @@ function renderSet(){
   status(S.mode==='learn'?'Study draft · QA status: '+S.current.qaStatus:'Approved test set.');
 }
 function load(){
-  stopClock();S.mode=byId('p4Mode').value;status('Loading isolated DEV data...');
+  stopClock();S.session=null;byId('p4Review').hidden=true;S.mode=byId('p4Mode').value;status('Loading isolated DEV data...');
   byId('p4Content').textContent='';
   if(typeof google==='undefined'||!google.script||!google.script.run){status('Google Apps Script runtime is not connected.');return;}
   google.script.run.withSuccessHandler(data=>{
@@ -40,7 +40,7 @@ function open(){
   const el=byId('speakingPart4Future');if(!el)return;
   el.classList.remove('hidden');load();
 }
-function close(){stopClock();S.phase='ready';byId('speakingPart4Future').classList.add('hidden');}
+function close(){stopClock();S.session=null;S.phase='ready';byId('speakingPart4Future').classList.add('hidden');}
 document.addEventListener('DOMContentLoaded',()=>{
  const card=qs('.speaking-module-card.is-coming');
  if(card&&/Part 4/.test(card.textContent)){card.disabled=false;card.classList.remove('is-coming');const label=qs('.module-status',card);if(label)label.textContent='DEV preview';card.addEventListener('click',open);}
