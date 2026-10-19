@@ -19,7 +19,7 @@ const P4_FIXED_PHRASES=[
 'One thing I remember clearly is that','Overall, I think','What matters most is',
 'At that time,','At first,','In the end,','For example,','After that,',
 'To be honest,','In my opinion,','However,','Luckily,','I think',
-'I felt','I believe','We should','People should'
+'I usually feel','I do not think','I felt','We should','People should','Last month,','Last summer,'
 ].sort((a,b)=>b.length-a.length);
 function p4FormulaHtml(raw){
  const text=String(raw||'');
@@ -30,7 +30,7 @@ function p4FormulaHtml(raw){
      const ix=text.toLowerCase().indexOf(phrase.toLowerCase(),from);
      if(ix<0)break;
      const before=ix===0?' ':text[ix-1],after=text[ix+phrase.length]||' ';
-     if(!/[A-Za-z]/.test(before)&&!/[A-Za-z]/.test(after)&&matches.every(m=>ix+phrase.length<=m.start||ix>=m.end)){
+     if((ix===0||/[.!?]/.test(text.slice(0,ix).trimEnd().slice(-1)))&&!/[A-Za-z]/.test(after)&&matches.every(m=>ix+phrase.length<=m.start||ix>=m.end)){
        matches.push({start:ix,end:ix+phrase.length});
      }
      from=ix+phrase.length;
