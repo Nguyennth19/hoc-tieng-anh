@@ -12,7 +12,39 @@ function renderClock(){const sec=Math.max(0,Math.ceil((S.deadline-Date.now())/10
 function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function clock(phase,seconds){stopClock();S.phase=phase;S.deadline=Date.now()+seconds*1000;byId('p4Time').textContent=duration(seconds);byId('p4Stage').textContent=phase==='prep'?'Preparation':phase==='speak'?'Speaking':'Ready';S.timer=setInterval(renderClock,200);byId('p4Begin').disabled=true;byId('p4Next').disabled=phase!=='prep';byId('p4Stop').disabled=false;}
 function startSpeaking(){S.session='p4_'+Date.now()+'_'+Math.random().toString(36).slice(2,12);S.saved=false;clock('speak',120);status('Speaking: answer all three questions within the same 120-second window.');}
-function endSpeaking(){if(S.phase==='speak')S.spoken=Math.max(0,Math.min(120,120-Math.ceil((S.deadline-Date.now())/1000)));stopClock();S.phase='done';byId('p4Review').hidden=!(S.current&&S.session);byId('p4Stage').textContent='Finished';byId('p4Begin').disabled=false;byId('p4Next').disabled=true;byId('p4Stop').disabled=true;status('Practice finished. Rate your performance and save your DEV attempt below. Audio recording is not enabled.');}
+function endSpeaking(){if(S.phase==='speak')S.spoken=Math.max(0,Math.min(120,120-Math.ceil((S.deadline-Date.now())/1000)));stopClock();S.phase='done';byId('p4Review').hidden=!(S.current&&S.session);byId('p4Stage').textContent='Finished';byId('p4Begin').disabled=false;byId('p4Next').disabled=true;byId('p4Stop').disabled=true;status('Practice finished. Rate your performance and save your practice attempt below. Audio recording is not enabled.');}
+/** Highlight only approved reusable language patterns, not topic-specific details. */
+const P4_FIXED_PHRASES=[
+'I would like to talk about a time when','The main reason is that',
+'One thing I remember clearly is that','Overall, I think','What matters most is',
+'At that time,','At first,','In the end,','For example,','After that,',
+'To be honest,','In my opinion,','However,','Luckily,','I think',
+'I felt','I believe','We should','People should'
+].sort((a,b)=>b.length-a.length);
+function p4FormulaHtml(raw){
+ const text=String(raw||'');
+ const matches=[];
+ for(const phrase of P4_FIXED_PHRASES){
+   let from=0;
+   while(from<text.length){
+     const ix=text.toLowerCase().indexOf(phrase.toLowerCase(),from);
+     if(ix<0)break;
+     const before=ix===0?' ':text[ix-1],after=text[ix+phrase.length]||' ';
+     if(!/[A-Za-z]/.test(before)&&!/[A-Za-z]/.test(after)&&matches.every(m=>ix+phrase.length<=m.start||ix>=m.end)){
+       matches.push({start:ix,end:ix+phrase.length});
+     }
+     from=ix+phrase.length;
+   }
+ }
+ matches.sort((a,b)=>a.start-b.start);
+ let out='',at=0;
+ for(const m of matches){
+   out+=escapeHtml(text.slice(at,m.start));
+   out+='<strong class="p4-fixed-formula">'+escapeHtml(text.slice(m.start,m.end))+'</strong>';
+   at=m.end;
+ }
+ return out+escapeHtml(text.slice(at));
+}
 function renderSet(){
   if(!S.data)return;
   byId('p4Save').disabled=false;
