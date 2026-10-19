@@ -6,9 +6,17 @@
 function getPart4DevDatabase_() {
   const id = String(PropertiesService.getScriptProperties().getProperty('APTIS_DEV_DATABASE_ID') || '').trim();
   if (!id) throw new Error('DEV setup missing: APTIS_DEV_DATABASE_ID.');
-  const live = String(PropertiesService.getScriptProperties().getProperty('APTIS_DATABASE_ID') || '').trim();
-  if (id === live) throw new Error('Safety stop: DEV spreadsheet matches configured PROD.');
-  return SpreadsheetApp.openById(id);
+  const props = PropertiesService.getScriptProperties();
+  const environment = String(props.getProperty('APTIS_ENV') || '').trim();
+  const appDatabase = String(props.getProperty('APTIS_DATABASE_ID') || '').trim();
+  const prodDatabase = String(props.getProperty('APTIS_PROD_DATABASE_ID') || '').trim();
+  if (environment !== 'DEV') throw new Error('Part 4 DEV requires APTIS_ENV=DEV.');
+  if (!prodDatabase) throw new Error('Set APTIS_PROD_DATABASE_ID to the actual PROD Sheet ID in DEV Script Properties.');
+  if (id === prodDatabase || appDatabase === prodDatabase) throw new Error('Safety stop: DEV is pointing to PROD.');
+  if (appDatabase !== id) throw new Error('DEV mismatch: APTIS_DATABASE_ID must equal APTIS_DEV_DATABASE_ID.');
+  const db = SpreadsheetApp.openById(id);
+  if (!db.getSheetByName('A4_P4_EXAM_DEV')) throw new Error('Part 4 DEV data tab missing.');
+  return db;
 }
 function readPart4DevTable_(name) {
   const sh = getPart4DevDatabase_().getSheetByName(name);
