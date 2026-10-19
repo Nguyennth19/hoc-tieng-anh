@@ -687,12 +687,43 @@
     setMode('learn');
   }
 
+  // Shared B1 formula markers; reusable language across Speaking / Writing.
+  const SHARED_B1_FORMULAS = [
+    'I would like to talk about','The main reason is that','In my opinion,',
+    'For example,','After that,','In the end,','Overall, I think',
+    'I usually','I think','I felt','I feel','I like it because',
+    'There is','There are','However,','This helps me','I enjoy',
+    'Last weekend,','Yesterday,','My favorite','My hometown',
+    'I am planning to'
+  ].sort((a,b)=>b.length-a.length);
+  function renderSharedFormulaText(el,raw) {
+    const str=String(raw||'');
+    const found=[];
+    SHARED_B1_FORMULAS.forEach(phrase=>{
+      const re=new RegExp(phrase.replace(/[.*+?^$\{\}()|[\]\\]/g,'\\  function renderPromptContent() {'),'gi');
+      let m;
+      while((m=re.exec(str))!==null){
+        const prev=str.slice(0,m.index).trimEnd();
+        if((!prev||/[.!?]$/.test(prev))&&!found.some(a=>m.index<a.end&&m.index+phrase.length>a.start))found.push({start:m.index,end:m.index+phrase.length});
+      }
+    });
+    found.sort((a,b)=>a.start-b.start);
+    el.replaceChildren();
+    let pos=0;
+    found.forEach(m=>{
+      el.appendChild(document.createTextNode(str.slice(pos,m.start)));
+      const b=document.createElement('strong');b.className='p1-shared-formula';b.textContent=str.slice(m.start,m.end);el.appendChild(b);
+      pos=m.end;
+    });
+    el.appendChild(document.createTextNode(str.slice(pos)));
+  }
   function renderPromptContent() {
     const item = currentItem();
     if (!item) return;
 
     $('questionText').textContent = currentQuestionText();
-    $('modelAnswer').textContent = currentModel();
+    if(state.activePart===1) renderSharedFormulaText($('modelAnswer'),currentModel());
+    else $('modelAnswer').textContent = currentModel();
     $('structureText').textContent = currentStructure();
     renderKeywords(currentKeywords());
     renderShadow();
@@ -733,7 +764,7 @@
       btn.type = 'button'; btn.textContent = '▶';
       btn.addEventListener('click', () => speakText(sentence));
       const div = document.createElement('div');
-      div.textContent = sentence;
+      if(state.activePart===1)renderSharedFormulaText(div,sentence);else div.textContent = sentence;
       row.appendChild(btn); row.appendChild(div); box.appendChild(row);
     });
   }
