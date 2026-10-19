@@ -7,7 +7,7 @@
  * Existing SPEAKING rows are upgraded in-place by ID.
  * PROGRESS and ATTEMPTS are never reset here.
  */
-const PART1_CONTENT_VERSION = '2026.09.29.1';
+const PART1_CONTENT_VERSION = '2026.10.19.49';
 const PART1_EXTRA_COLUMNS = ['answerType','focus','expand','reason','templateKey'];
 
 function getPart1OptimizedContent_() {
@@ -65,6 +65,8 @@ function upgradeSpeakingPart1Content_(sheet, settings, report) {
     const id = String(values[r][idx.id] || '').trim();
     const item = byId[id];
     if (!item) continue;
+    // Preserve user-approved 49-question V2 bank. Legacy migrations must not overwrite it.
+    if (idx.sourceLabel !== undefined && String(values[r][idx.sourceLabel] || '').indexOf('P1_V2_49_RELEASE_') === 0) continue;
 
     values[r][idx.core] = item.core;
     values[r][idx.model] = item.model;
