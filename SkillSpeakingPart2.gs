@@ -538,3 +538,26 @@ function aggregatePart2DescriptionProgress_(taskId, promptProgress, topicRow) {
     favorite: topicRow ? Boolean(topicRow.favorite) : false, masteredPrompts: p.status === 'learned' ? 1 : 0, totalPrompts: 1
   };
 }
+
+/** Read-only safety gate for the current 30 released Part2 picture descriptions. */
+function testSpeakingPart2Release30() {
+  const sh=requireSheet_(SHEET_NAMES.SPEAKING_P2,HEADERS.SPEAKING_P2);
+  const idx=headerIndexMap_(sh);
+  const values=sh.getDataRange().getDisplayValues().slice(1);
+  const active=values.filter(r=>r[idx.id]&&String(r[idx.active]).toUpperCase()==='TRUE');
+  const issues=[];
+  active.forEach(r=>{
+    const id=String(r[idx.id]);
+    if(!r[idx.imageDriveId]&&!r[idx.imageUrl])issues.push(id+':NO_IMAGE');
+    if(!r[idx.descriptionModel]&&!r[idx.model1])issues.push(id+':NO_MODEL');
+    if(!r[idx.question1])issues.push(id+':NO_QUESTION');
+  });
+  const payload=getBootstrapData(true);
+  const result={ok:active.length===30&&issues.length===0&&
+    Array.isArray(payload.part2)&&payload.part2.length===30,
+    sheetActive:active.length,bootstrapCount:Array.isArray(payload.part2)?payload.part2.length:-1,
+    distinctIds:new Set(active.map(r=>r[idx.id])).size,
+    issues:issues,part2Version:PART2_DESCRIPTION_VERSION};
+  result.ok=result.ok&&result.distinctIds===30;
+  Logger.log(JSON.stringify(result));return result;
+}
