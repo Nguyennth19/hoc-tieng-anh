@@ -11,7 +11,7 @@ function topicLabel(x){const t=String(x.topic||x.questions?.[0]||'').trim();retu
 function renderClock(){const sec=Math.max(0,Math.ceil((S.deadline-Date.now())/1000));byId('p4Time').textContent=duration(sec);if(sec===0){stopClock();if(S.phase==='prep'){startSpeaking();}else if(S.phase==='speak'){endSpeaking();}}}
 function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function clock(phase,seconds){stopClock();S.phase=phase;S.deadline=Date.now()+seconds*1000;byId('p4Time').textContent=duration(seconds);byId('p4Stage').textContent=phase==='prep'?'Preparation':phase==='speak'?'Speaking':'Ready';S.timer=setInterval(renderClock,200);byId('p4Begin').disabled=true;byId('p4Next').disabled=phase!=='prep';byId('p4Stop').disabled=false;}
-function startSpeaking(){S.session='p4_'+Date.now()+'_'+Math.random().toString(36).slice(2,12);S.saved=false;clock('speak',120);status('Speaking: answer all three questions within the same 120-second window.');}
+function startSpeaking(){p4StopAudio();if(S.mode==='learn')byId('p4StudyView').value='recall';renderAnswersOnly_();S.session='p4_'+Date.now()+'_'+Math.random().toString(36).slice(2,12);S.saved=false;clock('speak',120);status('Speaking: answer all three questions within the same 120-second window.');}
 function endSpeaking(){if(S.phase==='speak')S.spoken=Math.max(0,Math.min(120,120-Math.ceil((S.deadline-Date.now())/1000)));stopClock();S.phase='done';byId('p4Review').hidden=!(S.current&&S.session);byId('p4Stage').textContent='Finished';byId('p4Begin').disabled=false;byId('p4Next').disabled=true;byId('p4Stop').disabled=true;status('Practice finished. Rate your performance and save your practice attempt below. Audio recording is not enabled.');}
 /** Highlight only approved reusable language patterns, not topic-specific details. */
 const P4_FIXED_PHRASES=[
@@ -45,24 +45,66 @@ function p4FormulaHtml(raw){
  }
  return out+escapeHtml(text.slice(at));
 }
+
+const P4_MASTERY={rows:[]};
+function p4StopAudio(){if('speechSynthesis' in window)window.speechSynthesis.cancel();}
+function p4Listen(index){
+ if(S.mode!=='learn'||!S.current||!S.current.models||!('speechSynthesis' in window)){status('Browser speech playback is unavailable.');return;}
+ p4StopAudio();
+ const u=new SpeechSynthesisUtterance(String(S.current.models[index]||''));
+ u.lang='en-US';u.rate=Number(byId('p4VoiceRate').value)||0.85;
+ u.onerror=()=>status('Audio playback was interrupted. Check browser audio permissions.');
+ window.speechSynthesis.speak(u);
+}
+function p4AnswerHtml(answer){
+ const formatted=p4FormulaHtml(answer),view=byId('p4StudyView').value;
+ if(view==='recall')return '<span class="p4-recall-prompt">Try answering without looking at the model.</span>';
+ if(view==='formula'){
+   const markers=[...formatted.matchAll(/<strong class="p4-fixed-formula">[\\s\\S]*?<\\/strong>/g)].map(m=>m[0]);
+   return markers.length?markers.join(' <span class="p4-hidden-slot">…</span> ')+' <span class="p4-hidden-slot">…</span>':'<span class="p4-hidden-slot">Recall the idea in your own words.</span>';
+ }
+ return formatted;
+}
+function p4ApplyStudyMode(){
+ const learn=S.mode==='learn';
+ byId('p4LearningTools').hidden=!learn;
+ if(!learn){p4StopAudio();byId('p4StudyView').value='recall';}
+ else if(byId('p4StudyView').value==='recall'&&S.phase==='ready'){} 
+}
+function p4RefreshMastery(){
+ if(typeof google==='undefined'||!google.script?.run)return;
+ google.script.run.withSuccessHandler(items=>{
+  P4_MASTERY.rows=Array.isArray(items)?items:[];
+  const counts=[0,0,0,0];P4_MASTERY.rows.forEach(x=>{const n=Number(x.level)||0;if(n>=0&&n<=3)counts[n]++;});
+  byId('p4MasteryOverview').textContent='Mastery across 51 sets: '+counts[3]+' independent · '+counts[2]+' with hints · '+counts[1]+' reading · '+counts[0]+' new';
+  p4SyncMastery();
+ }).withFailureHandler(e=>byId('p4MasterySaved').textContent='Mastery unavailable: '+e.message).getSpeakingPart4Mastery();
+}
+function p4SyncMastery(){
+ const row=P4_MASTERY.rows.find(x=>x.questionId===S.current?.id);
+ byId('p4MasteryLevel').value=String(row?row.level:0);
+}
+function renderAnswersOnly_(){if(!S.current)return;byId('p4Content').querySelectorAll('.p4dev-inline-answer').forEach((el,i)=>{const p=el.querySelector('p');if(p)p.innerHTML=p4AnswerHtml(S.current.models[i]);el.open=false;});}
 function renderSet(){
   if(!S.data)return;
+  p4StopAudio();p4ApplyStudyMode();
   byId('p4Save').disabled=false;
   S.current=S.data.sets.find(x=>x.id===byId('p4Set').value)||S.data.sets[0]||null;
   stopClock();S.phase='ready';S.session=null;S.saved=false;byId('p4Review').hidden=true;byId('p4Saved').textContent='';byId('p4Stage').textContent='Ready';byId('p4Time').textContent='01:00';
   byId('p4Begin').disabled=!S.current;byId('p4Next').disabled=true;byId('p4Stop').disabled=true;
+  p4SyncMastery();
   if(!S.current){byId('p4Content').textContent='No approved exam sets are available. Use Learn mode for drafts.';byId('p4Models').textContent='';return;}
   byId('p4Content').innerHTML=S.current.questions.map((q,i)=>{
     const answer=S.mode==='learn'&&S.current.models?S.current.models[i]:'';
     return '<article class="p4dev-question"><b>Q'+(i+1)+'</b><p class="p4dev-prompt">'+escapeHtml(q)+'</p>'+
-      (answer?'<details class="p4dev-inline-answer"><summary>Study answer (draft) · Q'+(i+1)+'</summary><p>'+p4FormulaHtml(answer)+'</p></details>':'')+'</article>';
+      (answer?'<details class="p4dev-inline-answer"'+(byId('p4StudyView').value==='recall'?'':' open')+'><summary>Study answer · Q'+(i+1)+'</summary><button type="button" class="p4-listen" data-answer="'+i+'">▶ Listen Q'+(i+1)+'</button><p>'+p4AnswerHtml(answer)+'</p></details>':'')+'</article>';
   }).join('');
   byId('p4Models').textContent='';
   status(S.mode==='learn'?'Study draft · QA status: '+S.current.qaStatus:'Approved test set.');
 }
 function load(){
   const requestId=++S.requestSeq;
-  stopClock();S.session=null;byId('p4Review').hidden=true;S.mode=byId('p4Mode').value;status('Loading Part 4 data...');
+  p4StopAudio();stopClock();S.session=null;byId('p4Review').hidden=true;S.mode=byId('p4Mode').value;status('Loading Part 4 data...');
   byId('p4Content').textContent='';
   if(typeof google==='undefined'||!google.script||!google.script.run){status('Google Apps Script runtime is not connected.');return;}
   google.script.run.withSuccessHandler(data=>{
@@ -72,6 +114,7 @@ function load(){
     const select=byId('p4Set');select.replaceChildren();
     data.sets.forEach(x=>{const o=document.createElement('option');o.value=x.id;o.textContent=topicLabel(x)+(x.qaStatus==='QA_HOLD'?' · QA hold':'');o.title=x.id+' · '+String(x.questions?.[0]||'');select.appendChild(o);});
     renderSet();
+    p4RefreshMastery();
     if(S.mode==='exam'&&data.sets.length===0)status('Exam mode locked: no QA-approved sets. All source drafts remain available in Learn mode.');
   }).withFailureHandler(error=>{if(requestId===S.requestSeq)status('DEV not configured: '+(error?.message||'Unable to load data'));}).getSpeakingPart4Dev(S.mode);
 }
@@ -102,7 +145,7 @@ function open(){
   document.querySelectorAll('.bottom-nav .nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.nav==='part4'));
   window.scrollTo(0,0);load();
 }
-function close(){++S.requestSeq;stopClock();S.session=null;S.phase='ready';byId('speakingPart4Future').classList.add('hidden');const shell=qs('.speaking-shell');if(shell)shell.classList.remove('p4-mode');
+function close(){p4StopAudio();++S.requestSeq;stopClock();S.session=null;S.phase='ready';byId('speakingPart4Future').classList.add('hidden');const shell=qs('.speaking-shell');if(shell)shell.classList.remove('p4-mode');
   document.querySelectorAll('.bottom-nav .nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.nav==='home'));}
 document.addEventListener('DOMContentLoaded',()=>{
  const card=qs('.speaking-module-card.is-coming');
@@ -112,6 +155,19 @@ document.addEventListener('DOMContentLoaded',()=>{
  document.querySelectorAll('.bottom-nav [data-nav="progress"]').forEach(x=>x.addEventListener('click',()=>setTimeout(refreshPart4Progress,20)));
  byId('progressBtn')?.addEventListener('click',()=>setTimeout(refreshPart4Progress,20));
  document.querySelectorAll('.bottom-nav .nav-btn').forEach(b=>b.addEventListener('click',()=>{if(b.dataset.nav==='part4'){open();}else if(!byId('speakingPart4Future').classList.contains('hidden')){close();}},true));
+ byId('p4StudyView').addEventListener('change',()=>{if(S.mode==='learn')renderAnswersOnly_();});
+ byId('p4Content').addEventListener('click',e=>{const b=e.target.closest('button.p4-listen');if(b&&S.mode==='learn')p4Listen(Number(b.dataset.answer));});
+ byId('p4StopAudio').addEventListener('click',p4StopAudio);
+ byId('p4SaveMastery').addEventListener('click',()=>{
+  if(S.mode!=='learn'||!S.current)return;
+  const id=S.current.id,level=Number(byId('p4MasteryLevel').value);
+  byId('p4SaveMastery').disabled=true;
+  google.script.run.withSuccessHandler(()=>{
+   byId('p4SaveMastery').disabled=false;byId('p4MasterySaved').textContent='Mastery saved.';
+   p4RefreshMastery();refreshPart4Progress();
+  }).withFailureHandler(e=>{byId('p4SaveMastery').disabled=false;byId('p4MasterySaved').textContent='Save failed: '+e.message;})
+  .saveSpeakingPart4Mastery({questionId:id,level,practiceMode:byId('p4StudyView').value==='recall'?'recall':'learn'});
+ });
  byId('p4Mode').addEventListener('change',load);
  byId('p4Load').addEventListener('click',load);
  byId('p4Set').addEventListener('change',renderSet);
