@@ -700,11 +700,15 @@
     const str=String(raw||'');
     const found=[];
     SHARED_B1_FORMULAS.forEach(phrase=>{
-      const re=new RegExp(phrase.replace(/[.*+?^$\{\}()|[\]\\]/g,'\\  function renderPromptContent() {'),'gi');
-      let m;
-      while((m=re.exec(str))!==null){
-        const prev=str.slice(0,m.index).trimEnd();
-        if((!prev||/[.!?]$/.test(prev))&&!found.some(a=>m.index<a.end&&m.index+phrase.length>a.start))found.push({start:m.index,end:m.index+phrase.length});
+      const lower=str.toLowerCase(),needle=phrase.toLowerCase();
+      let pos=0;
+      while(true){
+        const ix=lower.indexOf(needle,pos);
+        if(ix<0)break;
+        const previous=str.slice(0,ix).trimEnd();
+        if((!previous||/[.!?]$/.test(previous))&&!found.some(a=>ix<a.end&&ix+phrase.length>a.start))
+          found.push({start:ix,end:ix+phrase.length});
+        pos=ix+phrase.length;
       }
     });
     found.sort((a,b)=>a.start-b.start);
