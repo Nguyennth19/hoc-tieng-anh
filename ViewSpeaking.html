@@ -140,7 +140,7 @@
 
       <section id="progressView" class="view hidden">
         <div class="progress-page-head">
-          <div><div class="eyebrow">SPEAKING PROGRESS</div><h2>Your progress at a glance</h2><p>Parts 1–3 use the same review system, so you can see what is mastered and what needs attention.</p></div>
+          <div><div class="eyebrow">SPEAKING PROGRESS</div><h2>Your progress at a glance</h2><p>Track Parts 1–3 together and view Part 4 practice progress below.</p></div>
           <button id="progressBackBtn" class="secondary-btn" type="button">← Back to practice</button>
         </div>
 
@@ -169,6 +169,13 @@
             <div class="wide-progress"><span id="p3ProgressBar"></span></div>
             <div class="progress-kpis"><span><b id="p3Learned">0</b> topics mastered</span><span><b id="p3Due">0</b> due</span><span><b id="p3Weak">0</b> needs work</span></div>
             <button class="text-btn progress-jump" data-jump-part="3" type="button">Open Part 3 →</button>
+          </article>
+          <article class="part-progress-card" id="p4ProgressCard">
+            <div class="part-progress-head"><div><span class="pill">Part 4</span><h3>Extended response</h3></div><strong id="p4ProgressPct">0%</strong></div>
+            <div class="wide-progress"><span id="p4ProgressBar"></span></div>
+            <div class="progress-kpis"><span><b id="p4Learned">0</b> mastered</span><span><b id="p4Due">0</b> due</span><span><b id="p4Reviews">0</b> reviews</span></div>
+            <button id="p4ProgressOpen" class="text-btn" type="button">Open Part 4 →</button>
+            <small id="p4ProgressStatus">Part 4 progress loads separately from Parts 1–3.</small>
           </article>
         </div>
 
@@ -376,13 +383,11 @@
       </section>
     </main>
   <nav class="bottom-nav">
-      <button class="nav-btn active" data-nav="home" type="button"><span>⌂</span>Home</button>
       <button class="nav-btn" data-nav="part1" type="button"><span>1</span>Part 1</button>
       <button class="nav-btn" data-nav="part2" type="button"><span>2</span>Part 2</button>
       <button class="nav-btn" data-nav="part3" type="button"><span>3</span>Part 3</button>
       <button class="nav-btn" data-nav="part4" type="button"><span>4</span>Part 4</button>
       <button class="nav-btn" data-nav="progress" type="button"><span>◔</span>Progress</button>
-      <button class="nav-btn" data-nav="audio" type="button"><span>♫</span>Audio</button>
     </nav>
   <div id="audioSheet" class="sheet-backdrop hidden" role="dialog" aria-modal="true">
       <div class="bottom-sheet">
