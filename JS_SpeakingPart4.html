@@ -55,7 +55,7 @@ function renderSet(){
   byId('p4Content').innerHTML=S.current.questions.map((q,i)=>{
     const answer=S.mode==='learn'&&S.current.models?S.current.models[i]:'';
     return '<article class="p4dev-question"><b>Q'+(i+1)+'</b><p class="p4dev-prompt">'+escapeHtml(q)+'</p>'+
-      (answer?'<details class="p4dev-inline-answer"><summary>Study answer (draft) · Q'+(i+1)+'</summary><p>'+escapeHtml(answer)+'</p></details>':'')+'</article>';
+      (answer?'<details class="p4dev-inline-answer"><summary>Study answer (draft) · Q'+(i+1)+'</summary><p>'+p4FormulaHtml(answer)+'</p></details>':'')+'</article>';
   }).join('');
   byId('p4Models').textContent='';
   status(S.mode==='learn'?'Study draft · QA status: '+S.current.qaStatus:'Approved test set.');
