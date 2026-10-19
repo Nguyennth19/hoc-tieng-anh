@@ -561,3 +561,32 @@ function testSpeakingPart2Release30() {
   result.ok=result.ok&&result.distinctIds===30;
   Logger.log(JSON.stringify(result));return result;
 }
+
+/** Part2 expansion gate: only screened Q1 assets are active; pending records fail closed. */
+function testSpeakingPart2Expansion43() {
+ const sh=requireSheet_(SHEET_NAMES.SPEAKING_P2,HEADERS.SPEAKING_P2),ix=headerIndexMap_(sh);
+ const rows=sh.getDataRange().getValues().slice(1).filter(r=>r[ix.id]);
+ const active=rows.filter(r=>r[ix.active]===true||String(r[ix.active]).toUpperCase()==='TRUE');
+ const newcomers=rows.filter(r=>/^SP2-EX-0(3[1-9]|4[0-9]|5[0-2])$/.test(String(r[ix.id])));
+ const released=newcomers.filter(r=>r[ix.active]===true||String(r[ix.active]).toUpperCase()==='TRUE');
+ const failures=[];
+ for(const row of released){
+  const id=String(row[ix.id]),model=String(row[ix.descriptionModel]||'');
+  if(!row[ix.imageDriveId])failures.push(id+':NO_IMAGE');
+  if(!row[ix.mustSay]||!row[ix.sayMore]||!model)failures.push(id+':NO_CONTENT');
+  if(!String(row[ix.sourceLabel]).includes('VISUAL_SCREENED_Q1'))failures.push(id+':NO_VISUAL_GATE');
+  const words=model.trim().split(/\s+/).length;
+  if(words<45||words>90)failures.push(id+':WORD_COUNT_'+words);
+ }
+ const payload=getBootstrapData(true);
+ const result={
+  ok:active.length===43&&newcomers.length===22&&released.length===13&&
+    payload.part2.length===43&&new Set(active.map(r=>r[ix.id])).size===43&&
+    failures.length===0,
+  sheetActive:active.length,bootstrapCount:payload.part2.length,
+  expansionTotal:newcomers.length,expansionReleased:released.length,
+  expansionHeld:newcomers.length-released.length,issues:failures,
+  contentRevision:payload.app.contentRevision
+ };
+ Logger.log(JSON.stringify(result));return result;
+}
