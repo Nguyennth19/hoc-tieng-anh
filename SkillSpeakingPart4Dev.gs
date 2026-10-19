@@ -24,12 +24,40 @@ function readPart4DevTable_(name) {
     return out;
   });
 }
+/** Exam eligibility requires BOTH explicit content QA and release approval. */
+function isSpeakingPart4ExamEligible_(row) {
+ return row && row.qa_status === 'APPROVED' && row.release_approved === 'YES';
+}
+/** Safe, read-only release-gate self-test; run in Apps Script editor. */
+function testSpeakingPart4ExamGate() {
+ const all=readPart4DevTable_('P4_IMPORT_STAGING');
+ const learn=getSpeakingPart4Dev('learn');
+ const exam=getSpeakingPart4Dev('exam');
+ const expected=all.filter(isSpeakingPart4ExamEligible_);
+ const cases={
+   completeBank:all.length===51 && learn.sets.length===all.length,
+   uniqueIds:new Set(all.map(x=>x.exam_set_id)).size===all.length,
+   questionsPresent:all.every(x=>x.q1_original&&x.q2_original&&x.q3_original),
+   approvedOnly:exam.sets.length===expected.length &&
+     exam.sets.every(x=>isSpeakingPart4ExamEligible_(all.find(r=>r.exam_set_id===x.id))),
+   examNoAnswers:exam.sets.every(x=>x.models===null),
+   learnAnswers:learn.sets.every(x=>Array.isArray(x.models)&&x.models.length===3),
+   timing:exam.preparationSeconds===60&&exam.speakingSeconds===120,
+   holdExcluded:exam.sets.every(x=>x.qaStatus!=='QA_HOLD'),
+   failClosed:!isSpeakingPart4ExamEligible_({qa_status:'QA_HOLD',release_approved:'YES'}) &&
+     !isSpeakingPart4ExamEligible_({qa_status:'APPROVED',release_approved:'NO'}),
+   approvedFixture:isSpeakingPart4ExamEligible_({qa_status:'APPROVED',release_approved:'YES'})
+ };
+ const result={ok:Object.values(cases).every(Boolean),cases,learnCount:learn.sets.length,examCount:exam.sets.length};
+ Logger.log(JSON.stringify(result));
+ return result;
+}
 /** Read-only DEV payload. QA_HOLD records are visible in learning mode only. */
 function getSpeakingPart4Dev(mode) {
   const choice = mode === 'exam' ? 'exam' : 'learn';
   const all = readPart4DevTable_('P4_IMPORT_STAGING');
   const eligible = choice === 'exam'
-    ? all.filter(x => x.release_approved === 'YES' && x.qa_status === 'APPROVED')
+    ? all.filter(isSpeakingPart4ExamEligible_)
     : all;
   return {
     mode: choice,
