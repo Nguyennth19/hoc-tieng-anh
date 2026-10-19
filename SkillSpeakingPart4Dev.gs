@@ -36,7 +36,7 @@ function getSpeakingPart4Dev(mode) {
     preparationSeconds: 60,
     speakingSeconds: 120,
     sets: eligible.map(x => ({
-      id: x.exam_set_id, storyId: x.story_id,
+      id: x.exam_set_id, topic: x.topic_title || x.q1_original, storyId: x.story_id,
       questions: [x.q1_original, x.q2_original, x.q3_original],
       models: choice === 'learn' ? [x.model_q1, x.model_q2, x.model_q3] : null,
       qaStatus: x.qa_status, releaseApproved: x.release_approved === 'YES'
