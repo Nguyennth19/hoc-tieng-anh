@@ -147,5 +147,11 @@ function testSpeakingPart1Release49() {
  };
  result.ok=result.total===49&&result.uniqueIds===49&&result.legacyIdsPreserved&&
  result.allQuestions&&result.allModels&&result.allActive&&result.sourceProtected;
+ // Verify actual bootstrap payload, not only the underlying Sheet.
+ const bootstrap=getBootstrapData(true);
+ result.bootstrapCount=Array.isArray(bootstrap.part1)?bootstrap.part1.length:-1;
+ result.bootstrapRevision=bootstrap.app&&bootstrap.app.contentRevision||'';
+ result.ok=result.ok&&result.bootstrapCount===49&&
+   String(result.bootstrapRevision).indexOf('p1='+PART1_CONTENT_VERSION)>=0;
  Logger.log(JSON.stringify(result));return result;
 }
