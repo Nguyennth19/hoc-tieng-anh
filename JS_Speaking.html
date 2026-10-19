@@ -588,8 +588,8 @@
     if (isP2) {
       $('questionNumber').textContent = 'Part 2 · Topic ' + (state.currentIndex + 1) + '/' + state.items.length;
       renderPart2Image(item);
-      $('part2MustSay').textContent = item.mustSay || '';
-      $('part2SayMore').textContent = item.sayMore || '';
+      renderSharedFormulaText($('part2MustSay'),item.mustSay || '');
+      renderSharedFormulaText($('part2SayMore'),item.sayMore || '');
       $('fullAnswerLabel').textContent = 'Full 45-second answer';
       $('structureBlock').classList.remove('hidden');
     } else if (isP3) {
@@ -707,7 +707,7 @@
     'I usually','I think','I felt','I feel','I like it because',
     'There is','There are','However,','This helps me','I enjoy',
     'Last weekend,','Yesterday,','My favorite','My hometown',
-    'I am planning to'
+    'I am planning to','In the picture, I can see','The picture shows','In the background,','On the left,','On the right,','They appear to be','It looks like','I can also see','The person appears to be'
   ].sort((a,b)=>b.length-a.length);
   function renderSharedFormulaText(el,raw) {
     const str=String(raw||'');
@@ -739,7 +739,7 @@
     if (!item) return;
 
     $('questionText').textContent = currentQuestionText();
-    if(state.activePart===1) renderSharedFormulaText($('modelAnswer'),currentModel());
+    if(state.activePart<=2) renderSharedFormulaText($('modelAnswer'),currentModel());
     else $('modelAnswer').textContent = currentModel();
     $('structureText').textContent = currentStructure();
     renderKeywords(currentKeywords());
@@ -781,7 +781,7 @@
       btn.type = 'button'; btn.textContent = '▶';
       btn.addEventListener('click', () => speakText(sentence));
       const div = document.createElement('div');
-      if(state.activePart===1)renderSharedFormulaText(div,sentence);else div.textContent = sentence;
+      if(state.activePart<=2)renderSharedFormulaText(div,sentence);else div.textContent = sentence;
       row.appendChild(btn); row.appendChild(div); box.appendChild(row);
     });
   }
