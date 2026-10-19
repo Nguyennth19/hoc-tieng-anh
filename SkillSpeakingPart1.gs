@@ -126,3 +126,26 @@ function getSpeakingPart1_() {
     };
   });
 }
+
+
+/** Final audit of the 49-question Part 1 release. Read-only. */
+function testSpeakingPart1Release49() {
+ const sh=requireSheet_(SHEET_NAMES.SPEAKING_P1,HEADERS.SPEAKING_P1);
+ const data=sh.getDataRange().getDisplayValues(),keys=data.shift();
+ const at=k=>keys.indexOf(k);
+ const ids=data.filter(x=>x[at('id')]).map(x=>x[at('id')]);
+ const rows=data.filter(x=>x[at('id')]);
+ const result={
+   total:rows.length,
+   uniqueIds:new Set(ids).size,
+   legacyIdsPreserved:Array.from({length:29},(_,i)=>'SP1-'+String(i+1).padStart(3,'0')).every((id,i)=>ids[i]===id),
+   allQuestions:rows.every(x=>x[at('question')]),
+   allModels:rows.every(x=>x[at('model')]),
+   allActive:rows.every(x=>String(x[at('active')]).toUpperCase()==='TRUE'),
+   sourceProtected:rows.every(x=>String(x[at('sourceLabel')]).indexOf('P1_V2_49_RELEASE_')===0),
+   cacheVersion:PART1_CONTENT_VERSION
+ };
+ result.ok=result.total===49&&result.uniqueIds===49&&result.legacyIdsPreserved&&
+ result.allQuestions&&result.allModels&&result.allActive&&result.sourceProtected;
+ Logger.log(JSON.stringify(result));return result;
+}
