@@ -646,7 +646,15 @@
     const multi = state.activePart >= 2;
     $('part2Visual').classList.toggle('hidden', !isP2);
     $('part3Visual').classList.toggle('hidden', !isP3);
-    $('promptStepper').classList.add('hidden');
+    $('promptStepper').classList.toggle('hidden', !multi);
+    if (multi) {
+      const prompts = Array.isArray(item.questions) ? item.questions : [];
+      $('.prompt-step').forEach(function(btn) {
+        const n = Number(btn.dataset.prompt);
+        btn.disabled = n > prompts.length || !String(prompts[n-1] || '').trim();
+      });
+      renderPromptStepper();
+    }
     $('part2FrameworkBlock').classList.toggle('hidden', !isP2);
     $('part3FrameworkBlock').classList.toggle('hidden', !isP3);
     $('part1Hints').classList.toggle('hidden', multi);
