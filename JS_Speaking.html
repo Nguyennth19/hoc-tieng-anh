@@ -436,7 +436,8 @@
   }
 
   function readBootstrapCache(allowVeryStale) {
-    const keys = [CLIENT_CACHE_KEY, CLIENT_CACHE_BACKUP_KEY].concat(LEGACY_CACHE_KEYS);
+    // Do not hydrate from old releases with stale P3 question arrays.
+    const keys = [CLIENT_CACHE_KEY, CLIENT_CACHE_BACKUP_KEY];
     for (let i = 0; i < keys.length; i++) {
       try {
         const raw = localStorage.getItem(keys[i]);
