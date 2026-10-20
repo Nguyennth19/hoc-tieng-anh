@@ -4,8 +4,8 @@
 
   // Stable client cache: do not change this key for ordinary content releases.
   // This lets a new deployment reuse the last good payload immediately.
-  const CLIENT_CACHE_KEY = 'aptisSpeakingBootstrap:speaking-finalqa-20261020';
-  const CLIENT_CACHE_BACKUP_KEY = 'aptisSpeakingBootstrap:speaking-finalqa-lastGood';
+  const CLIENT_CACHE_KEY = 'aptisSpeakingBootstrap:p3-q23-recovery-20261020';
+  const CLIENT_CACHE_BACKUP_KEY = 'aptisSpeakingBootstrap:p3-q23-recovery-lastGood';
   const LEGACY_CACHE_KEYS = [
     'aptisSpeakingBootstrap:speaking-hardqa-20261020',
     'aptisSpeakingBootstrap:speaking-hardqa-lastGood',
@@ -354,9 +354,18 @@
     const previousId = state.items && state.items[state.currentIndex] && state.items[state.currentIndex].id;
     const previousPrompt = state.currentPrompt;
     const previousMode = state.currentMode;
-    switchPart(state.activePart, true);
-    renderProgressDashboard();
-    renderSkillHome();
+    // Keep a visible fallback before slower statistics are rendered.
+    if (!wasStudying && !wasProgress && !wasPartHome) $('skillHomeView').classList.remove('hidden');
+    try {
+      switchPart(state.activePart, true);
+      renderProgressDashboard();
+      renderSkillHome();
+    } catch (error) {
+      console.error('Speaking bootstrap render failed:', error);
+      $('skillHomeView').classList.remove('hidden');
+      setSyncStatus('Some panels could not load. Choose a Part tab.', 'cached');
+      return true;
+    }
     if (wasStudying && previousId) {
       const newIndex = state.items.findIndex(function(item){ return item.id === previousId; });
       if (newIndex >= 0) {
@@ -1272,7 +1281,7 @@
     $('progressView').classList.add('hidden');
     $('homeView').classList.add('hidden');
     $('skillHomeView').classList.remove('hidden');
-    renderSkillHome();
+    try { renderSkillHome(); } catch(error) { console.error('Speaking summary render failed:',error); }
     setActiveNav('home');
     window.scrollTo({top:0,behavior:'smooth'});
   }
