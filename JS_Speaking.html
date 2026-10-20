@@ -658,7 +658,7 @@
     const multi = state.activePart >= 2;
     $('part2Visual').classList.toggle('hidden', !isP2);
     $('part3Visual').classList.toggle('hidden', !isP3);
-    $('promptStepper').classList.toggle('hidden', !multi);
+    $('promptStepper').classList.toggle('hidden', !multi || isP2);
     if (multi) {
       const prompts = Array.isArray(item.questions) ? item.questions : [];
       $$('.prompt-step').forEach(function(btn) {
@@ -826,7 +826,7 @@
     const item = currentItem();
     if (!item) return;
 
-    $('questionText').textContent = currentQuestionText();
+    $('questionText').textContent = state.activePart===2 && state.currentMode!=='test' ? 'Practise all three questions in this topic' : currentQuestionText();
     if(state.activePart<=2) renderSharedFormulaText($('modelAnswer'),currentModel());
     else $('modelAnswer').textContent = currentModel();
     $('structureText').textContent = currentStructure();
@@ -890,6 +890,95 @@
     setP1Button_(button, true);
     engine.speak(utterance);
   }
+
+  // P2 whole-topic study: one Learn/Memorize/Test flow, with stable prompt IDs.
+  const p2Drafts_ = Object.create(null);
+  function p2Card_(slot, heading, model) {
+    const card=document.createElement('section'); card.className='p2-topic-card';
+    const title=document.createElement('h3');title.textContent='Q'+slot+' · '+heading;card.appendChild(title);
+    const words=document.createElement('div');words.className='p2-topic-answer';card.appendChild(words);
+    renderSharedFormulaText(words,model);
+    const listen=document.createElement('button');listen.type='button';listen.className='secondary-btn';
+    listen.textContent='▶ Listen Q'+slot;listen.addEventListener('click',()=>toggleP1Audio_(model,listen));
+    card.appendChild(listen);return card;
+  }
+  function renderP2Unified_(){
+    const wrapper=$('p2Unified'),list=$('p2UnifiedCards'),footer=$('p2UnifiedFooter'),item=currentItem();
+    if(!wrapper||!item||state.activePart!==2)return;
+    list.replaceChildren();footer.replaceChildren();
+    const q=item.questions||[],m=item.models||[],isMemory=state.currentMode==='memorize';
+    for(let i=0;i<3;i++){
+      const question=String(q[i]||'').trim(),answer=String(m[i]||'').trim();
+      if(!question||!answer)continue;
+      if(!isMemory){list.appendChild(p2Card_(i+1,question,answer));continue;}
+      const card=document.createElement('section');card.className='p2-topic-card';
+      const head=document.createElement('h3');head.textContent='Q'+(i+1)+' · '+question;card.appendChild(head);
+      const label=document.createElement('p');label.className='p2-memory-hint';
+      label.textContent=state.memorizeLevel===3?'Listen and write the full answer.':'Fill in the missing words (Level '+state.memorizeLevel+').';
+      card.appendChild(label);
+      const key=item.id+':Q'+(i+1)+':L'+state.memorizeLevel;
+      const expected=[];
+      if(state.memorizeLevel===3){
+        const play=document.createElement('button');play.type='button';play.className='secondary-btn';
+        play.textContent='▶ Listen Q'+(i+1);play.addEventListener('click',()=>toggleP1Audio_(answer,play));
+        card.appendChild(play);
+        const area=document.createElement('textarea');area.className='p2-dictation';area.rows=5;
+        area.placeholder='Write the full answer for Q'+(i+1)+' here...';
+        area.value=p2Drafts_[key]||'';area.addEventListener('input',()=>{p2Drafts_[key]=area.value;});
+        card.appendChild(area);
+        expected.push({input:area,answer});
+      }else{
+        const line=document.createElement('div');line.className='p2-cloze-line';
+        const tokens=answer.split(/([A-Za-z][A-Za-z'-]*)/g);let count=0,idx=0;
+        const remembered=p2Drafts_[key]||{};
+        tokens.forEach(token=>{
+          if(/^[A-Za-z][A-Za-z'-]*$/.test(token)){count++;}
+          if(/^[A-Za-z][A-Za-z'-]*$/.test(token)&&token.length>2&&count%(state.memorizeLevel===1?5:3)===0){
+            const n=idx++,input=document.createElement('input');input.type='text';input.className='p1-cloze-input';
+            input.placeholder='_____';input.setAttribute('aria-label','Q'+(i+1)+' missing word '+n);
+            input.value=remembered[n]||'';input.addEventListener('input',()=>{p2Drafts_[key]??={};p2Drafts_[key][n]=input.value;});
+            line.appendChild(input);expected.push({input,answer:token}); 
+          }else line.appendChild(document.createTextNode(token));
+        });card.appendChild(line);
+      }
+      const controls=document.createElement('div');controls.className='p2-memory-actions';
+      const feedback=document.createElement('span');feedback.setAttribute('role','status');
+      const check=document.createElement('button');check.className='primary-btn';check.textContent='Check Q'+(i+1);
+      check.addEventListener('click',()=>{
+        if(state.memorizeLevel===3){
+          const target=answer.toLowerCase().match(/[a-z]+(?:'[a-z]+)?/g)||[];
+          const typed=expected[0].input.value.toLowerCase().match(/[a-z]+(?:'[a-z]+)?/g)||[];
+          const counts={};target.forEach(t=>counts[t]=(counts[t]||0)+1);
+          let matches=0;typed.forEach(t=>{if(counts[t]>0){matches++;counts[t]--;}});
+          feedback.textContent='Word recall '+Math.round(100*matches/Math.max(1,target.length))+'%. Check meaning as well.';
+        }else feedback.textContent=expected.filter(t=>tokenizeP1Recall_(t.input.value)===tokenizeP1Recall_(t.answer)).length+'/'+expected.length+' correct.';
+      });
+      const reveal=document.createElement('button');reveal.className='secondary-btn';reveal.textContent='Show answer';
+      reveal.addEventListener('click',()=>{feedback.textContent=answer;});
+      controls.append(check,reveal,feedback);card.appendChild(controls);list.appendChild(card);
+    }
+    if(!isMemory){
+      const all=document.createElement('button');all.className='primary-btn';all.textContent='▶ Listen to all 3 answers';
+      all.addEventListener('click',()=>toggleP1Audio_(m.filter((a,j)=>q[j]&&a).join('. '),all));footer.appendChild(all);
+    }
+  }
+  function renderP2TestOutline_(){
+    const area=$('p2TestOutline');if(!area)return;
+    area.replaceChildren();area.classList.toggle('hidden',state.activePart!==2||state.currentMode!=='test');
+    if(state.activePart!==2)return;
+    const item=currentItem();if(!item)return;
+    (item.questions||[]).slice(0,3).forEach((q,i)=>{
+      if(!q||!item.models[i])return;
+      const btn=document.createElement('button');btn.type='button';btn.className='p2-test-q';
+      btn.classList.toggle('active',state.currentPrompt===i+1);
+      btn.textContent='Q'+(i+1)+' · '+q;
+      btn.addEventListener('click',()=>{
+        stopTimer(true);stopSpeech();state.currentPrompt=i+1;
+        renderPromptStepper();renderPromptContent();renderP2TestOutline_();resetTimerDisplay();
+      });area.appendChild(btn);
+    });
+  }
+
   function renderShadow() {
     $('shadowAllBtn').textContent = state.activePart === 1 ? '▶ Play' : '▶ Shadow all';
     const box = $('shadowSentences');
@@ -957,7 +1046,10 @@
     state.currentMode = mode;
     configureP1Modes_();
     $$('.mode-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
-    ['learn','shadow','memorize','test'].forEach(name => $(name + 'Mode').classList.toggle('hidden', name !== mode));
+    ['learn','shadow','memorize','test'].forEach(name => $(name + 'Mode').classList.toggle('hidden', name !== mode || (state.activePart===2 && mode !== 'test')));
+    const unified=$('p2Unified');
+    if(unified)unified.classList.toggle('hidden',state.activePart!==2||!['shadow','memorize'].includes(mode));
+    if(state.activePart===2){if(mode!=='test')renderP2Unified_();renderP2TestOutline_();}
     if (mode === 'test') resetTimerDisplay();
   }
 
@@ -966,6 +1058,7 @@
     state.memorizeLevel = level;
     $$('.level-btn').forEach(btn => btn.classList.toggle('active', Number(btn.dataset.level) === level));
     renderMemorize();
+    if(state.activePart===2 && state.currentMode==='memorize')renderP2Unified_();
   }
 
   let p1RecallTargets_ = [];
