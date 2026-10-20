@@ -323,10 +323,10 @@
       return;
     }
     if (!hasCurrentSpeakingQuestionCoverage_(data)) {
-      setSyncStatus('Speaking release mismatch: Part 1 received ' + data.part1.length + '/49. Check deployment and server cache.', 'cached');
-      toast('Received P1=' + data.part1.length + ', P2=' + data.part2.length + ', P3=' + data.part3.length + '. Open latest deployment or Refresh.');
-      // Never render a three-part payload lacking the expected questions.
-      // The student can still use an already loaded valid snapshot.
+      // Show usable content rather than a blank page while alerting about incomplete questions.
+      setSyncStatus('Speaking questions incomplete — check deployment', 'cached');
+      toast('Speaking data: P1=' + data.part1.length + ', P2=' + data.part2.length + ', P3=' + data.part3.length + '. Some Q2/Q3 may be missing.');
+      applyBootstrap(data, { fromCache: false, background: options && options.background });
       return;
     }
     writeBootstrapCache(data);
@@ -339,7 +339,7 @@
   function applyBootstrap(data, meta) {
     // Always close blocking UI first, even if the payload is rejected.
     setLoadingVisible(false);
-    if (!hasCurrentSpeakingQuestionCoverage_(data)) return false;
+    if (!isValidBootstrap(data)) return false;
     state.data = data;
     $('appTitle').textContent = data.app.title || 'APTIS B2 Coach';
     $('errorView').classList.add('hidden');
