@@ -110,12 +110,12 @@
     $('markLearnedBtn').addEventListener('click', () => saveProgress(5, 'learned'));
     $('favoriteBtn').addEventListener('click', toggleFavorite);
 
-    $$$('.part-tab').forEach(btn => btn.addEventListener('click', () => switchPart(Number(btn.dataset.part))));
+    $$('.part-tab').forEach(btn => btn.addEventListener('click', () => switchPart(Number(btn.dataset.part))));
     $$('[data-open-speaking-part]').forEach(btn => btn.addEventListener('click', () => openPartHome(Number(btn.dataset.openSpeakingPart))));
     $('skillProgressLink').addEventListener('click', showProgress);
     $('skillRecommendationBtn').addEventListener('click', openRecommendedSpeakingPart);
     $$('.prompt-step').forEach(btn => btn.addEventListener('click', () => setPrompt(Number(btn.dataset.prompt))));
-    $$$('.mode-tab').forEach(btn => btn.addEventListener('click', () => setMode(btn.dataset.mode)));
+    $$('.mode-tab').forEach(btn => btn.addEventListener('click', () => setMode(btn.dataset.mode)));
     $$('.level-btn').forEach(btn => btn.addEventListener('click', () => setMemorizeLevel(Number(btn.dataset.level))));
     $$('.rating-btn').forEach(btn => btn.addEventListener('click', () => finishSelfRating(Number(btn.dataset.rating))));
     $$('.focus-card').forEach(btn => btn.addEventListener('click', () => applyFilter(btn.dataset.filterTarget)));
@@ -476,7 +476,7 @@
     state.quickQueue = [];
     state.quickPosition = -1;
 
-    $$$('.part-tab').forEach(btn => btn.classList.toggle('active', Number(btn.dataset.part) === state.activePart));
+    $$('.part-tab').forEach(btn => btn.classList.toggle('active', Number(btn.dataset.part) === state.activePart));
     updatePartCopy();
     renderSummary();
     renderList();
@@ -936,7 +936,7 @@
     if (state.currentMode !== mode) stopSpeech();
     state.currentMode = mode;
     configureP1Modes_();
-    $$$('.mode-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
+    $$('.mode-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
     ['learn','shadow','memorize','test'].forEach(name => $(name + 'Mode').classList.toggle('hidden', name !== mode));
     if (mode === 'test') resetTimerDisplay();
   }
