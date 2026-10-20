@@ -109,7 +109,7 @@
     $$('[data-open-speaking-part]').forEach(btn => btn.addEventListener('click', () => openPartHome(Number(btn.dataset.openSpeakingPart))));
     $('skillProgressLink').addEventListener('click', showProgress);
     $('skillRecommendationBtn').addEventListener('click', openRecommendedSpeakingPart);
-    $$$('.prompt-step').forEach(btn => btn.addEventListener('click', () => setPrompt(Number(btn.dataset.prompt))));
+    $$('.prompt-step').forEach(btn => btn.addEventListener('click', () => setPrompt(Number(btn.dataset.prompt))));
     $$('.mode-tab').forEach(btn => btn.addEventListener('click', () => setMode(btn.dataset.mode)));
     $$('.level-btn').forEach(btn => btn.addEventListener('click', () => setMemorizeLevel(Number(btn.dataset.level))));
     $$('.rating-btn').forEach(btn => btn.addEventListener('click', () => finishSelfRating(Number(btn.dataset.rating))));
@@ -760,7 +760,7 @@
     const labels = state.activePart === 3
       ? ['1 · Describe both', '2 · Compare', '3 · Opinion']
       : ['1 · Describe', '2 · Experience', '3 · Opinion'];
-    $$$('.prompt-step').forEach((btn, i) => {
+    $$('.prompt-step').forEach((btn, i) => {
       btn.classList.toggle('active', Number(btn.dataset.prompt) === state.currentPrompt);
       btn.textContent = labels[i] || btn.textContent;
     });
