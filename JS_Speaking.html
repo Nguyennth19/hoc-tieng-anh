@@ -4,9 +4,11 @@
 
   // Stable client cache: do not change this key for ordinary content releases.
   // This lets a new deployment reuse the last good payload immediately.
-  const CLIENT_CACHE_KEY = 'aptisSpeakingBootstrap:speaking-hardqa-20261020';
-  const CLIENT_CACHE_BACKUP_KEY = 'aptisSpeakingBootstrap:speaking-hardqa-lastGood';
+  const CLIENT_CACHE_KEY = 'aptisSpeakingBootstrap:speaking-finalqa-20261020';
+  const CLIENT_CACHE_BACKUP_KEY = 'aptisSpeakingBootstrap:speaking-finalqa-lastGood';
   const LEGACY_CACHE_KEYS = [
+    'aptisSpeakingBootstrap:speaking-hardqa-20261020',
+    'aptisSpeakingBootstrap:speaking-hardqa-lastGood',
     'aptisSpeakingBootstrap:p2-52-p3-54-20261020',
     'aptisSpeakingBootstrap:p2-52-p3-54-lastGood',
     'aptisSpeakingBootstrap:p2-52-v01-20261020',
@@ -59,7 +61,7 @@
 
     const cached = readBootstrapCache();
     // Part 1 release gate: old cached 29-question payload must not render on V2.
-    if (cached && cached.data && (cached.data.part1.length !== 49 || cached.data.part2.length < 52 || cached.data.part3.length < 54 || cached.data.part2.some(function(x){return x.questions && x.questions.length === 1 && /^SP2-EX-/.test(x.id) && x.id !== 'SP2-EX-012';}))) {
+    if (cached && cached.data && (!hasCurrentSpeakingQuestionCoverage_(cached.data))) {
       clearAptisSpeakingBootstrapCache_();
       loadData({ force: true, blocking: true });
       return;
@@ -320,7 +322,7 @@
       onError(new Error('Speaking data returned an invalid payload.'), { background: Boolean(state.data) });
       return;
     }
-    if (data.part1.length !== 49 || data.part2.length < 52 || data.part3.length < 54) {
+    if (!hasCurrentSpeakingQuestionCoverage_(data)) {
       setSyncStatus('Speaking release mismatch: Part 1 received ' + data.part1.length + '/49. Check deployment and server cache.', 'cached');
       toast('Received P1=' + data.part1.length + ', P2=' + data.part2.length + ', P3=' + data.part3.length + '. Open latest deployment or Refresh.');
       // Do not overwrite newer saved data with an older server payload.
@@ -349,6 +351,21 @@
       setSyncStatus(meta.stale ? 'Saved data · refreshing' : 'Saved data', 'cached');
     }
     return true;
+  }
+
+  function hasCurrentSpeakingQuestionCoverage_(data) {
+    if (!isValidBootstrap(data)) return false;
+    const p2Complete = data.part2.filter(function(item) {
+      return /^SP2-EX-/.test(item.id) && item.id !== 'SP2-EX-012' &&
+        Array.isArray(item.questions) && item.questions.length >= 3;
+    }).length;
+    const p3Complete = data.part3.filter(function(item) {
+      return /^SP3-EX-/.test(item.id) && item.id !== 'SP3-EX-012' &&
+        item.id !== 'SP3-EX-017' && Array.isArray(item.questions) &&
+        item.questions.length >= 3;
+    }).length;
+    return data.part1.length === 49 && data.part2.length >= 52 &&
+      data.part3.length >= 54 && p2Complete >= 51 && p3Complete >= 52;
   }
 
   function isValidBootstrap(data) {
