@@ -110,4 +110,21 @@ main{width:min(100%,var(--max));margin:0 auto;padding:20px 16px 38px}.view{anima
 #p1TypingArea textarea {display:block;width:100%;min-height:9rem;margin-top:.75rem;padding:.75rem;border:1px solid #c7d0e2;border-radius:.65rem;font:inherit}
 #p1TypingArea button {margin-top:.5rem}
 #p1Feedback {display:block;flex:1;min-width:12rem;line-height:1.5;font-size:.9rem}
+
+/* Compact study navigation and one-row memorize tools — responsive. */
+.study-topline {display:flex;align-items:center;justify-content:flex-end;min-height:2.75rem;gap:.5rem}
+.study-top-actions {display:flex;align-items:center;justify-content:flex-end;gap:.5rem;min-width:0;width:100%}
+.study-top-actions .study-nav-btn {white-space:nowrap;min-width:0;max-width:9rem;padding:.55rem 1rem;font-size:clamp(.75rem,2.1vw,.92rem);flex:0 1 auto}
+.study-topline #backBtn,.study-topline #favoriteBtn {display:none!important}
+#p1MemorizeActions:not(.hidden) {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.45rem;align-items:stretch;width:100%;margin:.7rem 0}
+#p1MemorizeActions button {min-width:0;width:100%;white-space:nowrap;padding:.6rem .3rem;font-size:clamp(.72rem,2.1vw,.95rem);border-radius:.7rem}
+#p1CheckBtn {background:#6356e8;color:#fff;border-color:#6356e8}
+#p1TryAgainBtn {background:#e8f3ff;color:#275a98;border:1px solid #a9caee}
+#p1RevealBtn {background:#e7f6e9;color:#287642;border:1px solid #afd9b8}
+#p1MemorizeActions #p1Feedback {grid-column:1/-1;min-width:0;overflow-wrap:anywhere}
+.speaking-shell:has(#p1MemorizeActions:not(.hidden)) #revealBtn {display:none!important}
+@media(max-width:420px) {
+  .study-top-actions .study-nav-btn {padding:.5rem .65rem;max-width:7rem}
+  #p1MemorizeActions button {letter-spacing:-.01em}
+}
 </style>
