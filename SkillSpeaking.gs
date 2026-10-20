@@ -5,7 +5,7 @@ function getBootstrapData(forceRefresh) {
   const bypass = forceRefresh === true;
   const p1 = getCachedSpeakingContent_('p1', bypass, getSpeakingPart1_);
   const p2 = getCachedSpeakingContent_('p2', bypass, getSpeakingPart2_);
-  const p3 = getCachedSpeakingContent_('p3', bypass, getSpeakingPart3_);
+  const p3 = getCachedSpeakingContent_('p3', bypass, getSpeakingPart3Full_);
   const progress = getCachedProgressMap_(bypass);
 
   const p1Items = p1.map(function(q) {
@@ -30,11 +30,18 @@ function getBootstrapData(forceRefresh) {
   });
 
   const p3Items = p3.map(function(task) {
-    const promptProgress = [1].map(function(n) {
+    const promptProgress = task.questions.map(function(q,i) {
+      const n = i + 1;
       const key = task.id + '-' + n;
       return progress[key] || defaultProgress_(key);
     });
-    const topicProgress = aggregatePart3DescriptionProgress_(task.id, promptProgress, progress[task.id]);
+    const learned = promptProgress.filter(function(p){return p.status === 'learned';}).length;
+    const oldTopic = progress[task.id] || {};
+    const topicProgress = Object.assign({}, aggregatePart3DescriptionProgress_(task.id, promptProgress, oldTopic), {
+      status: learned === promptProgress.length && learned > 0 ? 'learned' : (promptProgress.some(function(p){return Number(p.reviewCount || 0) > 0;}) ? 'learning' : 'new'),
+      masteredPrompts: learned,
+      totalPrompts: promptProgress.length
+    });
     return Object.assign({}, task, { promptProgress: promptProgress, progress: topicProgress });
   });
 
@@ -104,7 +111,7 @@ function clearSpeakingContentCache_() {
 function getSpeakingContentVersion_(partKey) {
   if (partKey === 'p1' && typeof PART1_CONTENT_VERSION !== 'undefined') return String(PART1_CONTENT_VERSION);
   if (partKey === 'p2' && typeof PART2_DESCRIPTION_VERSION !== 'undefined') return String(PART2_DESCRIPTION_VERSION) + '.expansion52.v01.teacher-first.20261020';
-  if (partKey === 'p3' && typeof PART3_DESCRIPTION_VERSION !== 'undefined') return String(PART3_DESCRIPTION_VERSION);
+  if (partKey === 'p3' && typeof PART3_DESCRIPTION_VERSION !== 'undefined') return String(PART3_DESCRIPTION_VERSION) + '.source54.q123.20261020';
   return 'base';
 }
 
