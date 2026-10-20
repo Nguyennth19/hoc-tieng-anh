@@ -134,7 +134,7 @@ function ensurePart3ExamBankReady_() {
       const active = idx.active === undefined ? true : !(row[idx.active] === false || String(row[idx.active]).toLowerCase() === 'false');
       if (/^SP3-EX-\d{3}$/.test(id) && active) activeExamCount++;
     });
-    if (currentVersion !== PART3_DESCRIPTION_VERSION || activeExamCount < 32) {
+    if (activeExamCount === 0) { // Seed only an empty exam bank; never overwrite curated Q2/Q3.
       upgradeSpeakingPart3Description_(p3, settings, []);
       clearSpeakingContentCache_();
     }
