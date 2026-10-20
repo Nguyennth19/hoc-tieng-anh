@@ -4,9 +4,11 @@
 
   // Stable client cache: do not change this key for ordinary content releases.
   // This lets a new deployment reuse the last good payload immediately.
-  const CLIENT_CACHE_KEY = 'aptisSpeakingBootstrap:p2-52-v01-20261020';
-  const CLIENT_CACHE_BACKUP_KEY = 'aptisSpeakingBootstrap:p2-52-lastGood';
+  const CLIENT_CACHE_KEY = 'aptisSpeakingBootstrap:p2-52-p3-54-20261020';
+  const CLIENT_CACHE_BACKUP_KEY = 'aptisSpeakingBootstrap:p2-52-p3-54-lastGood';
   const LEGACY_CACHE_KEYS = [
+    'aptisSpeakingBootstrap:p2-52-v01-20261020',
+    'aptisSpeakingBootstrap:p2-52-lastGood',
     'aptisSpeakingBootstrap:stable',
     'aptisSpeakingBootstrap:lastGood',
     'aptisSpeakingBootstrap:v3d:p2description-20260929',
@@ -55,7 +57,7 @@
 
     const cached = readBootstrapCache();
     // Part 1 release gate: old cached 29-question payload must not render on V2.
-    if (cached && cached.data && (cached.data.part1.length !== 49 || cached.data.part2.length < 52 || cached.data.part2.some(function(x){return x.questions && x.questions.length === 1 && /^SP2-EX-/.test(x.id) && x.id !== 'SP2-EX-012';}))) {
+    if (cached && cached.data && (cached.data.part1.length !== 49 || cached.data.part2.length < 52 || cached.data.part3.length < 54 || data.part3.length < 54 || cached.data.part2.some(function(x){return x.questions && x.questions.length === 1 && /^SP2-EX-/.test(x.id) && x.id !== 'SP2-EX-012';}))) {
       clearAptisSpeakingBootstrapCache_();
       loadData({ force: true, blocking: true });
       return;
@@ -316,11 +318,11 @@
       onError(new Error('Speaking data returned an invalid payload.'), { background: Boolean(state.data) });
       return;
     }
-    if (data.part1.length !== 49 || data.part2.length < 52) {
+    if (data.part1.length !== 49 || data.part2.length < 52 || data.part3.length < 54) {
       setSyncStatus('Speaking release mismatch: Part 1 received ' + data.part1.length + '/49. Check deployment and server cache.', 'cached');
       toast('Part 1 has ' + data.part1.length + '/49 questions. Open the latest deployment or use Refresh.');
       // Do not overwrite newer saved data with an older server payload.
-      if (!state.data || state.data.part1.length !== 49 || state.data.part2.length < 52) applyBootstrap(data, { fromCache: false });
+      if (!state.data || state.data.part1.length !== 49 || state.data.part2.length < 52 || state.data.part3.length < 54 || data.part3.length < 54) applyBootstrap(data, { fromCache: false });
       return;
     }
     writeBootstrapCache(data);
@@ -436,7 +438,7 @@
     } else {
       $('heroPill').textContent = 'Speaking Part 3';
       $('heroTitle').textContent = 'Compare clearly. Explain naturally.';
-      $('heroText').textContent = 'Compare two pictures using one reusable 45-second framework: common point, picture 1, picture 2 and difference.';
+      $('heroText').textContent = 'Compare two pictures, then answer two related questions. 45 seconds per response.';
       $('libraryTitle').textContent = (state.items.length || 0) + ' comparison topics';
       $('progressLabel').textContent = 'topics mastered';
     }
