@@ -17,17 +17,26 @@ function getSpeakingPart3Full_() {
     const q3 = String(row[ix.question3] || '').trim();
     const m2 = String(row[ix.model2] || '').trim();
     const m3 = String(row[ix.model3] || '').trim();
-    // If the original source lacks a question, do not invent it.
-    if (!(q2 && q3 && m2 && m3)) return item;
+    // Source questions can have 1, 2, or 3 real positions.
+    const questions = [String(row[ix.question1] || 'Compare the two pictures.')];
+    const models = [String(row[ix.descriptionModel] || row[ix.model1] || '')];
+    const keywords = [String(row[ix.descriptionKeywords] || row[ix.keywords1] || '')];
+    const structures = [String(row[ix.descriptionTemplate] || row[ix.structure1] || '')];
+    if (q2 && m2) {
+      questions.push(q2); models.push(m2);
+      keywords.push(String(row[ix.keywords2] || ''));
+      structures.push(String(row[ix.structure2] || ''));
+    }
+    if (q3 && m3 && questions.length === 2) {
+      questions.push(q3); models.push(m3);
+      keywords.push(String(row[ix.keywords3] || ''));
+      structures.push(String(row[ix.structure3] || ''));
+    }
     return Object.assign({}, item, {
-      questions: [String(row[ix.question1] || 'Compare the two pictures.'), q2, q3],
-      models: [String(row[ix.descriptionModel] || row[ix.model1] || ''), m2, m3],
-      keywords: [String(row[ix.descriptionKeywords] || row[ix.keywords1] || ''),
-                 String(row[ix.keywords2] || ''), String(row[ix.keywords3] || '')],
-      structures: [String(row[ix.descriptionTemplate] || row[ix.structure1] || ''),
-                   String(row[ix.structure2] || ''), String(row[ix.structure3] || '')],
-      practiceMode: 'picture_comparison_plus_two_questions',
+      questions:questions, models:models, keywords:keywords, structures:structures,
+      practiceMode: questions.length === 3 ? 'picture_comparison_plus_two_questions' : 'source_partial_questions',
       answerOrigin: String(row[ix.sourceLabel] || '')
     });
+  });
   });
 }
