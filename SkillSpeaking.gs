@@ -103,7 +103,7 @@ function clearSpeakingContentCache_() {
 
 function getSpeakingContentVersion_(partKey) {
   if (partKey === 'p1' && typeof PART1_CONTENT_VERSION !== 'undefined') return String(PART1_CONTENT_VERSION);
-  if (partKey === 'p2' && typeof PART2_DESCRIPTION_VERSION !== 'undefined') return String(PART2_DESCRIPTION_VERSION) + '.expansion43.q123.20261020';
+  if (partKey === 'p2' && typeof PART2_DESCRIPTION_VERSION !== 'undefined') return String(PART2_DESCRIPTION_VERSION) + '.expansion52.v01.teacher-first.20261020';
   if (partKey === 'p3' && typeof PART3_DESCRIPTION_VERSION !== 'undefined') return String(PART3_DESCRIPTION_VERSION);
   return 'base';
 }
