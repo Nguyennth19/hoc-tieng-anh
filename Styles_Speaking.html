@@ -99,4 +99,14 @@ main{width:min(100%,var(--max));margin:0 auto;padding:20px 16px 38px}.view{anima
 @media(max-width:760px){.speaking-overview-hero{grid-template-columns:1fr;padding:20px}.skill-overview-stats{grid-template-columns:repeat(3,1fr)}.skill-recommendation-card{grid-template-columns:auto 1fr}.skill-recommendation-card .primary-btn{grid-column:1/-1;width:100%}.speaking-module-grid{grid-template-columns:1fr}}
 @media(max-width:430px){.skill-overview-stats{grid-template-columns:1fr 1fr 1fr;gap:6px}.skill-overview-stats article{padding:11px;min-height:82px}.skill-overview-stats strong{font-size:24px}.speaking-module-card{min-height:190px;padding:17px}}
 @media(max-width:680px){.part-progress-grid{grid-template-columns:1fr}}
+
+/* Speaking P1 preview: compact 3-step learning and typed recall */
+.p1-cloze-line {line-height:2.7;overflow-wrap:anywhere}
+.p1-cloze-input {display:inline-block;vertical-align:middle;width:7rem;max-width:35vw;padding:.4rem .55rem;margin:.15rem .25rem;border:1px solid #a9b4d3;border-radius:.55rem;background:white;color:#1f2b47;font:inherit}
+.p1-cloze-input:focus {outline:2px solid #6558f5;outline-offset:2px}
+.p1-cloze-correct {border-color:#3d925e;background:#eef9f1}
+.p1-cloze-wrong {border-color:#ce8750;background:#fff5e8}
+#p1TypingArea textarea {display:block;width:100%;min-height:9rem;margin-top:.75rem;padding:.75rem;border:1px solid #c7d0e2;border-radius:.65rem;font:inherit}
+#p1TypingArea button {margin-top:.5rem}
+#p1Feedback {display:block;flex:1;min-width:12rem;line-height:1.5;font-size:.9rem}
 </style>
