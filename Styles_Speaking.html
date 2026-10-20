@@ -148,4 +148,12 @@ main{width:min(100%,var(--max));margin:0 auto;padding:20px 16px 38px}.view{anima
 @media(max-width:600px) {
  #p1TypingArea textarea,#p1DictationInput {min-height:180px;padding:.85rem}
 }
+
+/* Speaking Part 01 approved Learn layout: one flowing paragraph, full width. */
+#shadowSentences:has(.p1-learn-paragraph){display:block;width:100%;min-width:0}
+#shadowSentences .p1-learn-paragraph{margin:0;width:100%;box-sizing:border-box;line-height:1.8;font-size:clamp(1rem,2.1vw,1.16rem);overflow-wrap:anywhere;white-space:normal}
+#shadowMode:has(.p1-learn-paragraph) .inline-actions{display:flex;flex-wrap:wrap;gap:.65rem;align-items:center}
+#shadowMode:has(.p1-learn-paragraph) #shadowAllBtn{min-width:110px}
+#shadowMode:has(.p1-learn-paragraph) #stopSpeechBtn{min-width:85px}
+@media(max-width:480px){#shadowSentences .p1-learn-paragraph{font-size:1rem;line-height:1.72}}
 </style>
