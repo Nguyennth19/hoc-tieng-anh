@@ -130,6 +130,9 @@
     });
     $('p1CheckBtn').addEventListener('click', checkP1Recall_);
     $('p1TryAgainBtn').addEventListener('click', renderMemorize);
+    $('p1RevealBtn').addEventListener('click', () => {
+      $('p1Feedback').textContent = currentModel();
+    });
 
     $('startTimerBtn').addEventListener('click', startTimer);
     $('stopTimerBtn').addEventListener('click', () => stopTimer(false));
