@@ -21,10 +21,19 @@ function runMigrations() {
 
     // Part 1 content upgrade: preserve IDs/progress, update learning content in-place.
     upgradeSpeakingPart1Content_(p1, settings, report);
-    // Part 2 description-only upgrade from the exam bank.
-    upgradeSpeakingPart2Description_(p2, settings, report);
-    // Part 3 description/compare-only upgrade from the exam bank.
-    upgradeSpeakingPart3Description_(p3, settings, report);
+    // HARD QA 2026-10-20: Protect curated source Q2/Q3 and learner content.
+    // The old seed migration resets Q2/Q3, their model answers and activation.
+    // Seed only a genuinely empty bank; never reseed a populated release.
+    if (p2.getLastRow() < 2) {
+      upgradeSpeakingPart2Description_(p2, settings, report);
+    } else {
+      report.push('P2 existing bank preserved; no destructive seed replay.');
+    }
+    if (p3.getLastRow() < 2) {
+      upgradeSpeakingPart3Description_(p3, settings, report);
+    } else {
+      report.push('P3 existing bank preserved; no destructive seed replay.');
+    }
 
     const mediaCount = ensurePart2MediaAssets_(ss, p2, media, report);
     if (mediaCount) report.push('Prepared ' + mediaCount + ' Speaking Part 2 source images in Drive.');
