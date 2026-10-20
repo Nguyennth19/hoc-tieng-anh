@@ -426,7 +426,22 @@
   function switchPart(part, keepHome) {
     state.activePart = [1,2,3].includes(Number(part)) ? Number(part) : 1;
     writeLocal('aptisActivePart', String(state.activePart));
-    state.items = state.activePart === 3 ? (state.data.part3 || []) : (state.activePart === 2 ? (state.data.part2 || []) : (state.data.part1 || []));
+    // Navigation can run before asynchronous bootstrap has finished.
+    // Never read part1/part2/part3 from null; keep a visible loading state.
+    if (!isValidBootstrap(state.data)) {
+      state.items = [];
+      state.currentPrompt = 1;
+      $('.part-tab').forEach(btn => btn.classList.toggle('active', Number(btn.dataset.part) === state.activePart));
+      $('skillHomeView').classList.add('hidden');
+      $('homeView').classList.add('hidden');
+      $('studyView').classList.add('hidden');
+      $('progressView').classList.add('hidden');
+      setLoadingVisible(true);
+      setSyncStatus('Loading Speaking data…', 'syncing');
+      if (!state.refreshing) loadData({ force: true, blocking: true });
+      return;
+    }
+    state.items = state.activePart === 3 ? state.data.part3 : (state.activePart === 2 ? state.data.part2 : state.data.part1);
     state.currentPrompt = 1;
     state.quickQueue = [];
     state.quickPosition = -1;
@@ -1082,6 +1097,10 @@
   }
 
   function showPartHome() {
+    if (!isValidBootstrap(state.data)) {
+      switchPart(state.activePart, true);
+      return;
+    }
     stopSpeech(); stopTimer(true);
     $('skillHomeView').classList.add('hidden');
     $('studyView').classList.add('hidden');
@@ -1327,6 +1346,10 @@
   }
 
   function showProgress() {
+    if (!isValidBootstrap(state.data)) {
+      switchPart(state.activePart, true);
+      return;
+    }
     stopSpeech(); stopTimer(true);
     renderProgressDashboard();
     $('skillHomeView').classList.add('hidden');
