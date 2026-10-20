@@ -35,4 +35,49 @@
 .p4dev .p4dev-inline-answer p{line-height:1.8}
 .p4-learning-tools[hidden]{display:none!important}
 @media(max-width:600px){.p4-learning-tools select,.p4-learning-tools button{flex:1 1 43%}}
+
+/* Part 04: align to the accepted P01–P03 design, keep exam safeguards intact. */
+.p4dev{max-width:1060px;margin-inline:auto;padding-inline:clamp(12px,3vw,28px)}
+.p4dev-head{background:#fff;border:1px solid #e8eaf2;border-radius:22px;padding:clamp(16px,3vw,28px);margin:0 0 14px;box-shadow:0 12px 36px rgba(38,47,79,.055)}
+.p4dev-head h2{font-size:clamp(1.55rem,3vw,2.3rem);letter-spacing:-.025em}
+.p4dev-head p{color:#63708c;line-height:1.6}
+.p4dev #p4Close{white-space:nowrap;flex-shrink:0;background:#f1efff;border-color:#e4dfff;color:#6551cc;font-weight:700}
+.p4dev-controls{display:grid;grid-template-columns:auto minmax(170px,1fr) auto minmax(200px,1.6fr) auto;gap:10px;padding:18px;margin-bottom:14px;box-shadow:0 12px 32px rgba(38,47,79,.055)}
+.p4dev-controls label{white-space:nowrap;font-size:.85rem;color:#52617d}
+.p4dev-controls select{width:100%;min-width:0;max-width:100%;text-overflow:ellipsis}
+.p4dev-controls #p4Load{white-space:nowrap}
+.p4-learning-tools{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:end;gap:10px 12px;padding:18px;box-shadow:0 12px 32px rgba(38,47,79,.055)}
+.p4-learning-tools label{align-self:end;color:#53627c}
+.p4-learning-tools select,.p4-learning-tools button{width:100%;min-width:0}
+.p4-learning-tools #p4MasterySaved,.p4-learning-tools #p4MasteryOverview{grid-column:1/-1;overflow-wrap:anywhere}
+.p4dev-content{grid-template-columns:1fr;gap:14px}
+.p4dev-question{border-radius:20px;padding:clamp(16px,2.5vw,24px);box-shadow:0 9px 24px rgba(41,48,77,.04)}
+.p4dev-question b{font-size:.8rem;letter-spacing:.03em}
+.p4dev-prompt{font-size:clamp(1rem,2vw,1.23rem);font-weight:700;color:#243251}
+.p4dev-inline-answer{margin-top:14px;padding-top:14px}
+.p4dev .p4-listen{background:#ecf2ff;color:#3652a0}
+.p4dev-time{display:grid;grid-template-columns:minmax(0,1fr) auto repeat(3,auto);gap:10px;align-items:center;padding:14px 18px;border-radius:18px;box-shadow:0 12px 32px rgba(42,45,90,.1)}
+.p4dev-time strong{font-size:clamp(1.35rem,3vw,1.85rem);margin:0}
+.p4dev-time button{white-space:nowrap;font-weight:700}
+.p4dev #p4Next{background:#eaf1ff;border-color:#ccdbfc;color:#3159a2}
+.p4dev #p4Stop{background:#fff1ed;border-color:#f8d1c5;color:#a3442c}
+.p4dev #p4Review{border-radius:18px;padding:16px;background:#fff;border:1px solid #e8eaf2}
+@media(max-width:800px){
+ .p4dev-controls{grid-template-columns:1fr 1fr}
+ .p4dev-controls label{grid-column:auto}
+ .p4dev-controls #p4Mode,.p4dev-controls #p4Set{grid-column:span 1}
+ .p4dev-controls #p4Load{grid-column:1/-1}
+ .p4-learning-tools{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .p4dev-time{grid-template-columns:minmax(0,1fr) auto}
+ .p4dev-time button{min-width:0}
+}
+@media(max-width:480px){
+ .p4dev-head{flex-direction:column}
+ .p4dev-controls{grid-template-columns:1fr}
+ .p4dev-controls #p4Mode,.p4dev-controls #p4Set,.p4dev-controls #p4Load{grid-column:1}
+ .p4-learning-tools{grid-template-columns:1fr 1fr}
+ .p4dev-time{position:relative;bottom:auto;grid-template-columns:1fr 1fr;gap:8px}
+ .p4dev-time #p4Begin{grid-column:1/-1}
+ .p4dev-time button{padding:10px 8px;white-space:normal}
+}
 </style>
