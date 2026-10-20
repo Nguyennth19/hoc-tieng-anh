@@ -912,14 +912,93 @@
     renderMemorize();
   }
 
+  let p1RecallTargets_ = [];
+  function tokenizeP1Recall_(value) {
+    return String(value || '').trim().toLowerCase().replace(/[^a-z0-9'-]/g, '');
+  }
   function renderMemorize() {
     const model = currentModel();
-    let text = model;
-    if (state.memorizeLevel === 1) text = makeCloze(model, 5);
-    else if (state.memorizeLevel === 2) text = makeCloze(model, 3);
-    else if (state.memorizeLevel === 3) text = currentKeywords();
-    else if (state.memorizeLevel === 4) text = 'Speak from memory. No text support.';
-    $('memorizeText').textContent = text;
+    const typing = $('p1TypingArea');
+    const actions = $('p1MemorizeActions');
+    if (state.activePart !== 1) {
+      typing.classList.add('hidden'); actions.classList.add('hidden');
+      $('memorizeText').classList.remove('hidden');
+      let text = model;
+      if (state.memorizeLevel === 1) text = makeCloze(model, 5);
+      else if (state.memorizeLevel === 2) text = makeCloze(model, 3);
+      else if (state.memorizeLevel === 3) text = currentKeywords();
+      else if (state.memorizeLevel === 4) text = 'Speak from memory. No text support.';
+      $('memorizeText').textContent = text;
+      return;
+    }
+    typing.classList.remove('hidden');
+    actions.classList.remove('hidden');
+    $('memorizeText').classList.add('hidden');
+    $('p1Feedback').textContent = '';
+    typing.replaceChildren();
+    p1RecallTargets_ = [];
+    if (state.memorizeLevel === 3) {
+      const hint = document.createElement('p');
+      hint.textContent = 'Listen, then write the full answer from memory.';
+      typing.appendChild(hint);
+      const audioButton = document.createElement('button');
+      audioButton.type = 'button'; audioButton.className = 'secondary-btn';
+      audioButton.textContent = '▶ Listen';
+      audioButton.addEventListener('click', function(){toggleP1Audio_(model,audioButton);});
+      typing.appendChild(audioButton);
+      const area = document.createElement('textarea');
+      area.id = 'p1DictationInput'; area.rows = 5;
+      area.setAttribute('aria-label', 'Write the answer you hear');
+      area.placeholder = 'Write the answer here...';
+      typing.appendChild(area);
+      return;
+    }
+    const frequency = state.memorizeLevel === 1 ? 5 : 2;
+    const words = String(model || '').match(/[A-Za-z][A-Za-z'-]*|[^A-Za-z]+/g) || [];
+    let count = 0;
+    const line = document.createElement('div');
+    line.className = 'p1-cloze-line';
+    words.forEach(function(piece){
+      if (/^[A-Za-z]/.test(piece)) {
+        count++;
+        if (piece.length > 2 && count % frequency === 0) {
+          const input = document.createElement('input');
+          input.type = 'text'; input.className = 'p1-cloze-input';
+          input.placeholder = '_____';
+          input.setAttribute('aria-label', 'Missing word ' + (p1RecallTargets_.length + 1));
+          input.autocomplete = 'off'; input.spellcheck = false;
+          line.appendChild(input);
+          p1RecallTargets_.push({input:input,expected:piece});
+          return;
+        }
+      }
+      line.appendChild(document.createTextNode(piece));
+    });
+    typing.appendChild(line);
+  }
+  function checkP1Recall_() {
+    if (state.activePart !== 1) return;
+    if (state.memorizeLevel === 3) {
+      const value = String($('p1DictationInput')?.value || '').trim();
+      if (!value) { $('p1Feedback').textContent = 'Write an answer first.'; return; }
+      const target = String(currentModel() || '').toLowerCase().match(/[a-z]+(?:'[a-z]+)?/g) || [];
+      const attempt = value.toLowerCase().match(/[a-z]+(?:'[a-z]+)?/g) || [];
+      const counts = {};
+      target.forEach(function(word){counts[word] = (counts[word]||0)+1;});
+      let hits = 0;
+      attempt.forEach(function(word){if(counts[word]>0){hits++;counts[word]--;}});
+      const score = Math.round(100 * hits / Math.max(1,target.length));
+      $('p1Feedback').textContent = 'Word recall: ' + score + '%. Compare the original answer below; clear B1 meaning matters more than exact wording.';
+      return;
+    }
+    let correct = 0;
+    p1RecallTargets_.forEach(function(target){
+      const ok = tokenizeP1Recall_(target.input.value) === tokenizeP1Recall_(target.expected);
+      target.input.classList.toggle('p1-cloze-correct',ok);
+      target.input.classList.toggle('p1-cloze-wrong',!ok);
+      if(ok)correct++;
+    });
+    $('p1Feedback').textContent = correct + '/' + p1RecallTargets_.length + ' words correct.';
   }
 
   function makeCloze(text, everyN) {
