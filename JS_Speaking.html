@@ -1044,6 +1044,9 @@
     if (state.activePart <= 3 && mode === 'learn') mode = 'shadow';
     if (state.currentMode !== mode) stopSpeech();
     state.currentMode = mode;
+    if(state.activePart===2 && currentItem()){
+      $('questionText').textContent = mode==='test' ? currentQuestionText() : 'Practise all three questions in this topic';
+    }
     configureP1Modes_();
     $$('.mode-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
     ['learn','shadow','memorize','test'].forEach(name => $(name + 'Mode').classList.toggle('hidden', name !== mode || (state.activePart===2 && mode !== 'test')));
