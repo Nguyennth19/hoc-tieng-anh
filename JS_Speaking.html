@@ -61,11 +61,6 @@
 
     const cached = readBootstrapCache();
     // Part 1 release gate: old cached 29-question payload must not render on V2.
-    if (cached && cached.data && (!hasCurrentSpeakingQuestionCoverage_(cached.data))) {
-      clearAptisSpeakingBootstrapCache_();
-      loadData({ force: true, blocking: true });
-      return;
-    }
     if (cached && cached.data) {
       state.hydratedFromCache = true;
       applyBootstrap(cached.data, { fromCache: true, stale: cached.stale });
@@ -114,7 +109,7 @@
     $$('[data-open-speaking-part]').forEach(btn => btn.addEventListener('click', () => openPartHome(Number(btn.dataset.openSpeakingPart))));
     $('skillProgressLink').addEventListener('click', showProgress);
     $('skillRecommendationBtn').addEventListener('click', openRecommendedSpeakingPart);
-    $$('.prompt-step').forEach(btn => btn.addEventListener('click', () => setPrompt(Number(btn.dataset.prompt))));
+    $$$('.prompt-step').forEach(btn => btn.addEventListener('click', () => setPrompt(Number(btn.dataset.prompt))));
     $$('.mode-tab').forEach(btn => btn.addEventListener('click', () => setMode(btn.dataset.mode)));
     $$('.level-btn').forEach(btn => btn.addEventListener('click', () => setMemorizeLevel(Number(btn.dataset.level))));
     $$('.rating-btn').forEach(btn => btn.addEventListener('click', () => finishSelfRating(Number(btn.dataset.rating))));
@@ -383,6 +378,13 @@
     return true;
   }
 
+  // Cache usable source data even when individual Q2/Q3 remain intentionally
+  // missing. Exam coverage is a separate QA indicator, not a cache gate.
+  function isUsableSpeakingPayload_(data) {
+    return isValidBootstrap(data) &&
+      data.part1.length >= 49 && data.part2.length >= 30 && data.part3.length >= 32;
+  }
+
   function hasCurrentSpeakingQuestionCoverage_(data) {
     if (!isValidBootstrap(data)) return false;
     const p2Complete = data.part2.filter(function(item) {
@@ -431,7 +433,7 @@
         const raw = localStorage.getItem(keys[i]);
         if (!raw) continue;
         const box = JSON.parse(raw);
-        if (!box || !box.data || !box.savedAt || !hasCurrentSpeakingQuestionCoverage_(box.data)) continue;
+        if (!box || !box.data || !box.savedAt || !isUsableSpeakingPayload_(box.data)) continue;
         const age = Date.now() - Number(box.savedAt);
         const maxAge = allowVeryStale ? CLIENT_CACHE_STALE_MS : CLIENT_CACHE_STALE_MS;
         if (age > maxAge) continue;
@@ -442,7 +444,7 @@
   }
 
   function writeBootstrapCache(data) {
-    if (!hasCurrentSpeakingQuestionCoverage_(data)) return;
+    if (!isUsableSpeakingPayload_(data)) return;
     const payload = JSON.stringify({ savedAt: Date.now(), data: data });
     try { localStorage.setItem(CLIENT_CACHE_KEY, payload); } catch (e) {}
     try { localStorage.setItem(CLIENT_CACHE_BACKUP_KEY, payload); } catch (e) {}
@@ -649,7 +651,7 @@
     $('promptStepper').classList.toggle('hidden', !multi);
     if (multi) {
       const prompts = Array.isArray(item.questions) ? item.questions : [];
-      $('.prompt-step').forEach(function(btn) {
+      $$('.prompt-step').forEach(function(btn) {
         const n = Number(btn.dataset.prompt);
         btn.disabled = n > prompts.length || !String(prompts[n-1] || '').trim();
       });
@@ -758,7 +760,7 @@
     const labels = state.activePart === 3
       ? ['1 · Describe both', '2 · Compare', '3 · Opinion']
       : ['1 · Describe', '2 · Experience', '3 · Opinion'];
-    $$('.prompt-step').forEach((btn, i) => {
+    $$$('.prompt-step').forEach((btn, i) => {
       btn.classList.toggle('active', Number(btn.dataset.prompt) === state.currentPrompt);
       btn.textContent = labels[i] || btn.textContent;
     });
