@@ -299,7 +299,11 @@
         applyBootstrap(fallback.data, { fromCache: true, stale: true });
         setSyncStatus('Saved data · syncing', 'cached');
       } else {
-        setLoadingVisible(false);
+        // Keep the progress panel visible while Google Sheets is still loading.
+        // Hiding it here produced a blank page until another navigation event.
+        setLoadingVisible(true);
+        const msg = $('loadingView').querySelector('p');
+        if (msg) msg.textContent = 'Loading Speaking data is taking longer than usual…';
         setSyncStatus('Still syncing…', 'syncing');
       }
     }, LOADER_WATCHDOG_MS) : null;
