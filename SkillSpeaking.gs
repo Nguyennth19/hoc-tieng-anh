@@ -15,11 +15,17 @@ function getBootstrapData(forceRefresh) {
   });
 
   const p2Items = p2.map(function(task) {
-    const promptProgress = [1].map(function(n) {
+    const promptProgress = task.questions.map(function(q, i) {
+      const n = i + 1;
       const key = task.id + '-' + n;
       return progress[key] || defaultProgress_(key);
     });
-    const topicProgress = aggregatePart2DescriptionProgress_(task.id, promptProgress, progress[task.id]);
+    const learnedCount = promptProgress.filter(function(p){return p.status === 'learned';}).length;
+    const oldTopic = progress[task.id] || {};
+    const topicProgress = Object.assign({}, aggregatePart2DescriptionProgress_(task.id, promptProgress, oldTopic), {
+      status: learnedCount === promptProgress.length ? 'learned' : (promptProgress.some(function(p){return Number(p.reviewCount || 0) > 0;}) ? 'learning' : 'new'),
+      masteredPrompts: learnedCount, totalPrompts: promptProgress.length
+    });
     return Object.assign({}, task, { promptProgress: promptProgress, progress: topicProgress });
   });
 
@@ -97,7 +103,7 @@ function clearSpeakingContentCache_() {
 
 function getSpeakingContentVersion_(partKey) {
   if (partKey === 'p1' && typeof PART1_CONTENT_VERSION !== 'undefined') return String(PART1_CONTENT_VERSION);
-  if (partKey === 'p2' && typeof PART2_DESCRIPTION_VERSION !== 'undefined') return String(PART2_DESCRIPTION_VERSION) + '.expansion43.20261019';
+  if (partKey === 'p2' && typeof PART2_DESCRIPTION_VERSION !== 'undefined') return String(PART2_DESCRIPTION_VERSION) + '.expansion43.q123.20261020';
   if (partKey === 'p3' && typeof PART3_DESCRIPTION_VERSION !== 'undefined') return String(PART3_DESCRIPTION_VERSION);
   return 'base';
 }
