@@ -1,6 +1,6 @@
 <section class="skill-shell speaking-shell app-shell">
   <div class="skill-page-head">
-    <div><div class="eyebrow">APTIS ESOL · SPEAKING</div><h1>Speaking</h1><p>Learn, shadow, memorize and test yourself across Parts 1–4.</p></div>
+    <div><div class="eyebrow">APTIS ESOL · SPEAKING</div><h1>Speaking</h1></div>
     <div class="skill-head-actions">
       <button id="progressBtn" class="icon-btn" type="button" title="Speaking progress">▥</button>
       <button id="audioSettingsBtn" class="icon-btn" type="button" title="Audio">♪</button>
@@ -187,8 +187,12 @@
 
       <section id="studyView" class="view hidden">
         <div class="study-topline">
-          <button id="backBtn" class="back-btn" type="button">← Practice bank</button>
-          <div class="study-top-actions"><button id="favoriteBtn" class="icon-btn favorite-btn" type="button">☆</button></div>
+          <button id="backBtn" class="back-btn hidden" type="button" tabindex="-1">← Practice bank</button>
+          <div class="study-top-actions">
+            <button id="prevQuestionBtn" class="secondary-btn study-nav-btn" type="button" aria-label="Previous lesson">← Prev</button>
+            <button id="nextQuestionBtn" class="secondary-btn study-nav-btn" type="button" aria-label="Next lesson">Next →</button>
+            <button id="favoriteBtn" class="icon-btn favorite-btn hidden" type="button" tabindex="-1" aria-label="Favorite">☆</button>
+          </div>
         </div>
 
         <article class="study-card">
@@ -347,7 +351,7 @@
               <button class="level-btn" data-level="3" type="button">Keywords</button>
               <button class="level-btn" data-level="4" type="button">No help</button>
             </div>
-            <div class="content-block memorize-box"><p id="memorizeText" class="model-text"></p><div id="p1TypingArea" class="hidden"></div></div><div id="p1MemorizeActions" class="inline-actions hidden"><button id="p1CheckBtn" class="primary-btn" type="button">Check</button><button id="p1TryAgainBtn" class="secondary-btn" type="button">Try again</button><span id="p1Feedback" role="status" aria-live="polite"></span></div>
+            <div class="content-block memorize-box"><p id="memorizeText" class="model-text"></p><div id="p1TypingArea" class="hidden"></div></div><div id="p1MemorizeActions" class="inline-actions hidden"><button id="p1CheckBtn" class="primary-btn" type="button">Check</button><button id="p1TryAgainBtn" class="secondary-btn" type="button">Try again</button><button id="p1RevealBtn" class="secondary-btn" type="button">Show answer</button><span id="p1Feedback" role="status" aria-live="polite"></span></div>
             <button id="revealBtn" class="secondary-btn" type="button">Reveal full answer</button>
           </div>
 
@@ -375,9 +379,7 @@
           </div>
 
           <footer class="study-footer">
-            <button id="prevQuestionBtn" class="secondary-btn" type="button">← Previous</button>
             <button id="markLearnedBtn" class="success-btn" type="button">✓ Mark learned</button>
-            <button id="nextQuestionBtn" class="secondary-btn" type="button">Next →</button>
           </footer>
         </article>
       </section>
