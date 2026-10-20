@@ -349,10 +349,30 @@
     state.data = data;
     $('appTitle').textContent = data.app.title || 'APTIS B2 Coach';
     $('errorView').classList.add('hidden');
+    const wasStudying = !$('studyView').classList.contains('hidden');
+    const wasProgress = !$('progressView').classList.contains('hidden');
+    const wasPartHome = !$('homeView').classList.contains('hidden');
+    const previousId = state.items && state.items[state.currentIndex] && state.items[state.currentIndex].id;
+    const previousPrompt = state.currentPrompt;
+    const previousMode = state.currentMode;
     switchPart(state.activePart, true);
     renderProgressDashboard();
     renderSkillHome();
-    showHome();
+    if (wasStudying && previousId) {
+      const newIndex = state.items.findIndex(function(item){ return item.id === previousId; });
+      if (newIndex >= 0) {
+        state.currentIndex = newIndex;
+        state.currentPrompt = previousPrompt;
+        $('skillHomeView').classList.add('hidden');
+        $('homeView').classList.add('hidden');
+        $('studyView').classList.remove('hidden');
+        $('progressView').classList.add('hidden');
+        renderQuestion();
+        setMode(previousMode);
+      } else showHome();
+    } else if (wasProgress) showProgress();
+    else if (wasPartHome) showPartHome();
+    else showHome();
     if (meta && meta.fromCache) {
       setSyncStatus(meta.stale ? 'Saved data · refreshing' : 'Saved data', 'cached');
     }
