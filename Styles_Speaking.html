@@ -127,4 +127,25 @@ main{width:min(100%,var(--max));margin:0 auto;padding:20px 16px 38px}.view{anima
   .study-top-actions .study-nav-btn {padding:.5rem .65rem;max-width:7rem}
   #p1MemorizeActions button {letter-spacing:-.01em}
 }
+
+/* Full-width, responsive typing for all Speaking 01–03 memorize levels. */
+.memorize-box:has(#p1TypingArea:not(.hidden)) {
+  display:block;min-width:0;width:100%;box-sizing:border-box;
+}
+#p1TypingArea:not(.hidden) {
+  display:flex;flex-direction:column;align-items:stretch;gap:.65rem;
+  flex:1 1 auto;min-width:0;width:100%;box-sizing:border-box;
+}
+#p1TypingArea textarea,
+#p1DictationInput {
+  display:block;box-sizing:border-box;width:100%;max-width:100%;
+  min-width:0;min-height:clamp(180px,26vh,320px);
+  resize:vertical;padding:1rem 1.1rem;line-height:1.65;
+  font:inherit;overflow-wrap:break-word;
+}
+#p1TypingArea .p1-cloze-line {width:100%;min-width:0}
+#p1TypingArea button {align-self:flex-start;flex:0 0 auto}
+@media(max-width:600px) {
+ #p1TypingArea textarea,#p1DictationInput {min-height:180px;padding:.85rem}
+}
 </style>
