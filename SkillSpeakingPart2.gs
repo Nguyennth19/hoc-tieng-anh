@@ -462,26 +462,25 @@ function upgradeSpeakingPart2Description_(sheet, settings, report) {
     set('imageAlt', seed.imageAlt);
     set('sceneIcon', seed.sceneIcon);
     set('question1', seed.question1);
-    set('question2', '');
-    set('question3', '');
+    // Teacher-first: NEVER erase curated Q2/Q3 on a seed migration.
+    // Seed only Q1. Source-backed later positions remain authoritative.
     set('model1', seed.model1);
-    set('model2', '');
-    set('model3', '');
     set('keywords1', seed.keywords1);
-    set('keywords2', '');
-    set('keywords3', '');
+
     set('structure1', seed.structure1);
-    set('structure2', '');
-    set('structure3', '');
+
     set('mustSay', seed.mustSay);
     set('sayMore', seed.sayMore);
     set('descriptionModel', seed.model1);
     set('descriptionKeywords', seed.keywords1);
     set('descriptionTemplate', seed.structure1);
-    set('practiceMode', 'description_only');
+    // Never reset editorial activation or provenance on an existing row.
+    if (!values.slice(1).some(function(r){return String(r[idx.id]) === seed.id;})) {
+      set('practiceMode', 'description_only');
+      set('active', true);
+      set('sourceLabel', seed.sourceLabel);
+    }
     set('contentVersion', PART2_DESCRIPTION_VERSION);
-    set('active', true);
-    set('sourceLabel', seed.sourceLabel);
   });
 
   setSetting_(settings, 'p2_description_version', PART2_DESCRIPTION_VERSION);
