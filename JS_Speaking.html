@@ -57,7 +57,7 @@
 
     const cached = readBootstrapCache();
     // Part 1 release gate: old cached 29-question payload must not render on V2.
-    if (cached && cached.data && (cached.data.part1.length !== 49 || cached.data.part2.length < 52 || cached.data.part3.length < 54 || data.part3.length < 54 || cached.data.part2.some(function(x){return x.questions && x.questions.length === 1 && /^SP2-EX-/.test(x.id) && x.id !== 'SP2-EX-012';}))) {
+    if (cached && cached.data && (cached.data.part1.length !== 49 || cached.data.part2.length < 52 || cached.data.part3.length < 54 || cached.data.part2.some(function(x){return x.questions && x.questions.length === 1 && /^SP2-EX-/.test(x.id) && x.id !== 'SP2-EX-012';}))) {
       clearAptisSpeakingBootstrapCache_();
       loadData({ force: true, blocking: true });
       return;
@@ -320,9 +320,9 @@
     }
     if (data.part1.length !== 49 || data.part2.length < 52 || data.part3.length < 54) {
       setSyncStatus('Speaking release mismatch: Part 1 received ' + data.part1.length + '/49. Check deployment and server cache.', 'cached');
-      toast('Part 1 has ' + data.part1.length + '/49 questions. Open the latest deployment or use Refresh.');
+      toast('Received P1=' + data.part1.length + ', P2=' + data.part2.length + ', P3=' + data.part3.length + '. Open latest deployment or Refresh.');
       // Do not overwrite newer saved data with an older server payload.
-      if (!state.data || state.data.part1.length !== 49 || state.data.part2.length < 52 || state.data.part3.length < 54 || data.part3.length < 54) applyBootstrap(data, { fromCache: false });
+      if (!state.data || state.data.part1.length !== 49 || state.data.part2.length < 52 || state.data.part3.length < 54) applyBootstrap(data, { fromCache: false });
       return;
     }
     writeBootstrapCache(data);
