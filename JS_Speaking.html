@@ -864,7 +864,7 @@
   let p1PlaybackButton = null;
   function setP1Button_(button, playing) {
     if (button) {
-      button.textContent = button.id === 'shadowAllBtn' ? (playing ? '⏸ Pause all' : '▶ Shadow all') : (playing ? '⏸' : '▶');
+      button.textContent = button.id === 'shadowAllBtn' ? (playing ? '⏸ Pause' : ((window.speechSynthesis && window.speechSynthesis.paused) ? '▶ Resume' : '▶ Play')) : (playing ? '⏸' : '▶');
       button.setAttribute('aria-label', playing ? 'Pause audio' : 'Play or resume audio');
       button.setAttribute('aria-pressed', playing ? 'true' : 'false');
     }
@@ -876,7 +876,7 @@
       engine.resume(); setP1Button_(button, true); return;
     }
     if (p1PlaybackButton === button && engine.speaking) {
-      engine.pause(); setP1Button_(button, false); return;
+      engine.pause(); setP1Button_(button, false); if (button && button.id === 'shadowAllBtn') button.textContent = '▶ Resume'; return;
     }
     stopSpeech();
     const token = ++p1SpeechToken;
@@ -891,8 +891,16 @@
     engine.speak(utterance);
   }
   function renderShadow() {
+    $('shadowAllBtn').textContent = state.activePart === 1 ? '▶ Play' : '▶ Shadow all';
     const box = $('shadowSentences');
     box.innerHTML = '';
+    if (state.activePart === 1) {
+      const paragraph = document.createElement('p');
+      paragraph.className = 'p1-learn-paragraph';
+      renderSharedFormulaText(paragraph, currentModel());
+      box.appendChild(paragraph);
+      return;
+    }
     splitSentences(currentModel()).forEach(function(sentence) {
       const row = document.createElement('div');
       row.className = 'shadow-sentence';
@@ -1471,7 +1479,7 @@
     });
   }
 
-  function stopSpeech() { p1SpeechToken++; setP1Button_(p1PlaybackButton, false); p1PlaybackButton = null; p1Speech = null; if ('speechSynthesis' in window) window.speechSynthesis.cancel(); if ($('shadowAllBtn')) $('shadowAllBtn').textContent = '▶ Shadow all'; }
+  function stopSpeech() { p1SpeechToken++; setP1Button_(p1PlaybackButton, false); p1PlaybackButton = null; p1Speech = null; if ('speechSynthesis' in window) window.speechSynthesis.cancel(); if ($('shadowAllBtn')) $('shadowAllBtn').textContent = '▶ Play'; }
   function openAudioSheet() { $('accentSelect').value = state.audio.accent; populateVoiceSelect(); syncSpeedButtons(); $('audioSheet').classList.remove('hidden'); }
   function closeAudioSheet() { stopSpeech(); $('audioSheet').classList.add('hidden'); }
   function setSpeechRate(rate) { state.audio.rate = clamp(rate,0.5,1.4); writeLocal('aptisRate',String(state.audio.rate)); syncSpeedButtons(); }
