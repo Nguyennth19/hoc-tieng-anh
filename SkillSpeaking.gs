@@ -4,8 +4,18 @@ function getBootstrapData(forceRefresh) {
 
   const bypass = forceRefresh === true;
   const p1 = getCachedSpeakingContent_('p1', bypass, getSpeakingPart1_);
-  const p2 = getCachedSpeakingContent_('p2', bypass, getSpeakingPart2_);
-  const p3 = getCachedSpeakingContent_('p3', bypass, getSpeakingPart3Full_);
+  // Practice bank is strict: only complete, active three-question topics.
+  // Keep original Sheet rows and progress IDs intact for audit/recovery.
+  const isCompletePracticeTopic_ = function(item) {
+    return item && Array.isArray(item.questions) && Array.isArray(item.models) &&
+      item.questions.length === 3 && item.models.length === 3 &&
+      item.questions.every(function(q){return String(q || '').trim().length > 0;}) &&
+      item.models.every(function(m){return String(m || '').trim().length > 0;});
+  };
+  const p2 = getCachedSpeakingContent_('p2', bypass, getSpeakingPart2_)
+    .filter(function(item){return item.id !== 'SP2-EX-012' && isCompletePracticeTopic_(item);});
+  const p3 = getCachedSpeakingContent_('p3', bypass, getSpeakingPart3Full_)
+    .filter(function(item){return item.id !== 'SP3-EX-012' && item.id !== 'SP3-EX-017' && isCompletePracticeTopic_(item);});
   const progress = getCachedProgressMap_(bypass);
 
   const p1Items = p1.map(function(q) {
@@ -110,8 +120,8 @@ function clearSpeakingContentCache_() {
 
 function getSpeakingContentVersion_(partKey) {
   if (partKey === 'p1' && typeof PART1_CONTENT_VERSION !== 'undefined') return String(PART1_CONTENT_VERSION);
-  if (partKey === 'p2' && typeof PART2_DESCRIPTION_VERSION !== 'undefined') return String(PART2_DESCRIPTION_VERSION) + '.expansion52.v02.q23-restored.20261020';
-  if (partKey === 'p3' && typeof PART3_DESCRIPTION_VERSION !== 'undefined') return String(PART3_DESCRIPTION_VERSION) + '.source54.q123-restored-v02.20261020';
+  if (partKey === 'p2' && typeof PART2_DESCRIPTION_VERSION !== 'undefined') return String(PART2_DESCRIPTION_VERSION) + '.complete51.filtered-v03.20261020';
+  if (partKey === 'p3' && typeof PART3_DESCRIPTION_VERSION !== 'undefined') return String(PART3_DESCRIPTION_VERSION) + '.complete52.filtered-v03.20261020';
   return 'base';
 }
 
