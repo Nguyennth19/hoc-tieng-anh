@@ -339,7 +339,7 @@
   function applyBootstrap(data, meta) {
     // Always close blocking UI first, even if the payload is rejected.
     setLoadingVisible(false);
-    if (!isValidBootstrap(data)) return false;
+    if (!hasCurrentSpeakingQuestionCoverage_(data)) return false;
     state.data = data;
     $('appTitle').textContent = data.app.title || 'APTIS B2 Coach';
     $('errorView').classList.add('hidden');
@@ -401,7 +401,7 @@
         const raw = localStorage.getItem(keys[i]);
         if (!raw) continue;
         const box = JSON.parse(raw);
-        if (!box || !box.data || !box.savedAt || !isValidBootstrap(box.data)) continue;
+        if (!box || !box.data || !box.savedAt || !hasCurrentSpeakingQuestionCoverage_(box.data)) continue;
         const age = Date.now() - Number(box.savedAt);
         const maxAge = allowVeryStale ? CLIENT_CACHE_STALE_MS : CLIENT_CACHE_STALE_MS;
         if (age > maxAge) continue;
@@ -412,7 +412,7 @@
   }
 
   function writeBootstrapCache(data) {
-    if (!isValidBootstrap(data)) return;
+    if (!hasCurrentSpeakingQuestionCoverage_(data)) return;
     const payload = JSON.stringify({ savedAt: Date.now(), data: data });
     try { localStorage.setItem(CLIENT_CACHE_KEY, payload); } catch (e) {}
     try { localStorage.setItem(CLIENT_CACHE_BACKUP_KEY, payload); } catch (e) {}
