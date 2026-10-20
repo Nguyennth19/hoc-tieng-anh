@@ -886,6 +886,7 @@
         btn.textContent = label[mode];
       }
     });
+    $('speakingModeTabs').classList.toggle('p1-three-steps', p1);
     $('shadowIntro').classList.toggle('hidden', p1);
     $('memorizeIntro').classList.toggle('hidden', p1);
     $$('.level-btn').forEach(function(btn) {
@@ -906,6 +907,7 @@
   }
 
   function setMemorizeLevel(level) {
+    if (state.activePart === 1) stopSpeech();
     state.memorizeLevel = level;
     $$('.level-btn').forEach(btn => btn.classList.toggle('active', Number(btn.dataset.level) === level));
     renderMemorize();
