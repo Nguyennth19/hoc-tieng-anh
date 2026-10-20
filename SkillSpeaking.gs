@@ -121,7 +121,7 @@ function clearSpeakingContentCache_() {
 function getSpeakingContentVersion_(partKey) {
   if (partKey === 'p1' && typeof PART1_CONTENT_VERSION !== 'undefined') return String(PART1_CONTENT_VERSION);
   if (partKey === 'p2' && typeof PART2_DESCRIPTION_VERSION !== 'undefined') return String(PART2_DESCRIPTION_VERSION) + '.complete51.filtered-v03.20261020';
-  if (partKey === 'p3' && typeof PART3_DESCRIPTION_VERSION !== 'undefined') return String(PART3_DESCRIPTION_VERSION) + '.complete52.filtered-v03.20261020';
+  if (partKey === 'p3' && typeof PART3_DESCRIPTION_VERSION !== 'undefined') return String(PART3_DESCRIPTION_VERSION) + '.teacher-reuse-q23-v04.20261020';
   return 'base';
 }
 
