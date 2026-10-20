@@ -38,5 +38,4 @@ function getSpeakingPart3Full_() {
       answerOrigin: String(row[ix.sourceLabel] || '')
     });
   });
-  });
 }
