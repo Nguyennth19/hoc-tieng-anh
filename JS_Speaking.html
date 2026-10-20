@@ -124,7 +124,7 @@
     $('shadowAllBtn').addEventListener('click', shadowAll);
     $('stopSpeechBtn').addEventListener('click', stopSpeech);
     $('revealBtn').addEventListener('click', () => {
-      if (state.activePart === 1) { $('p1Feedback').textContent = currentModel(); return; }
+      if (state.activePart <= 3) { $('p1Feedback').textContent = currentModel(); return; }
       $('memorizeText').textContent = currentModel();
       toast('Full answer revealed.');
     });
@@ -661,7 +661,7 @@
     }
 
     renderPromptContent();
-    setMode(state.activePart === 1 ? 'shadow' : 'learn');
+    setMode('shadow');
     setMemorizeLevel(1);
     syncFooter();
   }
@@ -741,7 +741,7 @@
     stopTimer(true);
     renderPromptStepper();
     renderPromptContent();
-    setMode('learn');
+    setMode('shadow');
   }
 
   // Shared B1 formula markers; reusable language across Speaking / Writing.
@@ -856,7 +856,7 @@
       btn.type = 'button'; btn.textContent = '▶';
       btn.setAttribute('aria-label', 'Play or resume audio');
       btn.addEventListener('click', function() {
-        if (state.activePart === 1) toggleP1Audio_(sentence, btn);
+        if (state.activePart <= 3) toggleP1Audio_(sentence, btn);
         else speakText(sentence);
       });
       const div = document.createElement('div');
@@ -865,7 +865,7 @@
     });
   }
   async function shadowAll() {
-    if (state.activePart === 1) {
+    if (state.activePart <= 3) {
       toggleP1Audio_(currentModel(), $('shadowAllBtn'));
       return;
     }
@@ -877,8 +877,8 @@
     }
   }
   function configureP1Modes_() {
-    const p1 = state.activePart === 1;
-    $$('.mode-tab').forEach(function(btn) {
+    const p1 = [1,2,3].includes(state.activePart);
+    $('.mode-tab').forEach(function(btn) {
       const mode = btn.dataset.mode;
       btn.classList.toggle('hidden', p1 && mode === 'learn');
       if (p1) {
@@ -900,7 +900,7 @@
     });
   }
   function setMode(mode) {
-    if (state.activePart === 1 && mode === 'learn') mode = 'shadow';
+    if (state.activePart <= 3 && mode === 'learn') mode = 'shadow';
     if (state.currentMode !== mode) stopSpeech();
     state.currentMode = mode;
     configureP1Modes_();
@@ -910,7 +910,7 @@
   }
 
   function setMemorizeLevel(level) {
-    if (state.activePart === 1) stopSpeech();
+    if (state.activePart <= 3) stopSpeech();
     state.memorizeLevel = level;
     $$('.level-btn').forEach(btn => btn.classList.toggle('active', Number(btn.dataset.level) === level));
     renderMemorize();
@@ -924,7 +924,7 @@
     const model = currentModel();
     const typing = $('p1TypingArea');
     const actions = $('p1MemorizeActions');
-    if (state.activePart !== 1) {
+    if (state.activePart > 3) {
       typing.classList.add('hidden'); actions.classList.add('hidden');
       $('memorizeText').classList.remove('hidden');
       let text = model;
@@ -981,7 +981,7 @@
     typing.appendChild(line);
   }
   function checkP1Recall_() {
-    if (state.activePart !== 1) return;
+    if (state.activePart > 3) return;
     if (state.memorizeLevel === 3) {
       const value = String($('p1DictationInput')?.value || '').trim();
       if (!value) { $('p1Feedback').textContent = 'Write an answer first.'; return; }
