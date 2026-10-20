@@ -124,9 +124,12 @@
     $('shadowAllBtn').addEventListener('click', shadowAll);
     $('stopSpeechBtn').addEventListener('click', stopSpeech);
     $('revealBtn').addEventListener('click', () => {
+      if (state.activePart === 1) { $('p1Feedback').textContent = currentModel(); return; }
       $('memorizeText').textContent = currentModel();
       toast('Full answer revealed.');
     });
+    $('p1CheckBtn').addEventListener('click', checkP1Recall_);
+    $('p1TryAgainBtn').addEventListener('click', renderMemorize);
 
     $('startTimerBtn').addEventListener('click', startTimer);
     $('stopTimerBtn').addEventListener('click', () => stopTimer(false));
@@ -655,7 +658,7 @@
     }
 
     renderPromptContent();
-    setMode('learn');
+    setMode(state.activePart === 1 ? 'shadow' : 'learn');
     setMemorizeLevel(1);
     syncFooter();
   }
@@ -809,53 +812,194 @@
     });
   }
 
+  let p1Speech = null;
+  let p1SpeechToken = 0;
+  let p1PlaybackButton = null;
+  function setP1Button_(button, playing) {
+    if (button) {
+      button.textContent = button.id === 'shadowAllBtn' ? (playing ? '⏸ Pause all' : '▶ Shadow all') : (playing ? '⏸' : '▶');
+      button.setAttribute('aria-label', playing ? 'Pause audio' : 'Play or resume audio');
+      button.setAttribute('aria-pressed', playing ? 'true' : 'false');
+    }
+  }
+  function toggleP1Audio_(text, button) {
+    if (!('speechSynthesis' in window)) { toast('Audio is not supported in this browser.'); return; }
+    const engine = window.speechSynthesis;
+    if (p1PlaybackButton === button && engine.paused) {
+      engine.resume(); setP1Button_(button, true); return;
+    }
+    if (p1PlaybackButton === button && engine.speaking) {
+      engine.pause(); setP1Button_(button, false); return;
+    }
+    stopSpeech();
+    const token = ++p1SpeechToken;
+    const utterance = makeUtterance(text);
+    p1Speech = utterance; p1PlaybackButton = button;
+    utterance.onend = utterance.onerror = function() {
+      if (token !== p1SpeechToken) return;
+      setP1Button_(button, false);
+      p1Speech = null; p1PlaybackButton = null;
+    };
+    setP1Button_(button, true);
+    engine.speak(utterance);
+  }
   function renderShadow() {
     const box = $('shadowSentences');
     box.innerHTML = '';
-    splitSentences(currentModel()).forEach(sentence => {
+    splitSentences(currentModel()).forEach(function(sentence) {
       const row = document.createElement('div');
       row.className = 'shadow-sentence';
       const btn = document.createElement('button');
       btn.type = 'button'; btn.textContent = '▶';
-      btn.addEventListener('click', () => speakText(sentence));
+      btn.setAttribute('aria-label', 'Play or resume audio');
+      btn.addEventListener('click', function() {
+        if (state.activePart === 1) toggleP1Audio_(sentence, btn);
+        else speakText(sentence);
+      });
       const div = document.createElement('div');
       if(state.activePart<=2)renderSharedFormulaText(div,sentence);else div.textContent = sentence;
       row.appendChild(btn); row.appendChild(div); box.appendChild(row);
     });
   }
-
   async function shadowAll() {
+    if (state.activePart === 1) {
+      toggleP1Audio_(currentModel(), $('shadowAllBtn'));
+      return;
+    }
     stopSpeech();
     const sentences = splitSentences(currentModel());
     for (const sentence of sentences) {
-      try {
-        await speakTextPromise(sentence);
-        await wait(800);
-      } catch (e) { break; }
+      try { await speakTextPromise(sentence); await wait(800); }
+      catch (e) { break; }
     }
   }
-
+  function configureP1Modes_() {
+    const p1 = state.activePart === 1;
+    $$('.mode-tab').forEach(function(btn) {
+      const mode = btn.dataset.mode;
+      btn.classList.toggle('hidden', p1 && mode === 'learn');
+      if (p1) {
+        const label = mode === 'shadow' ? '01 Learn' : mode === 'memorize' ? '02 Memorize' : mode === 'test' ? '03 Test' : '';
+        if (label) btn.textContent = label;
+      } else {
+        const label = {learn:'01 Learn',shadow:'02 Shadow',memorize:'03 Memorize',test:'04 Test'};
+        btn.textContent = label[mode];
+      }
+    });
+    $('speakingModeTabs').classList.toggle('p1-three-steps', p1);
+    $('shadowIntro').classList.toggle('hidden', p1);
+    $('memorizeIntro').classList.toggle('hidden', p1);
+    $$('.level-btn').forEach(function(btn) {
+      const n = Number(btn.dataset.level);
+      btn.classList.toggle('hidden', p1 && n === 4);
+      if (p1 && n === 3) btn.textContent = 'Level 3 · Listen & write';
+      if (!p1 && n === 3) btn.textContent = 'Keywords';
+    });
+  }
   function setMode(mode) {
+    if (state.activePart === 1 && mode === 'learn') mode = 'shadow';
+    if (state.currentMode !== mode) stopSpeech();
     state.currentMode = mode;
+    configureP1Modes_();
     $$('.mode-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
     ['learn','shadow','memorize','test'].forEach(name => $(name + 'Mode').classList.toggle('hidden', name !== mode));
     if (mode === 'test') resetTimerDisplay();
   }
 
   function setMemorizeLevel(level) {
+    if (state.activePart === 1) stopSpeech();
     state.memorizeLevel = level;
     $$('.level-btn').forEach(btn => btn.classList.toggle('active', Number(btn.dataset.level) === level));
     renderMemorize();
   }
 
+  let p1RecallTargets_ = [];
+  function tokenizeP1Recall_(value) {
+    return String(value || '').trim().toLowerCase().replace(/[^a-z0-9'-]/g, '');
+  }
   function renderMemorize() {
     const model = currentModel();
-    let text = model;
-    if (state.memorizeLevel === 1) text = makeCloze(model, 5);
-    else if (state.memorizeLevel === 2) text = makeCloze(model, 3);
-    else if (state.memorizeLevel === 3) text = currentKeywords();
-    else if (state.memorizeLevel === 4) text = 'Speak from memory. No text support.';
-    $('memorizeText').textContent = text;
+    const typing = $('p1TypingArea');
+    const actions = $('p1MemorizeActions');
+    if (state.activePart !== 1) {
+      typing.classList.add('hidden'); actions.classList.add('hidden');
+      $('memorizeText').classList.remove('hidden');
+      let text = model;
+      if (state.memorizeLevel === 1) text = makeCloze(model, 5);
+      else if (state.memorizeLevel === 2) text = makeCloze(model, 3);
+      else if (state.memorizeLevel === 3) text = currentKeywords();
+      else if (state.memorizeLevel === 4) text = 'Speak from memory. No text support.';
+      $('memorizeText').textContent = text;
+      return;
+    }
+    typing.classList.remove('hidden');
+    actions.classList.remove('hidden');
+    $('memorizeText').classList.add('hidden');
+    $('p1Feedback').textContent = '';
+    typing.replaceChildren();
+    p1RecallTargets_ = [];
+    if (state.memorizeLevel === 3) {
+      const hint = document.createElement('p');
+      hint.textContent = 'Listen, then write the full answer from memory.';
+      typing.appendChild(hint);
+      const audioButton = document.createElement('button');
+      audioButton.type = 'button'; audioButton.className = 'secondary-btn';
+      audioButton.textContent = '▶ Listen';
+      audioButton.addEventListener('click', function(){toggleP1Audio_(model,audioButton);});
+      typing.appendChild(audioButton);
+      const area = document.createElement('textarea');
+      area.id = 'p1DictationInput'; area.rows = 5;
+      area.setAttribute('aria-label', 'Write the answer you hear');
+      area.placeholder = 'Write the answer here...';
+      typing.appendChild(area);
+      return;
+    }
+    const frequency = state.memorizeLevel === 1 ? 5 : 2;
+    const words = String(model || '').match(/[A-Za-z][A-Za-z'-]*|[^A-Za-z]+/g) || [];
+    let count = 0;
+    const line = document.createElement('div');
+    line.className = 'p1-cloze-line';
+    words.forEach(function(piece){
+      if (/^[A-Za-z]/.test(piece)) {
+        count++;
+        if (piece.length > 2 && count % frequency === 0) {
+          const input = document.createElement('input');
+          input.type = 'text'; input.className = 'p1-cloze-input';
+          input.placeholder = '_____';
+          input.setAttribute('aria-label', 'Missing word ' + (p1RecallTargets_.length + 1));
+          input.autocomplete = 'off'; input.spellcheck = false;
+          line.appendChild(input);
+          p1RecallTargets_.push({input:input,expected:piece});
+          return;
+        }
+      }
+      line.appendChild(document.createTextNode(piece));
+    });
+    typing.appendChild(line);
+  }
+  function checkP1Recall_() {
+    if (state.activePart !== 1) return;
+    if (state.memorizeLevel === 3) {
+      const value = String($('p1DictationInput')?.value || '').trim();
+      if (!value) { $('p1Feedback').textContent = 'Write an answer first.'; return; }
+      const target = String(currentModel() || '').toLowerCase().match(/[a-z]+(?:'[a-z]+)?/g) || [];
+      const attempt = value.toLowerCase().match(/[a-z]+(?:'[a-z]+)?/g) || [];
+      const counts = {};
+      target.forEach(function(word){counts[word] = (counts[word]||0)+1;});
+      let hits = 0;
+      attempt.forEach(function(word){if(counts[word]>0){hits++;counts[word]--;}});
+      const score = Math.round(100 * hits / Math.max(1,target.length));
+      $('p1Feedback').textContent = 'Word recall: ' + score + '%. Compare the original answer below; clear B1 meaning matters more than exact wording.';
+      return;
+    }
+    let correct = 0;
+    p1RecallTargets_.forEach(function(target){
+      const ok = tokenizeP1Recall_(target.input.value) === tokenizeP1Recall_(target.expected);
+      target.input.classList.toggle('p1-cloze-correct',ok);
+      target.input.classList.toggle('p1-cloze-wrong',!ok);
+      if(ok)correct++;
+    });
+    $('p1Feedback').textContent = correct + '/' + p1RecallTargets_.length + ' words correct.';
   }
 
   function makeCloze(text, everyN) {
@@ -1280,7 +1424,7 @@
     });
   }
 
-  function stopSpeech() { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); }
+  function stopSpeech() { p1SpeechToken++; setP1Button_(p1PlaybackButton, false); p1PlaybackButton = null; p1Speech = null; if ('speechSynthesis' in window) window.speechSynthesis.cancel(); if ($('shadowAllBtn')) $('shadowAllBtn').textContent = '▶ Shadow all'; }
   function openAudioSheet() { $('accentSelect').value = state.audio.accent; populateVoiceSelect(); syncSpeedButtons(); $('audioSheet').classList.remove('hidden'); }
   function closeAudioSheet() { stopSpeech(); $('audioSheet').classList.add('hidden'); }
   function setSpeechRate(rate) { state.audio.rate = clamp(rate,0.5,1.4); writeLocal('aptisRate',String(state.audio.rate)); syncSpeedButtons(); }

@@ -219,7 +219,7 @@
 
           <h2 id="questionText" class="question-title"></h2>
 
-          <div class="mode-tabs">
+          <div class="mode-tabs" id="speakingModeTabs">
             <button data-mode="learn" class="mode-tab active" type="button"><span>01</span> Learn</button>
             <button data-mode="shadow" class="mode-tab" type="button"><span>02</span> Shadow</button>
             <button data-mode="memorize" class="mode-tab" type="button"><span>03</span> Memorize</button>
@@ -334,20 +334,20 @@
           </div>
 
           <div id="shadowMode" class="mode-panel hidden">
-            <div class="mode-intro"><strong>Listen → pause → repeat</strong><span>Focus on rhythm, clear endings and natural linking.</span></div>
+            <div class="mode-intro" id="shadowIntro"><strong>Listen → pause → repeat</strong><span>Focus on rhythm, clear endings and natural linking.</span></div>
             <div id="shadowSentences" class="shadow-list"></div>
             <div class="inline-actions"><button id="shadowAllBtn" class="primary-btn" type="button">▶ Shadow all</button><button id="stopSpeechBtn" class="secondary-btn" type="button">■ Stop</button></div>
           </div>
 
           <div id="memorizeMode" class="mode-panel hidden">
-            <div class="mode-intro"><strong>Reduce support step by step</strong><span>Move up only when the previous level feels easy.</span></div>
+            <div class="mode-intro" id="memorizeIntro"><strong>Reduce support step by step</strong><span>Move up only when the previous level feels easy.</span></div>
             <div class="memorize-levels">
               <button class="level-btn active" data-level="1" type="button">Level 1</button>
               <button class="level-btn" data-level="2" type="button">Level 2</button>
               <button class="level-btn" data-level="3" type="button">Keywords</button>
               <button class="level-btn" data-level="4" type="button">No help</button>
             </div>
-            <div class="content-block memorize-box"><p id="memorizeText" class="model-text"></p></div>
+            <div class="content-block memorize-box"><p id="memorizeText" class="model-text"></p><div id="p1TypingArea" class="hidden"></div></div><div id="p1MemorizeActions" class="inline-actions hidden"><button id="p1CheckBtn" class="primary-btn" type="button">Check</button><button id="p1TryAgainBtn" class="secondary-btn" type="button">Try again</button><span id="p1Feedback" role="status" aria-live="polite"></span></div>
             <button id="revealBtn" class="secondary-btn" type="button">Reveal full answer</button>
           </div>
 
