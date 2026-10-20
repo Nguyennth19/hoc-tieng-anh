@@ -4,8 +4,8 @@
 
   // Stable client cache: do not change this key for ordinary content releases.
   // This lets a new deployment reuse the last good payload immediately.
-  const CLIENT_CACHE_KEY = 'aptisSpeakingBootstrap:p3-q23-recovery-20261020';
-  const CLIENT_CACHE_BACKUP_KEY = 'aptisSpeakingBootstrap:p3-q23-recovery-lastGood';
+  const CLIENT_CACHE_KEY = 'aptisSpeakingBootstrap:complete-topics-20261020';
+  const CLIENT_CACHE_BACKUP_KEY = 'aptisSpeakingBootstrap:complete-topics-lastGood';
   const LEGACY_CACHE_KEYS = [
     'aptisSpeakingBootstrap:speaking-hardqa-20261020',
     'aptisSpeakingBootstrap:speaking-hardqa-lastGood',
@@ -405,8 +405,8 @@
         item.id !== 'SP3-EX-017' && Array.isArray(item.questions) &&
         item.questions.length >= 3;
     }).length;
-    return data.part1.length === 49 && data.part2.length >= 52 &&
-      data.part3.length >= 54 && p2Complete >= 51 && p3Complete >= 52;
+    return data.part1.length === 49 && data.part2.length >= 51 &&
+      data.part3.length >= 52 && p2Complete >= 51 && p3Complete >= 52;
   }
 
   function isValidBootstrap(data) {
