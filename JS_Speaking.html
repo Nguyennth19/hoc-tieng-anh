@@ -817,7 +817,7 @@
   let p1PlaybackButton = null;
   function setP1Button_(button, playing) {
     if (button) {
-      button.textContent = playing ? '⏸' : '▶';
+      button.textContent = button.id === 'shadowAllBtn' ? (playing ? '⏸ Pause all' : '▶ Shadow all') : (playing ? '⏸' : '▶');
       button.setAttribute('aria-label', playing ? 'Pause audio' : 'Play or resume audio');
       button.setAttribute('aria-pressed', playing ? 'true' : 'false');
     }
@@ -864,7 +864,6 @@
   async function shadowAll() {
     if (state.activePart === 1) {
       toggleP1Audio_(currentModel(), $('shadowAllBtn'));
-      $('shadowAllBtn').textContent = window.speechSynthesis.paused ? '▶ Shadow all' : '⏸ Pause all';
       return;
     }
     stopSpeech();
