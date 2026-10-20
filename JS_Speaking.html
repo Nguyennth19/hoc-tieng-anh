@@ -325,8 +325,8 @@
     if (!hasCurrentSpeakingQuestionCoverage_(data)) {
       setSyncStatus('Speaking release mismatch: Part 1 received ' + data.part1.length + '/49. Check deployment and server cache.', 'cached');
       toast('Received P1=' + data.part1.length + ', P2=' + data.part2.length + ', P3=' + data.part3.length + '. Open latest deployment or Refresh.');
-      // Do not overwrite newer saved data with an older server payload.
-      if (!state.data || state.data.part1.length !== 49 || state.data.part2.length < 52 || state.data.part3.length < 54) applyBootstrap(data, { fromCache: false });
+      // Never render a three-part payload lacking the expected questions.
+      // The student can still use an already loaded valid snapshot.
       return;
     }
     writeBootstrapCache(data);
