@@ -506,9 +506,11 @@ function getSpeakingPart2_() {
       id: String(row[idx.id] || ''), part: 2, topic: String(row[idx.topic] || ''),
       imageUrl: String(row[idx.imageUrl] || ''), imageDriveId: String(row[idx.imageDriveId] || ''),
       imageAlt: String(row[idx.imageAlt] || ''), sceneIcon: String(row[idx.sceneIcon] || '🖼️'),
-      questions: [String(row[idx.question1] || 'Describe the picture.')],
-      models: [model], keywords: [keywords], structures: [structure],
-      mustSay: must, sayMore: extra, practiceMode: 'description_only',
+      questions: [String(row[idx.question1] || 'Describe the picture.')].concat(row[idx.question2] && row[idx.question3] && row[idx.model2] && row[idx.model3] ? [String(row[idx.question2]),String(row[idx.question3])] : []),
+      models: [model].concat(row[idx.question2] && row[idx.question3] && row[idx.model2] && row[idx.model3] ? [String(row[idx.model2]),String(row[idx.model3])] : []),
+      keywords: [keywords].concat(row[idx.question2] && row[idx.question3] && row[idx.model2] && row[idx.model3] ? [String(row[idx.keywords2]||''),String(row[idx.keywords3]||'')] : []),
+      structures: [structure].concat(row[idx.question2] && row[idx.question3] && row[idx.model2] && row[idx.model3] ? [String(row[idx.structure2]||''),String(row[idx.structure3]||'')] : []),
+      mustSay: must, sayMore: extra, practiceMode: row[idx.question2] && row[idx.question3] && row[idx.model2] && row[idx.model3] ? 'picture_plus_two_questions' : 'description_only',
       sourceLabel: String(row[idx.sourceLabel] || '')
     };
   });
