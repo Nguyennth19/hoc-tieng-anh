@@ -175,17 +175,27 @@ function validateAttemptPayload_(payload) {
 }
 
 function isValidQuestionId_(id, allowTopicId) {
-  const value = String(id || '');
-  if (/^SP1-\d{3}$/.test(value)) return getSpeakingPart1_().some(function(q) { return q.id === value; });
-  const m = value.match(/^(SP[23]-\d{3})-(\d)$/);
-  if (m) {
-    const part = m[1].indexOf('SP3-') === 0 ? 3 : 2;
-    const list = part === 3 ? getSpeakingPart3_() : getSpeakingPart2_();
-    return Number(m[2]) >= 1 && Number(m[2]) <= 3 && list.some(function(q) { return q.id === m[1]; });
+  const value = String(id || '').trim();
+  if (/^SP1-\d{3}$/.test(value)) {
+    return getSpeakingPart1_().some(function(q) { return q.id === value; });
   }
-  if (allowTopicId && /^SP2-\d{3}$/.test(value)) return getSpeakingPart2_().some(function(q) { return q.id === value; });
-  if (allowTopicId && /^SP3-\d{3}$/.test(value)) return getSpeakingPart3_().some(function(q) { return q.id === value; });
-  return false;
+
+  // Curated banks include both SP2-001 and SP2-EX-001 (likewise P3).
+  // Only accept an existing active topic and response index 1..3.
+  const match = value.match(/^(SP[23]-(?:EX-)?\d{3})(?:-([1-3]))?$/);
+  if (!match) return false;
+  const topicId = match[1];
+  const prompt = match[2] ? Number(match[2]) : 0;
+  if (!prompt && !allowTopicId) return false;
+  const part = topicId.indexOf('SP3-') === 0 ? 3 : 2;
+  const list = part === 3 ? getSpeakingPart3_() : getSpeakingPart2_();
+  const topic = list.find(function(q) { return q.id === topicId; });
+  if (!topic) return false;
+  if (!prompt) return true;
+  // A given prompt must actually exist in the learning bank.
+  return Array.isArray(topic.questions) && Array.isArray(topic.models) &&
+    String(topic.questions[prompt - 1] || '').trim() !== '' &&
+    String(topic.models[prompt - 1] || '').trim() !== '';
 }
 
 function inferPart_(id) {
