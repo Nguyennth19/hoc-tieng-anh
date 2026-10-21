@@ -86,3 +86,52 @@ function phase23RunReleaseQAOnce() {
   if(issues.length) throw new Error('PHASE23_QA_FAIL: '+issues.join(' | '));
   return result;
 }
+
+/**
+ * Phase 2.3 startup regression, QA ONLY.
+ * Tests both cache path and refreshed bootstrap; snapshots all seven tabs
+ * before and after each read. Never manually call runMigrations() here.
+ */
+function phase23TestAutomaticStartupReadOnly() {
+  phase23AssertQA_();
+  const before=phase23QASnapshot_();
+  const first=getBootstrapData(false);
+  const afterFirst=phase23QASnapshot_();
+  const second=getBootstrapData(false);
+  const afterSecond=phase23QASnapshot_();
+  const counts=function(result) {
+    if (!result || !Array.isArray(result.part1) ||
+        !Array.isArray(result.part2) || !Array.isArray(result.part3)) {
+      throw new Error('BLOCKED: invalid bootstrap structure.');
+    }
+    return {part1:result.part1.length,part2:result.part2.length,part3:result.part3.length};
+  };
+  const actualFirst=counts(first),actualSecond=counts(second);
+  const expected={part1:49,part2:51,part3:52};
+  const issues=[];
+  [actualFirst,actualSecond].forEach(function(item,i) {
+    Object.keys(expected).forEach(function(key) {
+      if(item[key]!==expected[key]) issues.push('Bootstrap '+(i+1)+' '+key+' expected '+expected[key]+' got '+item[key]);
+    });
+  });
+  ['SPEAKING','SPEAKING_P2','SPEAKING_P3','PROGRESS','ATTEMPTS','SETTINGS','MEDIA'].forEach(function(name) {
+    if (before.sheets[name].hash!==afterFirst.sheets[name].hash)
+      issues.push(name+' changed during first bootstrap');
+    if (afterFirst.sheets[name].hash!==afterSecond.sheets[name].hash)
+      issues.push(name+' changed during second bootstrap');
+  });
+  const result={
+    ok:issues.length===0,
+    issues:issues,
+    qaWorkbookId:before.workbookId,
+    expected:expected,
+    first:actualFirst,
+    second:actualSecond,
+    checksumsUnchanged:issues.filter(function(x){return x.indexOf('changed during')>=0;}).length===0,
+    before:before,
+    after:afterSecond
+  };
+  console.log('PHASE23_AUTOMATIC_STARTUP_QA_RESULT '+JSON.stringify(result,null,2));
+  if(!result.ok) throw new Error('PHASE23_STARTUP_QA_FAIL: '+issues.join(' | '));
+  return result;
+}
