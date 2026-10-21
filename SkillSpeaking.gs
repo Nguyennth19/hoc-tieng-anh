@@ -1,6 +1,6 @@
 function getBootstrapData(forceRefresh) {
   ensureSchema_();
-  ensurePart3ExamBankReady_();
+  // P3 legacy auto-reseed is disabled. Bootstrap never modifies approved content.
 
   const bypass = forceRefresh === true;
   const p1 = getCachedSpeakingContent_('p1', bypass, getSpeakingPart1_);
@@ -78,11 +78,19 @@ function getCachedSpeakingContent_(partKey, forceRefresh, loaderFn) {
   if (!forceRefresh) {
     const hit = cache.get(key);
     if (hit) {
-      try { return JSON.parse(hit); } catch (e) {}
+      try {
+        const parsed = JSON.parse(hit);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) {
+        console.warn('Speaking content cache invalid for ' + partKey + ': ' + String(e));
+        cache.remove(key);
+      }
     }
   }
   const data = loaderFn();
-  try { cache.put(key, JSON.stringify(data), APP_CONFIG.CACHE_SECONDS); } catch (e) {}
+  if (!Array.isArray(data)) throw new Error('Invalid Speaking content for ' + partKey + ': expected array');
+  try { cache.put(key, JSON.stringify(data), APP_CONFIG.CACHE_SECONDS); }
+  catch (e) { console.warn('Speaking content cache write skipped: ' + String(e)); }
   return data;
 }
 
@@ -93,11 +101,18 @@ function getCachedProgressMap_(forceRefresh) {
   if (!forceRefresh) {
     const hit = cache.get(key);
     if (hit) {
-      try { return JSON.parse(hit); } catch (e) {}
+      try {
+        const parsed = JSON.parse(hit);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+      } catch (e) {
+        console.warn('Speaking progress cache invalid: ' + String(e));
+        cache.remove(key);
+      }
     }
   }
   const data = getProgressMap_();
-  try { cache.put(key, JSON.stringify(data), APP_CONFIG.PROGRESS_CACHE_SECONDS || 120); } catch (e) {}
+  try { cache.put(key, JSON.stringify(data), APP_CONFIG.PROGRESS_CACHE_SECONDS || 120); }
+  catch (e) { console.warn('Speaking progress cache write skipped: ' + String(e)); }
   return data;
 }
 
@@ -130,27 +145,9 @@ function getSpeakingContentVersion_(partKey) {
  * If the active exam bank is not present, seed content only (fast) and leave images to background batches.
  */
 function ensurePart3ExamBankReady_() {
-  try {
-    const ss = getDatabase_();
-    const p3 = ss.getSheetByName(SHEET_NAMES.SPEAKING_P3);
-    const settings = ss.getSheetByName(SHEET_NAMES.SETTINGS);
-    if (!p3 || !settings) return;
-    const currentVersion = getSetting_(settings, 'p3_description_version');
-    const idx = headerIndexMap_(p3);
-    const values = p3.getDataRange().getValues();
-    let activeExamCount = 0;
-    values.slice(1).forEach(function(row) {
-      const id = String(row[idx.id] || '');
-      const active = idx.active === undefined ? true : !(row[idx.active] === false || String(row[idx.active]).toLowerCase() === 'false');
-      if (/^SP3-EX-\d{3}$/.test(id) && active) activeExamCount++;
-    });
-    if (activeExamCount === 0) { // Seed only an empty exam bank; never overwrite curated Q2/Q3.
-      upgradeSpeakingPart3Description_(p3, settings, []);
-      clearSpeakingContentCache_();
-    }
-  } catch (e) {
-    // Bootstrap should remain resilient; the normal migration/error path can surface real failures.
-  }
+  // Deprecated API retained for compatibility. Never write production
+  // content during bootstrap. Recovery uses the independently backed-up bank.
+  return { ok: true, autoSeedDisabled: true };
 }
 
 /**
