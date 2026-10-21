@@ -188,7 +188,7 @@ function isValidQuestionId_(id, allowTopicId) {
   const prompt = match[2] ? Number(match[2]) : 0;
   if (!prompt && !allowTopicId) return false;
   const part = topicId.indexOf('SP3-') === 0 ? 3 : 2;
-  const list = part === 3 ? getSpeakingPart3_() : getSpeakingPart2_();
+  const list = part === 3 ? getSpeakingPart3Full_() : getSpeakingPart2_();
   const topic = list.find(function(q) { return q.id === topicId; });
   if (!topic) return false;
   if (!prompt) return true;
