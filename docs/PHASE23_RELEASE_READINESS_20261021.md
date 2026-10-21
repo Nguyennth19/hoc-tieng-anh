@@ -56,3 +56,11 @@ Preserve last known good production deployment version and matching production d
 - `Database.gs` `setSetting_` now sets plain-text number format **before** writing each SETTINGS value, preventing the conversion on future metadata writes.
 - QA-only function `phase23TestVersionTextStorage()` in the QA branch tests three dotted version strings using a temporary Sheet and confirms all original seven sheets remain unchanged. NOT YET EXECUTED; needs tester log.
 - Production Script Properties / live deployment details NOT VERIFIED. PR and merge are intentionally withheld.
+
+## QA acceptance — Version text persistence
+- User-provided `PHASE23_VERSION_TEXT_QA_RESULT`: `ok: true`, `issues: []`.
+- Expected and actual versions matched: `3.2.0`, `3.2.1`, `2.1.0`.
+- All three Google Sheets cell number formats were `@` (plain text).
+- `originalSevenSheetsUnchanged: true`.
+- **PASS** on Phase 2.3 disposable QA; not yet validated on production.
+- Remaining gates: verify original production workbook and deployment IDs by read-only audit, assess rollback and PR readiness. No production merge/deploy approved.
