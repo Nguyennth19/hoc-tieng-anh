@@ -66,3 +66,24 @@ function phase22RunMigrationOnQACopy(acknowledge) {
   const changedProtected = protectedNames.filter(function(n){return before.sheets[n].hash!==after.sheets[n].hash;});
   return {ok:changedProtected.length===0,changedProtected:changedProtected,before:before,after:after,migration:report};
 }
+
+/**
+ * Read-only media isolation check for Phase 2.2.
+ * Run in the separate staging script after setting APTIS_MEDIA_FOLDER_ID.
+ * This validates the exact QA folder independently of the copied workbook.
+ */
+function phase22VerifyMediaIsolationReadOnly() {
+  phase22AssertStaging_();
+  const expectedId = '1gMnGKRexXcSi_C_tKBHWVsOOAC_vULus';
+  const expectedName = 'APTIS_B2_PHASE22_MEDIA_QA_ONLY';
+  const props = PropertiesService.getScriptProperties();
+  const actualId = String(props.getProperty('APTIS_MEDIA_FOLDER_ID') || '').trim();
+  if (actualId !== expectedId) throw new Error('BLOCKED: APTIS_MEDIA_FOLDER_ID is not the approved QA folder.');
+  const folder = DriveApp.getFolderById(actualId);
+  if (folder.getId() !== expectedId || folder.getName() !== expectedName) {
+    throw new Error('BLOCKED: Drive folder identity/name mismatch.');
+  }
+  const result = {ok:true,stagingWorkbookId:QA_PHASE22_WORKBOOK_ID,qaMediaFolderId:folder.getId(),qaMediaFolderName:folder.getName()};
+  console.log(JSON.stringify(result,null,2));
+  return result;
+}
