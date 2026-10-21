@@ -71,26 +71,69 @@ function getBootstrapData(forceRefresh) {
   };
 }
 
+/**
+ * CacheService values are limited to about 100 KB each. Store JSON as
+ * conservative UTF-16 slices (18k code units => <=72 KB UTF-8 even for emoji).
+ * Write the manifest LAST: a partial/expired generation becomes a cache miss.
+ * The small manifest lives at the original key; chunks are generation-scoped.
+ * Cache failures must never alter stored Sheet data or block the loader.
+ */
+function speakingCacheRead_(cache, key) {
+  const raw = cache.get(key);
+  if (!raw) return null;
+  let manifest;
+  try { manifest = JSON.parse(raw); } catch (e) { cache.remove(key); return null; }
+  if (!manifest || manifest.cacheFormat !== 'chunked-v1' ||
+      !Number.isInteger(manifest.parts) || manifest.parts < 1 || manifest.parts > 200 ||
+      !/^[a-zA-Z0-9-]{8,64}$/.test(String(manifest.token || ''))) {
+    cache.remove(key);
+    return null;
+  }
+  const chunks = [];
+  for (let i = 0; i < manifest.parts; i++) {
+    const fragment = cache.get(key + ':chunk:' + manifest.token + ':' + i);
+    if (fragment === null) { cache.remove(key); return null; }
+    chunks.push(fragment);
+  }
+  const text = chunks.join('');
+  if (text.length !== manifest.length) { cache.remove(key); return null; }
+  try { return JSON.parse(text); }
+  catch (e) { cache.remove(key); return null; }
+}
+
+function speakingCacheWrite_(cache, key, data, ttl) {
+  const json = JSON.stringify(data);
+  if (!json) return;
+  const chunkLength = 18000;
+  const parts = Math.ceil(json.length / chunkLength);
+  if (!parts || parts > 200) return; // Bypass cache, never block live content.
+  const token = Utilities.getUuid().replace(/[^a-zA-Z0-9-]/g, '');
+  const written = [];
+  try {
+    for (let i = 0; i < parts; i++) {
+      const partKey = key + ':chunk:' + token + ':' + i;
+      cache.put(partKey, json.slice(i * chunkLength, (i + 1) * chunkLength), ttl);
+      written.push(partKey);
+    }
+    cache.put(key, JSON.stringify({cacheFormat:'chunked-v1',token:token,parts:parts,length:json.length}), ttl);
+  } catch (e) {
+    written.forEach(function(partKey) { try { cache.remove(partKey); } catch (ignored) {} });
+    try { cache.remove(key); } catch (ignored) {}
+    console.warn('Speaking cache skipped; direct Sheet read remains available: ' + String(e));
+  }
+}
+
 function getCachedSpeakingContent_(partKey, forceRefresh, loaderFn) {
   const cache = CacheService.getScriptCache();
   const dbId = getDatabase_().getId();
   const key = 'speak-content:' + APP_CONFIG.SCHEMA_VERSION + ':' + getSpeakingContentVersion_(partKey) + ':' + dbId + ':' + partKey;
   if (!forceRefresh) {
-    const hit = cache.get(key);
-    if (hit) {
-      try {
-        const parsed = JSON.parse(hit);
-        if (Array.isArray(parsed)) return parsed;
-      } catch (e) {
-        console.warn('Speaking content cache invalid for ' + partKey + ': ' + String(e));
-        cache.remove(key);
-      }
-    }
+    const hit = speakingCacheRead_(cache, key);
+    if (Array.isArray(hit)) return hit;
   }
   const data = loaderFn();
   if (!Array.isArray(data)) throw new Error('Invalid Speaking content for ' + partKey + ': expected array');
-  try { cache.put(key, JSON.stringify(data), APP_CONFIG.CACHE_SECONDS); }
-  catch (e) { console.warn('Speaking content cache write skipped: ' + String(e)); }
+  speakingCacheWrite_(cache, key, data, APP_CONFIG.CACHE_SECONDS);
   return data;
 }
 
@@ -99,20 +142,11 @@ function getCachedProgressMap_(forceRefresh) {
   const dbId = getDatabase_().getId();
   const key = 'speak-progress:' + dbId;
   if (!forceRefresh) {
-    const hit = cache.get(key);
-    if (hit) {
-      try {
-        const parsed = JSON.parse(hit);
-        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
-      } catch (e) {
-        console.warn('Speaking progress cache invalid: ' + String(e));
-        cache.remove(key);
-      }
-    }
+    const hit = speakingCacheRead_(cache, key);
+    if (hit && typeof hit === 'object' && !Array.isArray(hit)) return hit;
   }
   const data = getProgressMap_();
-  try { cache.put(key, JSON.stringify(data), APP_CONFIG.PROGRESS_CACHE_SECONDS || 120); }
-  catch (e) { console.warn('Speaking progress cache write skipped: ' + String(e)); }
+  speakingCacheWrite_(cache, key, data, APP_CONFIG.PROGRESS_CACHE_SECONDS || 120);
   return data;
 }
 
