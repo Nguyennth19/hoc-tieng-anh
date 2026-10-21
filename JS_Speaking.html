@@ -346,7 +346,10 @@
     setLoadingVisible(false);
     if (!isValidBootstrap(data)) return false;
     state.data = data;
-    $('appTitle').textContent = data.app.title || 'APTIS B2 Coach';
+    // The global shell owns the brand label; older layouts exposed #appTitle.
+    // Keep bootstrap compatible with both layouts without aborting Speaking initialization.
+    const appTitleEl = $('appTitle');
+    if (appTitleEl) appTitleEl.textContent = data.app.title || 'APTIS B2 Coach';
     $('errorView').classList.add('hidden');
     const wasStudying = !$('studyView').classList.contains('hidden');
     const wasProgress = !$('progressView').classList.contains('hidden');
