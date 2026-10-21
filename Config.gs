@@ -6,7 +6,7 @@
  * Keep the SAME Google Sheet from V1.
  * Paste its Spreadsheet ID below. V2 will migrate the existing database automatically.
  */
-const DATABASE_SPREADSHEET_ID = 'PASTE_YOUR_EXISTING_GOOGLE_SHEET_ID_HERE';
+const DATABASE_SPREADSHEET_ID = '1gkq6RBQDtARL0v7jb5J_HT_5ZRAuYci1-lqE0lIsPoY';
 
 const APP_CONFIG = Object.freeze({
   APP_TITLE: 'APTIS B2 Coach',
