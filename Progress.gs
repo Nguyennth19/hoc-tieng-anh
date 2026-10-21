@@ -12,6 +12,10 @@ function saveQuestionProgress(payload) {
     const previous = rowIndex > 0 ? values[rowIndex - 1] : [];
 
     const status = payload.status || String(previous[1] || 'learning');
+    // Master is idempotent: repeated confirmations must not inflate reviewCount.
+    if (status === 'learned' && String(previous[1] || '') === 'learned') {
+      return {ok:true,alreadyMastered:true,progress:rowToProgress_(previous)};
+    }
     const rating = Number(payload.rating || 0);
     const previousCount = Number(payload.reviewCount || previous[3] || 0);
     const favorite = payload.favorite === true || previous[7] === true || String(previous[7] || '').toLowerCase() === 'true';
