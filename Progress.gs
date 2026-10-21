@@ -1,3 +1,7 @@
+function isRepeatedMasterConfirmation_(previous, status) {
+  return status === 'learned' && String((previous || [])[1] || '') === 'learned';
+}
+
 function saveQuestionProgress(payload) {
   ensureSchema_();
   validateProgressPayload_(payload);
@@ -13,7 +17,7 @@ function saveQuestionProgress(payload) {
 
     const status = payload.status || String(previous[1] || 'learning');
     // Master is idempotent: repeated confirmations must not inflate reviewCount.
-    if (status === 'learned' && String(previous[1] || '') === 'learned') {
+    if (isRepeatedMasterConfirmation_(previous, status)) {
       return {ok:true,alreadyMastered:true,progress:rowToProgress_(previous)};
     }
     const rating = Number(payload.rating || 0);
