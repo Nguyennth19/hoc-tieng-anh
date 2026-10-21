@@ -1,9 +1,24 @@
+/**
+ * Fail closed before any migration writes. This is deliberately read-only.
+ * A missing/empty curated bank must be restored from an approved backup,
+ * rather than mutated by a partial migration.
+ */
+function assertSpeakingMigrationBanksReady_(ss) {
+  [SHEET_NAMES.SPEAKING_P1,SHEET_NAMES.SPEAKING_P2,SHEET_NAMES.SPEAKING_P3].forEach(function(name) {
+    const sheet = ss.getSheetByName(name);
+    if (!sheet || sheet.getLastRow() < 2) {
+      throw new Error('Migration blocked: curated Speaking bank missing or empty: '+name);
+    }
+  });
+}
+
 function runMigrations() {
   const ss = getDatabase_();
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
 
   try {
+    assertSpeakingMigrationBanksReady_(ss);
     const report = [];
 
     const settings = ensureSheetWithHeaders_(ss, SHEET_NAMES.SETTINGS, HEADERS.SETTINGS, report);
