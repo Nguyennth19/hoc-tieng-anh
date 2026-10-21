@@ -60,6 +60,8 @@ function phase22RunMigrationOnQACopy(acknowledge) {
     throw new Error('BLOCKED: explicit opt-in required.');
   }
   const before = phase22PreflightReadOnly();
+  // Re-check QA media folder immediately before any migration writes.
+  phase22VerifyMediaIsolationReadOnly();
   const report = runMigrations();
   const after = phase22Snapshot_();
   const protectedNames = ['SPEAKING_P3','PROGRESS','ATTEMPTS'];
