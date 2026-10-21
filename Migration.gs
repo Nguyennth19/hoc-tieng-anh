@@ -93,10 +93,16 @@ function ensureSchema_() {
   const currentP2 = settings ? getSetting_(settings, 'p2_description_version') : '';
   const currentP3 = settings ? getSetting_(settings, 'p3_description_version') : '';
 
-  if (currentSchema !== APP_CONFIG.SCHEMA_VERSION ||
+  const matchesStoredVersion = function(stored, expected) {
+    if (stored === expected) return true;
+    const parts = String(expected).split('.');
+    return parts.length === 3 && parts[2].length === 1 &&
+      stored === parts[0] + '.' + parts[1] + '.200' + parts[2];
+  };
+  if (!matchesStoredVersion(currentSchema, APP_CONFIG.SCHEMA_VERSION) ||
       currentP1 !== PART1_CONTENT_VERSION ||
-      currentP2 !== PART2_DESCRIPTION_VERSION ||
-      currentP3 !== PART3_DESCRIPTION_VERSION) {
+      !matchesStoredVersion(currentP2, PART2_DESCRIPTION_VERSION) ||
+      !matchesStoredVersion(currentP3, PART3_DESCRIPTION_VERSION)) {
     runMigrations();
   }
   cache.put(key, expected, APP_CONFIG.CACHE_SECONDS);
