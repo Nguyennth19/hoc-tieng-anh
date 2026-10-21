@@ -30,9 +30,12 @@ function phase22Snapshot_() {
     const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,payload,Utilities.Charset.UTF_8)
       .map(function(b){return ('0'+(b & 255).toString(16)).slice(-2);}).join('');
     const header = values[0] || [];
-    const idCol = name === 'PROGRESS' || name === 'ATTEMPTS' ? 1 : 0;
-    const ids = values.slice(1).filter(function(row){return row.some(function(v){return String(v == null ? '' : v).trim();});})
-      .map(function(row){return String(row[idCol] == null ? '' : row[idCol]);});
+    const populated = values.slice(1).filter(function(row){return row.some(function(v){return String(v == null ? '' : v).trim();});});
+    const ids = populated.map(function(row){
+      // PROGRESS key is questionId in column A. ATTEMPTS are events, not unique question IDs.
+      if (name === 'ATTEMPTS') return JSON.stringify([row[0], row[1], row[6], row[7]]);
+      return String(row[0] == null ? '' : row[0]);
+    });
     result[name] = {rows:ids.length,duplicates:ids.length-new Set(ids).size,hash:digest};
   });
   return {workbookId:ss.getId(),checkedAt:new Date().toISOString(),sheets:result};
