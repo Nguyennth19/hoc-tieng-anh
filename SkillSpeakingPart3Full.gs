@@ -17,13 +17,13 @@ function getSpeakingPart3Full_() {
   }).map(function(row) {
     const model = cell(row, 'descriptionModel') || cell(row, 'model1');
     const keywords = cell(row, 'descriptionKeywords') || cell(row, 'keywords1');
-    const structure = cell(row, 'descriptionTemplate') || cell(row, 'structure1');
+    const initialStructure = cell(row, 'descriptionTemplate') || cell(row, 'structure1');
     const q2 = cell(row, 'question2').trim();
     const q3 = cell(row, 'question3').trim();
     const m2 = cell(row, 'model2').trim();
     const m3 = cell(row, 'model3').trim();
     const questions = [cell(row, 'question1', 'Compare the two pictures.')];
-    const models = [model], cues = [keywords], structures = [structure];
+    const models = [model], cues = [keywords], structures = [initialStructure];
     if (q2 && m2) {
       questions.push(q2); models.push(m2);
       cues.push(cell(row, 'keywords2')); structures.push(cell(row, 'structure2'));
