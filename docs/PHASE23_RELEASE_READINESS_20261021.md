@@ -37,3 +37,14 @@ Preserve last known good production deployment version and matching production d
 - Content counts: P1 49, P2 51, P3 52. Part 4 and all other skills unchanged.
 - Test media and cache freshness, browser console, and permissions.
 - Check version/rollout and read-only audit after deploy.
+
+## Phase 2.3 automatic migration audit — 2026-10-21
+- `getBootstrapData()` calls `ensureSchema_()`. When schema/content-version keys differ or cache misses, `ensureSchema_()` may invoke `runMigrations()`. This is an **automatic write path**; opening a new release deployment can trigger migration.
+- `runMigrations()` creates/updates SHEET headers, legacy columns, P1 content, Part 2 embedded media, SETTINGS metadata and invalidates caches. Its Sheet/Drive changes are NOT transactional.
+- A previous P3-empty check ran after some mutations. Release candidate now runs `assertSpeakingMigrationBanksReady_(ss)` before ANY migration sheet mutation and rejects missing/empty P1/P2/P3. This does not eliminate other migration side effects on valid data.
+- A new disposable QA workbook copied from the Phase 0 backup was verified against its source with full A1:AK1000 FORMULA matrices across **all seven tabs**: 49 P1, 64 P2, 60 P3, 4 PROGRESS, 1 ATTEMPTS, 13 SETTINGS, 106 MEDIA rows; 7/7 exact match.
+- Fresh QA workbook: https://docs.google.com/spreadsheets/d/1M4I1ZmwscCVsihxTuAVSEPHdRdYjIEV0DEGQyYDFpeI/edit
+- Fresh QA media: https://drive.google.com/drive/folders/10XYy1NgFzpKO51ZjleFIsmae3BN7Lcts
+- Separate QA harness branch: `qa/speaking-phase23-release-test-20261021` based on this release-candidate; contains `tests/Phase23_ReleaseQAGuard.gs`. This test harness must NEVER be merged into main.
+- To exercise RC in a **new, isolated** Apps Script project, import the QA branch only there, configure Script Properties `APTIS_DATABASE_ID` and `APTIS_MEDIA_FOLDER_ID` to the above QA IDs *before opening any app preview*, run `phase23ReleaseQAPreflight`, then await review before granting `APTIS_PHASE23_QA_RUN_ONCE` and calling `phase23RunReleaseQAOnce`.
+- No Phase 2.3 migration has been executed yet. No production deployment/merge.
