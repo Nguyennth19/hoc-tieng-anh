@@ -61,7 +61,7 @@ function phase22RunMigrationOnQACopy(acknowledge) {
   }
   const before = phase22PreflightReadOnly();
   // Re-check QA media folder immediately before any migration writes.
-  phase22VerifyMediaIsolationReadOnly();
+  phase22FinalReadOnlyAudit();
   const report = runMigrations();
   const after = phase22Snapshot_();
   const protectedNames = ['SPEAKING_P3','PROGRESS','ATTEMPTS'];
@@ -88,4 +88,50 @@ function phase22VerifyMediaIsolationReadOnly() {
   const result = {ok:true,stagingWorkbookId:QA_PHASE22_WORKBOOK_ID,qaMediaFolderId:folder.getId(),qaMediaFolderName:folder.getName()};
   console.log(JSON.stringify(result,null,2));
   return result;
+}
+
+/**
+ * Phase 2.2 final read-only audit. Call before approving any migration run.
+ * Verifies workbook/folder identity, ordered base headers and copied media setting.
+ */
+function phase22FinalReadOnlyAudit() {
+  const ss = phase22AssertStaging_();
+  const folderCheck = phase22VerifyMediaIsolationReadOnly();
+  const sheets = [
+    {name:SHEET_NAMES.SPEAKING_P1,required:HEADERS.SPEAKING_P1},
+    {name:SHEET_NAMES.SPEAKING_P2,required:HEADERS.SPEAKING_P2},
+    {name:SHEET_NAMES.SPEAKING_P3,required:HEADERS.SPEAKING_P3},
+    {name:SHEET_NAMES.PROGRESS,required:HEADERS.PROGRESS},
+    {name:SHEET_NAMES.ATTEMPTS,required:HEADERS.ATTEMPTS},
+    {name:SHEET_NAMES.SETTINGS,required:HEADERS.SETTINGS},
+    {name:SHEET_NAMES.MEDIA,required:HEADERS.MEDIA}
+  ];
+  const structural = sheets.map(function(entry) {
+    const sheet = ss.getSheetByName(entry.name);
+    if (!sheet) throw new Error('BLOCKED: missing QA sheet '+entry.name);
+    const actual = sheet.getRange(1,1,1,entry.required.length).getDisplayValues()[0];
+    const bad = entry.required.filter(function(header,i) {return actual[i]!==header;});
+    if (bad.length) throw new Error('BLOCKED: header mismatch '+entry.name+': '+bad.join(', '));
+    if (entry.name === SHEET_NAMES.SPEAKING_P3 && sheet.getLastRow()<2) {
+      throw new Error('BLOCKED: P3 bank is empty.');
+    }
+    return {name:entry.name,baseHeaders:'PASS',dataRows:Math.max(0,sheet.getLastRow()-1)};
+  });
+  const settings=ss.getSheetByName(SHEET_NAMES.SETTINGS);
+  const copiedFolderId=String(getSetting_(settings,'media_folder_id')||'').trim();
+  const preflight=phase22PreflightReadOnly();
+  const audit={
+    ok:true,
+    qaWorkbookId:ss.getId(),
+    qaMediaFolderId:folderCheck.qaMediaFolderId,
+    copiedSettingsMediaFolderId:copiedFolderId,
+    settingsFolderWillBeUpdatedByMigration:copiedFolderId!==folderCheck.qaMediaFolderId,
+    sheetChecks:structural,
+    snapshotHashes:Object.keys(preflight.sheets).reduce(function(acc,name) {
+      acc[name]=preflight.sheets[name].hash;
+      return acc;
+    },{})
+  };
+  console.log(JSON.stringify(audit,null,2));
+  return audit;
 }
