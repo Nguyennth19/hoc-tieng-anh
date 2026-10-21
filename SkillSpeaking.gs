@@ -79,28 +79,37 @@ function getBootstrapData(forceRefresh) {
  * Cache failures must never alter stored Sheet data or block the loader.
  */
 function speakingCacheRead_(cache, key) {
-  const raw = cache.get(key);
-  if (!raw) return null;
-  let manifest;
-  try { manifest = JSON.parse(raw); } catch (e) { cache.remove(key); return null; }
-  if (!manifest || manifest.cacheFormat !== 'chunked-v1' ||
-      !Number.isInteger(manifest.parts) || manifest.parts < 1 || manifest.parts > 200 ||
-      !/^[a-zA-Z0-9-]{8,64}$/.test(String(manifest.token || ''))) {
-    cache.remove(key);
+  // CacheService is best-effort. A read/remove failure must fall back to
+  // the authoritative Sheet loader, never abort Speaking bootstrap.
+  const invalidate = function() {
+    try { cache.remove(key); } catch (ignored) {}
+  };
+  try {
+    const raw = cache.get(key);
+    if (!raw) return null;
+    let manifest;
+    try { manifest = JSON.parse(raw); } catch (e) { invalidate(); return null; }
+    if (!manifest || manifest.cacheFormat !== 'chunked-v1' ||
+        !Number.isInteger(manifest.parts) || manifest.parts < 1 || manifest.parts > 200 ||
+        !/^[a-zA-Z0-9-]{8,64}$/.test(String(manifest.token || ''))) {
+      invalidate();
+      return null;
+    }
+    const chunks = [];
+    for (let i = 0; i < manifest.parts; i++) {
+      const fragment = cache.get(key + ':chunk:' + manifest.token + ':' + i);
+      if (fragment == null) { invalidate(); return null; }
+      chunks.push(fragment);
+    }
+    const text = chunks.join('');
+    if (text.length !== manifest.length) { invalidate(); return null; }
+    try { return JSON.parse(text); }
+    catch (e) { invalidate(); return null; }
+  } catch (e) {
+    console.warn('Speaking cache read skipped; using Sheet loader: ' + String(e));
     return null;
   }
-  const chunks = [];
-  for (let i = 0; i < manifest.parts; i++) {
-    const fragment = cache.get(key + ':chunk:' + manifest.token + ':' + i);
-    if (fragment === null) { cache.remove(key); return null; }
-    chunks.push(fragment);
-  }
-  const text = chunks.join('');
-  if (text.length !== manifest.length) { cache.remove(key); return null; }
-  try { return JSON.parse(text); }
-  catch (e) { cache.remove(key); return null; }
 }
-
 function speakingCacheWrite_(cache, key, data, ttl) {
   const json = JSON.stringify(data);
   if (!json) return;
