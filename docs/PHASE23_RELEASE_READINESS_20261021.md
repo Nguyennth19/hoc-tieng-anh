@@ -48,3 +48,11 @@ Preserve last known good production deployment version and matching production d
 - Separate QA harness branch: `qa/speaking-phase23-release-test-20261021` based on this release-candidate; contains `tests/Phase23_ReleaseQAGuard.gs`. This test harness must NEVER be merged into main.
 - To exercise RC in a **new, isolated** Apps Script project, import the QA branch only there, configure Script Properties `APTIS_DATABASE_ID` and `APTIS_MEDIA_FOLDER_ID` to the above QA IDs *before opening any app preview*, run `phase23ReleaseQAPreflight`, then await review before granting `APTIS_PHASE23_QA_RUN_ONCE` and calling `phase23RunReleaseQAOnce`.
 - No Phase 2.3 migration has been executed yet. No production deployment/merge.
+
+## Phase 2.3 release-final-review progress
+- Controlled migration QA confirmed PASS, `issues: []`. Bank, progress, attempts and media hashes unchanged; SETTINGS metadata intentionally updated.
+- Startup QA after legacy version matching patch confirmed PASS with P1=49, P2=51, P3=52 on both bootstraps; all seven Sheet hashes unchanged.
+- Root cause: Sheets can date-coerce dotted strings such as `3.2.0` into display text `3.2.2000`. `ensureSchema_` now recognizes this pre-existing legacy representation to avoid unnecessary repeated migration.
+- `Database.gs` `setSetting_` now sets plain-text number format **before** writing each SETTINGS value, preventing the conversion on future metadata writes.
+- QA-only function `phase23TestVersionTextStorage()` in the QA branch tests three dotted version strings using a temporary Sheet and confirms all original seven sheets remain unchanged. NOT YET EXECUTED; needs tester log.
+- Production Script Properties / live deployment details NOT VERIFIED. PR and merge are intentionally withheld.
