@@ -135,3 +135,33 @@ function phase23TestAutomaticStartupReadOnly() {
   if(!result.ok) throw new Error('PHASE23_STARTUP_QA_FAIL: '+issues.join(' | '));
   return result;
 }
+
+/** Phase 2.3 QA: guard version persistence using a temporary QA-only sheet. */
+function phase23TestVersionTextStorage() {
+  const ss = phase23AssertQA_();
+  const name = '__PHASE23_VERSION_QA_TEMP__';
+  if (ss.getSheetByName(name)) throw new Error('BLOCKED: temporary QA sheet already exists.');
+  const initial = phase23QASnapshot_();
+  const sh = ss.insertSheet(name);
+  let result;
+  try {
+    sh.getRange(1,1,1,2).setValues([['key','value']]);
+    setSetting_(sh,'schema_version','3.2.0');
+    setSetting_(sh,'app_version','3.2.1');
+    setSetting_(sh,'p2_description_version','2.1.0');
+    const got=['schema_version','app_version','p2_description_version'].map(function(k){return getSetting_(sh,k);});
+    const formats=sh.getRange(2,2,3,1).getNumberFormats().map(function(r){return r[0];});
+    const expected=['3.2.0','3.2.1','2.1.0'];
+    const issues=expected.filter(function(x,i){return x!==got[i] || formats[i]!=='@';});
+    result={ok:issues.length===0,issues:issues,expected:expected,actual:got,formats:formats};
+  } finally {
+    ss.deleteSheet(sh);
+  }
+  const after=phase23QASnapshot_();
+  const unchanged=Object.keys(initial.sheets).every(function(k){return initial.sheets[k].hash===after.sheets[k].hash;});
+  result.originalSevenSheetsUnchanged=unchanged;
+  if(!unchanged) result.ok=false;
+  console.log('PHASE23_VERSION_TEXT_QA_RESULT '+JSON.stringify(result,null,2));
+  if(!result.ok) throw new Error('PHASE23_VERSION_TEXT_QA_FAIL');
+  return result;
+}
