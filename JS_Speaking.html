@@ -503,7 +503,7 @@
       $('heroPill').textContent = 'Speaking Part 1';
       $('heroTitle').textContent = 'Small practice. Stronger answers.';
       $('heroText').textContent = 'Build the core sentence first, then speak naturally for 30 seconds.';
-      $('libraryTitle').textContent = '29 personal questions';
+      $('libraryTitle').textContent = (state.items.length || 0) + ' personal questions';
       $('progressLabel').textContent = 'mastered';
     } else if (state.activePart === 2) {
       $('heroPill').textContent = 'Speaking Part 2';
