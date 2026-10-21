@@ -1200,15 +1200,59 @@
     return state.activePart === 2 ? Number(state.data.app.timers.part2 || 45) : Number(state.data.app.timers.part1 || 30);
   }
 
+  // Accessible modal: only shown after Apps Script confirms the save.
+  function showProgressSavedDialog_(message) {
+    const existing = document.getElementById('progressSavedDialog');
+    if (existing) existing.remove();
+    const backdrop = document.createElement('div');
+    backdrop.id = 'progressSavedDialog';
+    backdrop.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;';
+    const panel = document.createElement('div');
+    panel.setAttribute('role','dialog');
+    panel.setAttribute('aria-modal','true');
+    panel.setAttribute('aria-label','Progress saved');
+    panel.style.cssText = 'width:min(420px,100%);background:#fff;color:#243050;border-radius:18px;padding:26px;box-shadow:0 16px 48px rgba(0,0,0,.2);text-align:center;';
+    const heading = document.createElement('h3');
+    heading.textContent = '✓ Progress saved!';
+    heading.style.cssText = 'font-size:21px;margin:0 0 12px;';
+    const explanation = document.createElement('p');
+    explanation.textContent = message;
+    explanation.style.cssText = 'line-height:1.6;margin:0 0 22px;';
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.textContent = 'Continue learning';
+    close.style.cssText = 'background:#6954ff;color:#fff;border:0;border-radius:10px;padding:12px 22px;cursor:pointer;font-weight:600;';
+    function dismiss() { backdrop.remove(); }
+    close.addEventListener('click', dismiss);
+    backdrop.addEventListener('click', function(e) { if (e.target === backdrop) dismiss(); });
+    panel.appendChild(heading);
+    panel.appendChild(explanation);
+    panel.appendChild(close);
+    backdrop.appendChild(panel);
+    document.body.appendChild(backdrop);
+    close.focus();
+  }
+
   function saveProgress(rating, status) {
     const item = currentItem();
+    if (!item) return;
     const p = currentProgress() || {};
     const id = currentProgressId();
+    const savedPart = state.activePart;
+    const savedPrompt = state.currentPrompt;
+    const button = $('markLearnedBtn');
+    button.disabled = true;
 
     google.script.run
       .withSuccessHandler(result => {
-        if (state.activePart >= 2) {
-          item.promptProgress[state.currentPrompt - 1] = result.progress;
+        button.disabled = false;
+        if (!result || !result.ok || !result.progress ||
+            result.progress.questionId !== id || result.progress.status !== status) {
+          toast('Save could not be verified. Please retry.');
+          return;
+        }
+        if (savedPart >= 2) {
+          item.promptProgress[savedPrompt - 1] = result.progress;
           recalcPart2Aggregate(item);
         } else {
           item.progress = result.progress;
@@ -1216,17 +1260,32 @@
         renderSummary();
         $('statusBadge').textContent = statusLabel(item.progress.status);
         renderList();
+        renderProgressDashboard();
         persistCurrentBootstrapCache();
-        toast(status === 'learned' ? 'Marked as learned.' : 'Progress saved.');
+
+        const learnedCount = savedPart >= 2
+          ? (item.promptProgress || []).filter(x => x && x.status === 'learned').length : 1;
+        const total = savedPart >= 2 ? (item.promptProgress || []).length : 1;
+        const message = savedPart >= 2
+          ? ('Answer '+savedPrompt+' saved. '+learnedCount+'/'+total+
+            ' responses mastered in this topic. '+
+            (learnedCount === total ? 'Topic completed!' : 'Complete the remaining responses to master this topic.'))
+          : 'This response is marked as learned.';
+        showProgressSavedDialog_(message);
+        // Refresh from the server rather than relying on local cache after reload.
+        refreshDataInBackground(true);
       })
-      .withFailureHandler(err => toast('Could not save progress: ' + safeError(err)))
+      .withFailureHandler(err => {
+        button.disabled = false;
+        toast('Could not save progress: ' + safeError(err));
+      })
       .saveQuestionProgress({
         questionId: id,
         status: status,
         rating: rating,
         reviewCount: Number(p.reviewCount || 0),
         note: p.note || '',
-        favorite: false
+        favorite: Boolean(p.favorite)
       });
   }
 
