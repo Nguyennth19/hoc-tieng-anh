@@ -658,7 +658,7 @@
     const multi = state.activePart >= 2;
     $('part2Visual').classList.toggle('hidden', !isP2);
     $('part3Visual').classList.toggle('hidden', !isP3);
-    $('promptStepper').classList.toggle('hidden', !multi || isP2);
+    $('promptStepper').classList.toggle('hidden', !multi || isP2 || isP3);
     if (multi) {
       const prompts = Array.isArray(item.questions) ? item.questions : [];
       $$('.prompt-step').forEach(function(btn) {
@@ -826,7 +826,7 @@
     const item = currentItem();
     if (!item) return;
 
-    $('questionText').textContent = state.activePart===2 && state.currentMode!=='test' ? 'Practise all three questions in this topic' : currentQuestionText();
+    $('questionText').textContent = [2,3].includes(state.activePart) && state.currentMode!=='test' ? 'Practise all three questions in this topic' : currentQuestionText();
     if(state.activePart<=2) renderSharedFormulaText($('modelAnswer'),currentModel());
     else $('modelAnswer').textContent = currentModel();
     $('structureText').textContent = currentStructure();
@@ -891,7 +891,7 @@
     engine.speak(utterance);
   }
 
-  // P2 whole-topic study: one Learn/Memorize/Test flow, with stable prompt IDs.
+  // Shared P2/P3 whole-topic study: one Learn/Memorize/Test flow, stable prompt IDs.
   const p2Drafts_ = Object.create(null);
   function p2Card_(slot, heading, model) {
     const card=document.createElement('section'); card.className='p2-topic-card';
@@ -904,7 +904,7 @@
   }
   function renderP2Unified_(){
     const wrapper=$('p2Unified'),list=$('p2UnifiedCards'),footer=$('p2UnifiedFooter'),item=currentItem();
-    if(!wrapper||!item||state.activePart!==2)return;
+    if(!wrapper||!item||![2,3].includes(state.activePart))return;
     list.replaceChildren();footer.replaceChildren();
     const q=item.questions||[],m=item.models||[],isMemory=state.currentMode==='memorize';
     for(let i=0;i<3;i++){
@@ -964,8 +964,8 @@
   }
   function renderP2TestOutline_(){
     const area=$('p2TestOutline');if(!area)return;
-    area.replaceChildren();area.classList.toggle('hidden',state.activePart!==2||state.currentMode!=='test');
-    if(state.activePart!==2)return;
+    area.replaceChildren();area.classList.toggle('hidden',![2,3].includes(state.activePart)||state.currentMode!=='test');
+    if(![2,3].includes(state.activePart))return;
     const item=currentItem();if(!item)return;
     (item.questions||[]).slice(0,3).forEach((q,i)=>{
       if(!q||!item.models[i])return;
@@ -1044,15 +1044,15 @@
     if (state.activePart <= 3 && mode === 'learn') mode = 'shadow';
     if (state.currentMode !== mode) stopSpeech();
     state.currentMode = mode;
-    if(state.activePart===2 && currentItem()){
+    if([2,3].includes(state.activePart) && currentItem()){
       $('questionText').textContent = mode==='test' ? currentQuestionText() : 'Practise all three questions in this topic';
     }
     configureP1Modes_();
     $$('.mode-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
-    ['learn','shadow','memorize','test'].forEach(name => $(name + 'Mode').classList.toggle('hidden', name !== mode || (state.activePart===2 && mode !== 'test')));
+    ['learn','shadow','memorize','test'].forEach(name => $(name + 'Mode').classList.toggle('hidden', name !== mode || ([2,3].includes(state.activePart) && mode !== 'test')));
     const unified=$('p2Unified');
-    if(unified)unified.classList.toggle('hidden',state.activePart!==2||!['shadow','memorize'].includes(mode));
-    if(state.activePart===2){if(mode!=='test')renderP2Unified_();renderP2TestOutline_();}
+    if(unified)unified.classList.toggle('hidden',![2,3].includes(state.activePart)||!['shadow','memorize'].includes(mode));
+    if([2,3].includes(state.activePart)){if(mode!=='test')renderP2Unified_();renderP2TestOutline_();}
     if (mode === 'test') resetTimerDisplay();
   }
 
@@ -1061,7 +1061,7 @@
     state.memorizeLevel = level;
     $$('.level-btn').forEach(btn => btn.classList.toggle('active', Number(btn.dataset.level) === level));
     renderMemorize();
-    if(state.activePart===2 && state.currentMode==='memorize')renderP2Unified_();
+    if([2,3].includes(state.activePart) && state.currentMode==='memorize')renderP2Unified_();
   }
 
   let p1RecallTargets_ = [];
