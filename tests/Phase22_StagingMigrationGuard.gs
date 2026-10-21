@@ -55,18 +55,114 @@ function phase22PreflightReadOnly() {
  * Execution can change QA copy and create Drive media via migration.
  * Never run in the original Apps Script project.
  */
+function phase22CaptureIdentity_() {
+  const ss = phase22AssertStaging_();
+  const rowsFor = function(name) {
+    const sheet = ss.getSheetByName(name);
+    const values = sheet.getDataRange().getDisplayValues().slice(1);
+    return values.filter(function(row) {
+      return row.some(function(value) { return String(value).trim() !== ''; });
+    });
+  };
+  const idsFor = function(name) {
+    return rowsFor(name).map(function(row) { return String(row[0]).trim(); });
+  };
+  const mediaRows = rowsFor(SHEET_NAMES.MEDIA);
+  return {
+    p1Ids:idsFor(SHEET_NAMES.SPEAKING_P1),
+    p2Ids:idsFor(SHEET_NAMES.SPEAKING_P2),
+    p3Ids:idsFor(SHEET_NAMES.SPEAKING_P3),
+    mediaMap:mediaRows.reduce(function(map,row) {
+      const assetKey=String(row[0]).trim();
+      if (assetKey) map[assetKey]=String(row[3]).trim();
+      return map;
+    },{})
+  };
+}
+
+function phase22CompareMigrationQA_(before,after,identitiesBefore,identitiesAfter,migration) {
+  const protectedNames=['SPEAKING_P3','PROGRESS','ATTEMPTS'];
+  const changedProtected=protectedNames.filter(function(name) {
+    return before.sheets[name].hash !== after.sheets[name].hash;
+  });
+  const issues=[];
+  if (migration.spreadsheetId !== QA_PHASE22_WORKBOOK_ID) {
+    issues.push('Migration returned unexpected spreadsheetId.');
+  }
+  if (changedProtected.length) issues.push('Protected checksum changed: '+changedProtected.join(', '));
+  ['p1Ids','p2Ids','p3Ids'].forEach(function(key) {
+    const a=identitiesBefore[key],b=identitiesAfter[key];
+    if (JSON.stringify(a)!==JSON.stringify(b)) issues.push('Bank IDs/order changed: '+key);
+  });
+  const beforeMedia=identitiesBefore.mediaMap,afterMedia=identitiesAfter.mediaMap;
+  Object.keys(beforeMedia).forEach(function(key) {
+    if (afterMedia[key]!==beforeMedia[key]) issues.push('Existing media mapping changed: '+key);
+  });
+  const oldCount=Object.keys(beforeMedia).length,newCount=Object.keys(afterMedia).length;
+  if (newCount<oldCount) issues.push('MEDIA asset keys decreased.');
+  if (after.sheets.MEDIA.duplicates) issues.push('MEDIA has duplicate asset keys.');
+  const folderId=String(getSetting_(phase22AssertStaging_().getSheetByName(SHEET_NAMES.SETTINGS),'media_folder_id')||'').trim();
+  if (folderId!=='1gMnGKRexXcSi_C_tKBHWVsOOAC_vULus') issues.push('SETTINGS.media_folder_id is not QA folder.');
+  return {
+    ok:issues.length===0,
+    issues:issues,
+    protectedChecksumsChanged:changedProtected,
+    bankIdsAndOrderPreserved:!issues.some(function(x){return x.indexOf('Bank IDs/order changed')===0;}),
+    oldMediaAssetCount:oldCount,
+    newMediaAssetCount:newCount,
+    settingsMediaFolderId:folderId
+  };
+}
+
+/**
+ * Controlled QA migration. Use only the wrapper below; NEVER call runMigrations()
+ * directly from the Apps Script function selector.
+ */
 function phase22RunMigrationOnQACopy(acknowledge) {
   if (acknowledge !== 'I_CONFIRM_DISPOSABLE_QA_ONLY') {
     throw new Error('BLOCKED: explicit opt-in required.');
   }
-  const before = phase22PreflightReadOnly();
-  // Re-check QA media folder immediately before any migration writes.
-  phase22FinalReadOnlyAudit();
-  const report = runMigrations();
-  const after = phase22Snapshot_();
-  const protectedNames = ['SPEAKING_P3','PROGRESS','ATTEMPTS'];
-  const changedProtected = protectedNames.filter(function(n){return before.sheets[n].hash!==after.sheets[n].hash;});
-  return {ok:changedProtected.length===0,changedProtected:changedProtected,before:before,after:after,migration:report};
+  const audit=phase22FinalReadOnlyAudit();
+  if (!audit.ok) throw new Error('BLOCKED: final audit failed.');
+  const before=phase22PreflightReadOnly();
+  const identitiesBefore=phase22CaptureIdentity_();
+  console.log('PHASE22_BEFORE '+JSON.stringify(before));
+  let migration;
+  try {
+    migration=runMigrations();
+  } catch(err) {
+    console.error('PHASE22_MIGRATION_ERROR '+String(err && err.stack || err));
+    console.log('PHASE22_AFTER_ERROR '+JSON.stringify(phase22Snapshot_()));
+    throw err;
+  }
+  const after=phase22Snapshot_();
+  const identitiesAfter=phase22CaptureIdentity_();
+  const validation=phase22CompareMigrationQA_(before,after,identitiesBefore,identitiesAfter,migration);
+  const result={
+    ok:validation.ok,
+    before:before,
+    after:after,
+    validation:validation,
+    migration:migration
+  };
+  console.log('PHASE22_CONTROLLED_MIGRATION_RESULT '+JSON.stringify(result,null,2));
+  if (!validation.ok) throw new Error('PHASE22_DATA_INTEGRITY_FAIL: '+validation.issues.join(' | '));
+  return result;
+}
+
+/**
+ * Single-use UI wrapper. Requires a deliberate Script Property opt-in.
+ * This property is removed BEFORE any writes, so a second click cannot rerun.
+ */
+function phase22ExecuteControlledMigrationOnce() {
+  const props=PropertiesService.getScriptProperties();
+  const key='APTIS_PHASE22_QA_RUN_ONCE';
+  const approved=String(props.getProperty(key)||'').trim();
+  if (approved!=='I_CONFIRM_DISPOSABLE_QA_ONLY') {
+    throw new Error('BLOCKED: set APTIS_PHASE22_QA_RUN_ONCE to I_CONFIRM_DISPOSABLE_QA_ONLY in STAGING Script Properties only.');
+  }
+  props.deleteProperty(key);
+  return phase22RunMigrationOnQACopy(approved);
 }
 
 /**
