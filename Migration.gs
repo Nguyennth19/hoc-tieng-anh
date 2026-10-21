@@ -29,11 +29,13 @@ function runMigrations() {
     } else {
       report.push('P2 existing bank preserved; no destructive seed replay.');
     }
+    // P3 legacy Q1-only seeding is quarantined, even when the bank is empty.
+    // It can erase Q2/Q3 and revive inactive topics. Populate P3 only through
+    // a separately reviewed restoration procedure against the Phase 0 backup.
     if (p3.getLastRow() < 2) {
-      upgradeSpeakingPart3Description_(p3, settings, report);
-    } else {
-      report.push('P3 existing bank preserved; no destructive seed replay.');
+      throw new Error('P3 bank is empty. Restore the approved bank from backup; automatic Q1-only seed is disabled.');
     }
+    report.push('P3 production bank preserved; legacy Q1-only seed disabled.');
 
     const mediaCount = ensurePart2MediaAssets_(ss, p2, media, report);
     if (mediaCount) report.push('Prepared ' + mediaCount + ' Speaking Part 2 source images in Drive.');
