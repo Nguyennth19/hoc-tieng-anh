@@ -51,7 +51,8 @@ function startSpeaking(){
 }
 function endSpeaking(){
   if(S.phase==='prep'){
-    stopClock();S.phase='ready';S.session=null;
+    stopClock();S.phase='ready';S.session=null;S.saved=false;
+    byId('p4Review').hidden=true;
     byId('p4Time').textContent='01:00';byId('p4Stage').textContent='Ready';byId('p4TimerBar').style.width='100%';
     byId('p4Begin').disabled=!S.current;byId('p4Next').disabled=true;
     byId('p4Pause').disabled=true;byId('p4Stop').disabled=true;
