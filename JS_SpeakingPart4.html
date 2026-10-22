@@ -2,7 +2,7 @@
 (function(){
 'use strict';
 const byId=id=>document.getElementById(id);
-const S={data:null,current:null,mode:'learn',studyStep:'learn',memLevel:1,phase:'ready',deadline:0,timer:null,spoken:0,session:null,saved:false,requestSeq:0};
+const S={data:null,current:null,mode:'learn',studyStep:'learn',memLevel:1,phase:'ready',spoken:0,session:null,saved:false,requestSeq:0};
 const P4_MEM_DRAFTS=Object.create(null); // Client-session drafts only. Never sent to Sheets or Mastery.
 const qs=(sel,root=document)=>root.querySelector(sel);
 /* P4 delegates its preparation/speaking stages to the same timer as P1–3.
