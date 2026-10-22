@@ -84,6 +84,8 @@ function testSpeakingSharedTimerS6ReadOnly(){
     timerResumeUsesRemaining:has(commonTimer,"phase='running';notify()"),
     timerCompletesOnce:has(commonTimer,"if(phase!=='running')return;"),
     timersCancelPrevious:has(commonTimer,"speakingActiveTimer_!==api)speakingActiveTimer_.stop(true)"),
+    sharedClockOffersStopActive:has(common,'stopActive:function(){if(speakingActiveTimer_)speakingActiveTimer_.stop(true);}'),
+    part4EntryStopsOldClock:has(p4,'window.AptisSpeakingTimer?.stopActive?.();'),
     sharedPartDurations:has(common,'part1:30,part2:45,part3:45,part4Preparation:60,part4Speaking:120'),
     part123UsesSharedTimer:has(common,"window.AptisSpeakingTimer.create(function(snap)"),
     part123PauseAndResume:has(common,'function pauseTimer(){p123Timer_().pause();}')&&has(common,"timer.snapshot().status==='paused')timer.resume()"),
