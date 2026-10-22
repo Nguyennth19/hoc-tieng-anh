@@ -429,7 +429,9 @@
     setLoadingVisible(false);
     if (!isValidBootstrap(data)) return false;
     state.data = data;
-    $('appTitle').textContent = data.app.title || 'APTIS B2 Coach';
+    // S6.1 hard-fix: old #appTitle was removed when the app received the
+    // shared global B2 Coach shell. Never dereference a deleted DOM node.
+    // The visible Speaking heading is owned by ViewSpeaking.html.
     $('errorView').classList.add('hidden');
     const wasStudying = !$('studyView').classList.contains('hidden');
     const wasProgress = !$('progressView').classList.contains('hidden');
