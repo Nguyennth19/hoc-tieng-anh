@@ -6,7 +6,11 @@ const S={data:null,current:null,mode:'learn',phase:'ready',deadline:0,timer:null
 const qs=(sel,root=document)=>root.querySelector(sel);
 const duration=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
 function stopClock(){if(S.timer){clearInterval(S.timer);S.timer=null;}}
-function status(message){byId('p4Status').textContent=message;}
+function status(message){
+  byId('p4Status').textContent=message;
+  const libraryStatus=byId('p4LibraryStatus');
+  if(libraryStatus)libraryStatus.textContent=message;
+}
 function topicLabel(x){const t=String(x.topic||x.questions?.[0]||'').trim();return t.length>94?t.slice(0,91)+'…':t||'Untitled topic';}
 function renderClock(){const sec=Math.max(0,Math.ceil((S.deadline-Date.now())/1000));byId('p4Time').textContent=duration(sec);if(sec===0){stopClock();if(S.phase==='prep'){startSpeaking();}else if(S.phase==='speak'){endSpeaking();}}}
 function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
