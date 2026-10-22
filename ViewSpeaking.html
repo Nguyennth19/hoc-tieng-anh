@@ -369,13 +369,7 @@
 
           <div id="testMode" class="mode-panel hidden">
             <div id="p2TestOutline" class="p2-test-outline hidden"></div>
-            <div class="test-box">
-              <div id="testLabel" class="test-label">APTIS SPEAKING PRACTICE</div>
-              <div id="timer" class="timer">00:30</div>
-              <div class="timer-bar"><div id="timerBar" class="timer-bar-fill"></div></div>
-              <p id="testInstruction" class="test-instruction">Answer aloud without reading the model.</p>
-              <div class="test-actions"><button id="startTimerBtn" class="primary-btn large" type="button">Start test</button><button id="stopTimerBtn" class="secondary-btn large" type="button" disabled>Stop</button></div>
-            </div>
+
 
             <div id="selfCheck" class="content-block hidden">
               <span class="block-label">How did it feel?</span>
@@ -391,11 +385,29 @@
             </div>
           </div>
 
-          <footer class="study-footer">
+          <div class="test-box speaking-practice-timer" role="group" aria-label="Speaking practice timer">
+              <div id="testLabel" class="test-label">APTIS SPEAKING PRACTICE</div>
+              <div id="timer" class="timer" aria-live="off">00:30</div><span id="speakingTimerStage" class="speaking-timer-stage" role="status" aria-live="polite">Ready to practise</span>
+              <div class="timer-bar"><div id="timerBar" class="timer-bar-fill"></div></div>
+              <p id="testInstruction" class="test-instruction">Answer aloud without reading the model.</p>
+              <div class="test-actions speaking-timer-actions"><button id="startTimerBtn" class="primary-btn large" type="button">Start speaking</button><button id="pauseTimerBtn" class="secondary-btn large" type="button" disabled>⏸ Pause</button><button id="stopTimerBtn" class="secondary-btn large" type="button" disabled>■ Stop</button></div>
+            </div>
+
+          <footer class="study-footer speaking-completion-actions">
             <button id="markLearnedBtn" class="success-btn" type="button">✓ Mark learned</button>
           </footer>
         </article>
       </section>
+    </div>
+  <div id="speakingCompletionDialog" class="speaking-confirm-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="speakingCompletionTitle" aria-describedby="speakingCompletionDetail">
+      <div class="speaking-confirm-card">
+        <h3 id="speakingCompletionTitle">Confirm completion</h3>
+        <p id="speakingCompletionDetail">Save your self-assessed learning progress?</p>
+        <div class="speaking-confirm-actions">
+          <button id="speakingCompletionCancel" class="secondary-btn" type="button">Cancel</button>
+          <button id="speakingCompletionAccept" class="success-btn" type="button">Confirm</button>
+        </div>
+      </div>
     </div>
   <nav class="bottom-nav">
       <button class="nav-btn" data-nav="part1" type="button"><span>1</span>Part 1</button>
