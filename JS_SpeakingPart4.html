@@ -433,6 +433,8 @@ function refreshPart4Progress(){
 }
 function open(){
   if(!p4MountInsideSpeaking_())return;
+  // S6: entering P4 stops any still-running P1–3 timer immediately.
+  window.AptisSpeakingTimer?.stopActive?.();
   const el=byId('speakingPart4Future');if(!el)return;
   el.classList.remove('hidden');
   const shell=qs('.speaking-shell');if(shell)shell.classList.add('p4-mode');
