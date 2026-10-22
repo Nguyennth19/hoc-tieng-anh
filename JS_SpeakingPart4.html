@@ -338,17 +338,19 @@ function load(forceRefresh){
 
 function setP4Step_(step) {
   if (!['learn','memorize','test'].includes(step)) return;
-  const wantExam=step==='test';
-  const nextMode=wantExam?'exam':'learn';
+  const wantExam=step==='test',nextMode=wantExam?'exam':'learn';
+  S.studyStep=step;
   byId('p4Mode').value=nextMode;
-  if (!wantExam) byId('p4StudyView').value=step==='learn'?'full':'formula';
+  // Hidden study-mode setting no longer controls Memorize: LV1–LV3 render directly.
+  if(!wantExam)byId('p4StudyView').value='full';
   document.querySelectorAll('[data-p4-step]').forEach(btn=>{
     const active=btn.dataset.p4Step===step;
     btn.classList.toggle('active',active);
     btn.setAttribute('aria-pressed',String(active));
   });
+  p4StopAudio();
   if(S.mode!==nextMode)load();
-  else {p4StopAudio();p4ApplyStudyMode();renderAnswersOnly_();}
+  else {p4ApplyStudyMode();p4RenderStudyCards_();}
 }
 function refreshPart4Progress(){
   const el=byId('p4ProgressStatus');if(!el)return;
@@ -440,6 +442,17 @@ document.addEventListener('DOMContentLoaded',()=>{
   .saveSpeakingPart4Mastery({questionId:id,level,practiceMode:byId('p4StudyView').value==='recall'?'recall':'learn'});
  });
  document.querySelectorAll('[data-p4-step]').forEach(btn=>btn.addEventListener('click',()=>setP4Step_(btn.dataset.p4Step)));
+ document.querySelectorAll('#p4MemorizeLevels [data-p4-level]').forEach(btn=>btn.addEventListener('click',()=>{
+   const level=Number(btn.dataset.p4Level);
+   if(![1,2,3].includes(level)||S.mode!=='learn'||S.studyStep!=='memorize')return;
+   p4StopAudio();S.memLevel=level;
+   document.querySelectorAll('#p4MemorizeLevels [data-p4-level]').forEach(item=>{
+     const active=Number(item.dataset.p4Level)===level;
+     item.classList.toggle('active',active);
+     item.setAttribute('aria-pressed',String(active));
+   });
+   if(S.current)p4RenderStudyCards_();
+ }));
  byId('p4Mode').addEventListener('change',load);
  byId('p4Load').addEventListener('click',()=>load(true));
  byId('p4Set').addEventListener('change',renderSet);
