@@ -85,4 +85,26 @@
 .p4dev .p4-step-btn{border:0;border-radius:12px;min-width:0;padding:13px 6px;background:transparent;color:#778197;font-weight:800;white-space:nowrap;font-size:clamp(.8rem,2vw,1rem);box-shadow:none}
 .p4dev .p4-step-btn.active{background:#fff;color:#6757ef;box-shadow:0 4px 14px rgba(44,44,76,.1)}
 .p4dev .p4-step-btn:focus-visible{outline:2px solid #6757ef;outline-offset:2px}
+
+/* UI-01A — scoped Part 4 Topic Library / Detail; other parts unchanged */
+.p4dev .p4-topic-library[hidden],.p4dev .p4-topic-detail[hidden]{display:none!important}
+.p4-topic-library,.p4-topic-detail{max-width:1080px;margin:0 auto}
+.p4-library-title{margin:6px 0 18px}
+.p4-library-title h3{font-size:clamp(22px,3vw,29px);margin:0 0 6px;color:#192545}
+.p4-library-title p{margin:0;color:#586784}
+.p4-topic-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.p4dev .p4-topic-card{min-height:120px;display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:9px;padding:18px;background:#fff;border:1px solid #d9e0f0;border-radius:17px;box-shadow:0 5px 18px rgba(36,48,93,.04);width:100%;white-space:normal}
+.p4-topic-card small{font-size:12px;font-weight:750;color:#7055ef}
+.p4-topic-card strong{font-size:16px;color:#1b2949;line-height:1.35}
+.p4-topic-card span{font-size:12px;color:#66738e}
+.p4dev .p4-topic-card:hover{border-color:#8574ff;box-shadow:0 8px 23px rgba(93,73,214,.12)}
+.p4dev .p4-topic-card:focus-visible,.p4dev .p4-topic-navigation button:focus-visible{outline:3px solid #8d7fff;outline-offset:2px}
+.p4-topic-navigation{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px}
+.p4-topic-navigation #p4TopicPosition{margin-left:auto;font-size:13px;color:#66738e}
+.p4-topic-heading{margin:0 0 14px}
+.p4-topic-heading span{display:inline-flex;padding:5px 12px;border-radius:999px;background:#efebff;color:#6752db;font-weight:700;font-size:12px}
+.p4-topic-heading h3{margin:9px 0 0;font-size:clamp(22px,3vw,30px);color:#1b2949}
+@media(max-width:850px){.p4-topic-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:570px){.p4-topic-grid{grid-template-columns:1fr}.p4-topic-navigation{gap:6px}.p4-topic-navigation #p4TopicPosition{order:4;width:100%;margin:0;text-align:center}.p4dev .p4-topic-card{min-height:98px}}
+
 </style>
