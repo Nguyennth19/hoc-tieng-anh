@@ -37,11 +37,11 @@ button,input,select{font:inherit}button{cursor:pointer}button:disabled{cursor:no
 .topbar h1{margin:1px 0 0;font-size:18px;font-weight:900;letter-spacing:-.025em}.eyebrow{font-size:10px;font-weight:900;letter-spacing:.13em;color:#8a94a7}.top-actions{gap:7px}
 .icon-btn{width:44px;height:44px;border:1px solid var(--border);background:#fff;color:var(--ink);border-radius:14px;display:grid;place-items:center;box-shadow:var(--shadow-soft);font-weight:900;font-size:17px}
 .icon-btn:active,.primary-btn:active,.secondary-btn:active,.success-btn:active,.focus-card:active,.question-item:active{transform:translateY(1px)}
-main{width:min(100%,var(--max));margin:0 auto;padding:20px 16px 38px}.view{animation:fadeIn .18s ease}@keyframes fadeIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+.speaking-shell .speaking-main{min-width:0;padding:0 0 38px}.view{animation:fadeIn .18s ease}@keyframes fadeIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
 .panel{background:#fff;border:1px solid var(--border);border-radius:var(--radius-xl);padding:24px;box-shadow:var(--shadow)}.loading-panel{display:flex;align-items:center;justify-content:center;gap:14px;min-height:190px}.loading-panel p{margin:4px 0 0;color:var(--muted)}.spinner{width:30px;height:30px;border:3px solid #e0e4ed;border-top-color:var(--purple);border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
 
 /* Part selector: KidLearn-style compact run strip */
-.part-switch{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:0 0 14px}.part-tab{min-height:62px;border:1px solid var(--border);border-radius:17px;background:#fff;color:var(--muted);padding:10px 14px;text-align:left;box-shadow:0 4px 12px rgba(48,68,124,.035);transition:.15s ease}.part-tab span,.part-tab small{display:block}.part-tab span{font-weight:900;font-size:15px;color:var(--ink)}.part-tab small{margin-top:2px;font-size:11px;line-height:1.35}.part-tab.active{background:var(--purple-soft);border-color:#d9d1ff;box-shadow:none}.part-tab.active span{color:#5f55e6}.part-tab.active small{color:#7169a4}
+.part-switch{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:0 0 14px}.part-tab{min-height:62px;border:1px solid var(--border);border-radius:17px;background:#fff;color:var(--muted);padding:10px 14px;text-align:left;box-shadow:0 4px 12px rgba(48,68,124,.035);transition:.15s ease}.part-tab span,.part-tab small{display:block}.part-tab span{font-weight:900;font-size:15px;color:var(--ink)}.part-tab small{margin-top:2px;font-size:11px;line-height:1.35}.part-tab.active{background:var(--purple-soft);border-color:#d9d1ff;box-shadow:none}.part-tab.active span{color:#5f55e6}.part-tab.active small{color:#7169a4}
 
 /* Home hero */
 .welcome-card{background:linear-gradient(135deg,#fff 0%,#fbfaff 56%,#efecff 100%);border:1px solid #ded9fb;border-radius:28px;padding:26px;display:grid;grid-template-columns:1fr auto;gap:26px;align-items:center;box-shadow:var(--shadow)}
@@ -72,7 +72,7 @@ main{width:min(100%,var(--max));margin:0 auto;padding:20px 16px 38px}.view{anima
 .sheet-backdrop{position:fixed;inset:0;z-index:80;display:flex;align-items:flex-end;justify-content:center;background:rgba(39,49,77,.33);padding:12px}.bottom-sheet{width:min(100%,620px);background:#fff;border-radius:25px 25px 18px 18px;padding:12px 20px 22px;box-shadow:0 -18px 60px rgba(48,68,124,.2)}.sheet-handle{width:42px;height:4px;background:#d3d8e2;border-radius:999px;margin:0 auto 12px}.sheet-heading{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}.sheet-heading h3{margin:3px 0 0}.setting-row{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:13px 0;border-top:1px solid var(--border)}.setting-row.vertical{align-items:stretch;flex-direction:column;gap:8px}.setting-row span strong,.setting-row span small{display:block}.setting-row span small{color:var(--muted);margin-top:3px}.toast{position:fixed;left:50%;bottom:88px;z-index:100;transform:translateX(-50%);max-width:calc(100% - 28px);padding:11px 14px;border-radius:13px;background:#27314d;color:#fff;box-shadow:var(--shadow);font-size:13px}
 
 @media(max-width:760px){
-  main{padding:14px 10px 30px}.topbar{padding:8px 10px;min-height:60px}.brand-mark{width:38px;height:38px;border-radius:13px}.topbar h1{font-size:16px}.icon-btn{width:42px;height:42px}
+  .speaking-shell .speaking-main{padding:0 0 30px}.topbar{padding:8px 10px;min-height:60px}.brand-mark{width:38px;height:38px;border-radius:13px}.topbar h1{font-size:16px}.icon-btn{width:42px;height:42px}
   .part-switch{gap:6px}.part-tab{padding:9px 8px;min-height:58px}.part-tab span{font-size:14px}.part-tab small{font-size:10px}
   .welcome-card{padding:20px;grid-template-columns:1fr}.progress-hero{display:flex;align-items:center;gap:10px;order:-1;text-align:left}.progress-ring{width:72px;height:72px;margin:0}.progress-ring::after{inset:7px}.progress-ring span{font-size:18px}.welcome-card h2{font-size:28px}.focus-grid{grid-template-columns:1fr 1fr}.focus-card{min-height:112px;padding:14px}.stack-mobile{align-items:stretch;flex-direction:column}.library-controls{width:100%}.search-wrap{min-width:0;flex:1}.question-list{grid-template-columns:1fr}.study-card{padding:14px;border-radius:21px}.question-title{font-size:25px}.mode-tabs{grid-template-columns:repeat(4,1fr);gap:4px}.mode-tab{font-size:12px;padding:8px 3px}.mode-tab span{display:block;margin:0 0 1px}.hint-grid{grid-template-columns:1fr}.mode-intro{flex-direction:column}.rating-row{grid-template-columns:1fr 1fr}.rating-btn.strong{grid-column:1/-1}.study-footer{display:grid;grid-template-columns:1fr 1fr}#markLearnedBtn{grid-column:1/-1;grid-row:1}.setting-row{align-items:stretch;flex-direction:column}.progress-page-head{flex-direction:column}.progress-page-head h2{font-size:27px}.progress-overview-grid{grid-template-columns:1fr 1fr}.part-progress-grid{grid-template-columns:1fr}.topic-thumb{width:72px;height:58px}.part3-visual{gap:7px}.compare-image-card{padding:5px}.compare-label{font-size:10px;padding:3px 5px}.image-placeholder.compact .scene-icon{font-size:32px}.bottom-nav{width:min(calc(100% - 12px),660px);bottom:5px}.nav-btn{font-size:9px;padding:5px 2px;min-height:50px}.nav-btn span{font-size:16px}
 }
@@ -174,4 +174,22 @@ main{width:min(100%,var(--max));margin:0 auto;padding:20px 16px 38px}.view{anima
 .p2-test-q{text-align:left;border:1px solid #dce3ef;background:#fff;padding:12px;border-radius:10px;color:#465575;overflow-wrap:anywhere;cursor:pointer}
 .p2-test-q.active{background:#f0ecff;border-color:#c8bfff;color:#6247e7;font-weight:700}
 @media(max-width:520px){.p2-topic-card{padding:12px}.p2-memory-actions button{flex:1 1 auto}.p2-topic-card .p2-dictation{min-height:185px}}
+
+/* S2 shared Speaking layout: all Parts use the same reusable frame from Styles.html.
+   Show the shared selector for P1–P3 home and for P4; never resize per Part. */
+.speaking-shell .shared-part-switch{display:none;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:12px auto 16px}
+.speaking-shell .shared-part-switch .part-tab{min-width:0}
+.speaking-shell:has(#homeView:not(.hidden)) .shared-part-switch,
+.speaking-shell.p4-mode .shared-part-switch{display:grid}
+.speaking-shell .shared-part-switch [data-p4-home].active{background:var(--purple-soft);border-color:#ded9fb;color:var(--purple-2)}
+/* P4 has a different view but uses the same header/selector/content frame.
+   No blanket direct-child hiding: it can hide live settings and error feedback. */
+.speaking-shell.p4-mode > .speaking-main{display:none!important}
+.speaking-shell #speakingPart4Future{padding:0 0 100px;color:var(--ink);font-family:inherit}
+@media(max-width:650px){
+ .speaking-shell .shared-part-switch{gap:5px}
+ .speaking-shell .shared-part-switch .part-tab{padding:8px 5px}
+ .speaking-shell .shared-part-switch .part-tab small{font-size:10px}
+}
+
 </style>
