@@ -110,10 +110,10 @@
     $('skillProgressLink').addEventListener('click', showProgress);
     $('skillRecommendationBtn').addEventListener('click', openRecommendedSpeakingPart);
     $$('.prompt-step').forEach(btn => btn.addEventListener('click', () => setPrompt(Number(btn.dataset.prompt))));
-    $('#speakingModeTabs .mode-tab').forEach(btn => btn.addEventListener('click', () => setMode(btn.dataset.mode)));
+    $$('#speakingModeTabs .mode-tab').forEach(btn => btn.addEventListener('click', () => setMode(btn.dataset.mode)));
     $$('.level-btn').forEach(btn => btn.addEventListener('click', () => setMemorizeLevel(Number(btn.dataset.level))));
     $$('.rating-btn').forEach(btn => btn.addEventListener('click', () => finishSelfRating(Number(btn.dataset.rating))));
-    $('#homeView .focus-card').forEach(btn => btn.addEventListener('click', () => applyFilter(btn.dataset.filterTarget)));
+    $$('#homeView .focus-card').forEach(btn => btn.addEventListener('click', () => applyFilter(btn.dataset.filterTarget)));
 
     $('listenBtn').addEventListener('click', () => speakText(currentModel()));
     $('shadowAllBtn').addEventListener('click', shadowAll);
@@ -1019,7 +1019,7 @@
   }
   function configureP1Modes_() {
     const p1 = [1,2,3].includes(state.activePart);
-    $('#speakingModeTabs .mode-tab').forEach(function(btn) {
+    $$('#speakingModeTabs .mode-tab').forEach(function(btn) {
       const mode = btn.dataset.mode;
       btn.classList.toggle('hidden', p1 && mode === 'learn');
       if (p1) {
@@ -1048,7 +1048,7 @@
       $('questionText').textContent = mode==='test' ? currentQuestionText() : 'Practise all three questions in this topic';
     }
     configureP1Modes_();
-    $('#speakingModeTabs .mode-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
+    $$('#speakingModeTabs .mode-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
     ['learn','shadow','memorize','test'].forEach(name => $(name + 'Mode').classList.toggle('hidden', name !== mode || ([2,3].includes(state.activePart) && mode !== 'test')));
     const unified=$('p2Unified');
     if(unified)unified.classList.toggle('hidden',![2,3].includes(state.activePart)||!['shadow','memorize'].includes(mode));
