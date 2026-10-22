@@ -12,15 +12,15 @@ function testPart4FullSourceHardQAReadOnly() {
   const style = source('Styles_SpeakingPart4');
   const commonStyle = source('Styles_Speaking');
   const ids = {};
-  const idPattern = /\\bid="([^"]+)"/g;
+  const idPattern = /\bid="([^"]+)"/g;
   [speaking, p4].forEach(function(markup) {
     let match;
     while ((match = idPattern.exec(markup))) ids[match[1]] = (ids[match[1]] || 0) + 1;
     idPattern.lastIndex = 0;
   });
-  const refs = Array.from(new Set(Array.from(js.matchAll(/\\bbyId\\(['"]([^'"]+)['"]\\)/g), function(m){return m[1];})));
+  const refs = Array.from(new Set(Array.from(js.matchAll(/\bbyId\(['"]([^'"]+)['"]\)/g), function(m){return m[1];})));
   const checks = {
-    indexIncludesP4ExactlyOnce: (index.match(/include\\('ViewSpeakingPart4'\\)/g) || []).length === 1,
+    indexIncludesP4ExactlyOnce: (index.match(/include\('ViewSpeakingPart4'\)/g) || []).length === 1,
     noNestedTemplateInViewSpeaking: speaking.indexOf("include('ViewSpeakingPart4')") === -1,
     p4RootPresent: p4.indexOf('id="speakingPart4Future"') >= 0,
     sharedShellPresent: speaking.indexOf('class="skill-shell speaking-shell app-shell"') >= 0,
