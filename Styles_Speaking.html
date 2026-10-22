@@ -235,7 +235,7 @@ button,input,select{font:inherit}button{cursor:pointer}button:disabled{cursor:no
    Show the shared selector only on home/library, never inside Topic Detail. */
 .speaking-shell .shared-part-switch{display:none;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:12px auto 16px}
 .speaking-shell .shared-part-switch .part-tab{min-width:0}
-.speaking-shell:has(#homeView:not(.hidden)) .shared-part-switch,
+.speaking-shell:not(.p4-mode):has(#homeView:not(.hidden)) .shared-part-switch,
 .speaking-shell.p4-mode:not(.p4-detail-mode) .shared-part-switch{display:grid}
 .speaking-shell .shared-part-switch [data-p4-home].active{background:var(--purple-soft);border-color:#ded9fb;color:var(--purple-2)}
 /* P4 has a different view but uses the same header/selector/content frame.
