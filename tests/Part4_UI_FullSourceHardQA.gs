@@ -36,7 +36,7 @@ function testPart4FullSourceHardQAReadOnly() {
     libraryLoadingErrorVisible: p4.indexOf('id="p4LibraryStatus"') >= 0 && js.indexOf("byId('p4LibraryStatus')") >= 0,
     noLegacyP4HomeCSS: style.indexOf('.p4-unified-switch') === -1 && style.indexOf('max-width:1020px') === -1,
     noAutoHideModelOnSpeaking: js.indexOf("if(S.mode==='learn')byId('p4StudyView').value='recall'") === -1,
-    validatedContentCache: js.indexOf('P4_CONTENT_CACHE') >= 0 && js.indexOf('data.isDev!==true') >= 0,
+    validatedContentCache: js.indexOf('function p4ValidContent_(') >= 0 && js.indexOf('data.isDev!==true') >= 0 && js.indexOf('window.AptisSpeakingCache') >= 0 && js.indexOf('P4_CONTENT_CACHE') === -1,
     teacherAndMasteryWiringRetained: js.indexOf('saveSpeakingPart4Mastery') >= 0 && js.indexOf('saveSpeakingPart4DevAttempt') >= 0
   };
   const issues = Object.keys(checks).filter(function(k){return !checks[k];});
