@@ -912,15 +912,8 @@
     renderMemorize();
     resetTimerDisplay();
 
-    $('testLabel').textContent = state.activePart === 3 ? 'APTIS PART 3 · COMPARE TWO PICTURES' : (state.activePart === 2 ? 'APTIS PART 2 · PICTURE DESCRIPTION' : 'APTIS PART 1 PRACTICE');
-
-    const seconds = currentTimerSeconds();
-    $('testInstruction').textContent = state.activePart === 2
-      ? 'Describe the picture for up to ' + seconds + ' seconds. Say the yellow MUST SAY block first; add the blue SAY MORE ideas only if there is time.'
-      : (state.activePart === 3
-        ? 'Compare the two pictures for up to ' + seconds + ' seconds. Follow COMMON → PICTURE 1 → PICTURE 2 → DIFFERENCE first; add the blue SAY MORE idea only if there is time.'
-        : 'Answer aloud without reading the model. Keep speaking until the timer ends.');
-    $('startTimerBtn').textContent = 'Start ' + seconds + '-second test';
+    // Countdown duration stays per selected Part/Q (30s P1; 45s P2/P3).
+    $('startTimerBtn').textContent = '▶ Start speaking';
     $('showAnswerAfterTest').textContent = 'Show model answer';
     $('showAnswerAfterTest').disabled = false;
   }
@@ -1055,6 +1048,19 @@
     create:createSpeakingPracticeTimer_,format:speakingClockFormat_,
     stopActive:function(){if(speakingActiveTimer_)speakingActiveTimer_.stop(true);},
     defaultSeconds:Object.freeze({part1:30,part2:45,part3:45,part4Preparation:60,part4Speaking:120})
+  });
+
+  /* S6.3 — one owner for mode-dependent Timer and Completion visibility.
+     Memorize is cloze/dictation only. No save or timer state transition occurs. */
+  window.AptisSpeakingPracticeChrome=Object.freeze({
+    sync:function(card,mode){
+      if(!card)return;
+      const memorizing=mode==='memorize';
+      const timer=card.querySelector('.speaking-practice-timer');
+      const completion=card.querySelector('.speaking-completion-actions');
+      if(timer)timer.hidden=memorizing;
+      if(completion)completion.hidden=memorizing;
+    }
   });
 
   /* Shared confirmation UI, not a new persistence policy.
@@ -1239,6 +1245,7 @@
     if(unified)unified.classList.toggle('hidden',![2,3].includes(state.activePart)||!['shadow','memorize'].includes(mode));
     if([2,3].includes(state.activePart)){if(mode!=='test')renderP2Unified_();renderP2TestOutline_();}
     if (mode === 'test') resetTimerDisplay();
+    window.AptisSpeakingPracticeChrome.sync($('studyView').querySelector('.study-card'),mode);
   }
 
   function setMemorizeLevel(level) {
@@ -1646,12 +1653,10 @@
       state.timerElapsed=snap.elapsedSeconds;
       state.timerRunning=snap.status==='running';
       $('timer').textContent=window.AptisSpeakingTimer.format(snap.remainingSeconds);
-      $('timerBar').style.width=Math.max(0,Math.min(100,100*snap.remainingSeconds/Math.max(1,snap.totalSeconds)))+'%';
       $('startTimerBtn').disabled=snap.status==='running';
       $('startTimerBtn').textContent=snap.status==='paused'?'▶ Resume':'▶ Start speaking';
       $('pauseTimerBtn').disabled=snap.status!=='running';
       $('stopTimerBtn').disabled=!['running','paused'].includes(snap.status);
-      $('speakingTimerStage').textContent=({idle:'Ready to practise',running:'Speaking',paused:'Paused',stopped:'Stopped',done:'Time finished'})[snap.status]||'Ready';
     },function(){
       // Timer completion is UI-only. Rating/Mark learned remain explicit learner actions.
       if(state.currentMode==='test'){
@@ -1673,7 +1678,6 @@
     if(silent){
       timer.stop(true);state.timerElapsed=0;
       $('timer').textContent=window.AptisSpeakingTimer.format(currentTimerSeconds());
-      $('timerBar').style.width='100%';
       $('selfCheck').classList.add('hidden');
       return;
     }
@@ -1685,9 +1689,7 @@
   function resetTimerDisplay(){
     if(speakingMainPracticeTimer_&&['running','paused'].includes(speakingMainPracticeTimer_.snapshot().status))return;
     $('timer').textContent=window.AptisSpeakingTimer.format(currentTimerSeconds());
-    $('timerBar').style.width='100%';
     $('selfCheck').classList.add('hidden');
-    $('speakingTimerStage').textContent='Ready to practise';
   }
 
   function formatTime(seconds) {
