@@ -1,13 +1,6 @@
 <style>
-/* Part 4 only: all Home hero/stats/search/cards/buttons inherit Styles_Speaking.html. */
-.speaking-shell.p4-mode > :not(.bottom-nav):not(.skill-page-head):not(.shared-part-switch):not(#speakingPart4Future){display:none!important}
-.speaking-shell.p4-mode .skill-page-head{display:flex!important}
-.speaking-shell .part-switch{grid-template-columns:repeat(4,minmax(0,1fr))}
-.speaking-shell .part-switch .part-tab{min-width:0}
-.speaking-shell .shared-part-switch{display:none;width:min(calc(100% - 32px),var(--max));margin:12px auto 16px;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
-.speaking-shell:has(#homeView:not(.hidden)) .shared-part-switch,.speaking-shell.p4-mode .shared-part-switch{display:grid!important}
-.speaking-shell .shared-part-switch [data-p4-home].active{background:var(--purple-soft);border-color:#ded9fb;color:var(--purple-2)}
-.speaking-shell.p4-mode #speakingPart4Future.p4dev{width:min(calc(100% - 32px),var(--max));max-width:none;margin:0 auto;padding:0 0 100px;color:var(--ink);font-family:inherit}
+/* Part 4-specific Topic Library, Question, timer and mastery controls ONLY.
+   App shell/width/header/part tabs are owned by shared Styles.html & Styles_Speaking.html. */
 .p4dev.hidden,.p4dev [hidden]{display:none!important}
 .p4dev .p4-topic-library,.p4dev .p4-topic-detail{width:100%;max-width:none;margin:0;padding:0}
 .p4dev .welcome-card,.p4dev .today-section,.p4dev .library-section{width:100%}
@@ -53,5 +46,5 @@
 .p4dev #p4Begin,.p4dev #p4Save{background:var(--purple);color:#fff;border-color:transparent}
 .p4dev #p4Review{padding:16px;border:1px solid var(--border);border-radius:18px;background:#fff;margin-top:14px}
 .p4dev .p4dev-disclaimer{font-size:12px;color:var(--muted);margin:16px 0 35px}
-@media(max-width:650px){.speaking-shell .shared-part-switch,.speaking-shell.p4-mode #speakingPart4Future.p4dev{width:calc(100% - 20px)}.speaking-shell .shared-part-switch{gap:5px}.speaking-shell .shared-part-switch .part-tab{padding:8px 5px}.speaking-shell .shared-part-switch .part-tab small{font-size:10px}.p4dev .p4-topic-grid{grid-template-columns:1fr}.p4dev .p4-topic-navigation #p4BackLibrary{width:100%;text-align:left}.p4dev .p4-learning-tools{grid-template-columns:1fr}.p4dev .p4dev-time{position:relative;bottom:auto}}
+@media(max-width:650px){.p4dev .p4-topic-grid{grid-template-columns:1fr}.p4dev .p4-topic-navigation #p4BackLibrary{width:100%;text-align:left}.p4dev .p4-learning-tools{grid-template-columns:1fr}.p4dev .p4dev-time{position:relative;bottom:auto}}
 </style>
