@@ -123,24 +123,50 @@ function p4MoveTopic_(delta){
   const target=S.data.sets[index];
   if(target)p4ShowDetail_(target.id);
 }
+function p4MasteryLevel_(id){
+  const row=P4_MASTERY.rows.find(x=>x.questionId===id);
+  return Math.max(0,Math.min(3,Number(row?.level)||0));
+}
 function p4RenderLibrary_(){
   const box=byId('p4TopicCards');
   if(!box||!S.data)return;
+  const sets=S.data.sets||[];
   const levels=['New','Reading','With hints','Independent'];
+  const counts=[0,0,0,0];
+  sets.forEach(x=>{counts[p4MasteryLevel_(x.id)]++;});
+  byId('p4HomeNew').textContent=counts[0];
+  byId('p4HomeReading').textContent=counts[1];
+  byId('p4HomeHints').textContent=counts[2];
+  byId('p4HomeIndependent').textContent=counts[3];
+  const pct=sets.length?Math.round(100*counts[3]/sets.length):0;
+  byId('p4HomeProgressPct').textContent=pct+'%';
+  byId('p4HomeProgressRing').style.background='conic-gradient(var(--primary) '+(pct*3.6)+'deg, #e7ebf3 0deg)';
+  byId('p4HomeLibraryTitle').textContent=sets.length+' Part 4 topics';
+  const query=byId('p4HomeSearch').value.trim().toLowerCase();
+  const filter=byId('p4HomeFilter').value;
   box.replaceChildren();
-  S.data.sets.forEach((set,i)=>{
-    const row=P4_MASTERY.rows.find(x=>x.questionId===set.id);
-    const level=levels[Math.max(0,Math.min(3,Number(row?.level)||0))];
+  sets.forEach((set,i)=>{
+    const levelNumber=p4MasteryLevel_(set.id);
+    const level=levels[levelNumber];
+    if(query&&!topicLabel(set).toLowerCase().includes(query))return;
+    if(filter!=='all'&&['new','reading','hints','independent'][levelNumber]!==filter)return;
     const button=document.createElement('button');
     button.type='button';button.className='p4-topic-card';
-    const num=document.createElement('small');num.textContent='Topic '+String(i+1).padStart(2,'0');
+    const num=document.createElement('small');num.textContent=String(i+1).padStart(2,'0');
+    const text=document.createElement('div');text.className='p4-topic-card-copy';
     const title=document.createElement('strong');title.textContent=topicLabel(set);
     const meta=document.createElement('span');meta.textContent='3 questions · '+level;
-    button.append(num,title,meta);
+    text.append(title,meta);button.append(num,text);
     button.addEventListener('click',()=>p4ShowDetail_(set.id));
     box.appendChild(button);
   });
-  if(!S.data.sets.length)box.textContent='No topics available in this study path.';
+  if(!box.children.length)box.textContent=sets.length?'No topics match your filter.':'No topics available in this study path.';
+}
+function p4OpenFirstMatching_(review){
+  if(!S.data?.sets?.length)return;
+  const items=S.data.sets;
+  const chosen=review?items.find(x=>p4MasteryLevel_(x.id)<3):null;
+  p4ShowDetail_((chosen||items[0]).id);
 }
 
 function renderSet(){
@@ -231,6 +257,17 @@ document.addEventListener('DOMContentLoaded',()=>{
    button.addEventListener('click',()=>{
      if(!byId('speakingPart4Future').classList.contains('hidden'))close();
    },true);
+ });
+ byId('p4HomeSearch').addEventListener('input',p4RenderLibrary_);
+ byId('p4HomeFilter').addEventListener('change',p4RenderLibrary_);
+ document.querySelectorAll('[data-p4-filter]').forEach(b=>b.addEventListener('click',()=>{
+   byId('p4HomeFilter').value=b.dataset.p4Filter;p4RenderLibrary_();
+ }));
+ byId('p4ContinueLearning').addEventListener('click',()=>p4OpenFirstMatching_(false));
+ byId('p4QuickReview').addEventListener('click',()=>p4OpenFirstMatching_(true));
+ byId('p4ReviewPlan').addEventListener('click',()=>{
+   byId('p4HomeFilter').value='all';p4RenderLibrary_();
+   byId('p4HomeLibraryTitle').scrollIntoView({block:'start',behavior:'smooth'});
  });
  byId('p4BackLibrary').addEventListener('click',p4ShowLibrary_);
  byId('p4PrevTopic').addEventListener('click',()=>p4MoveTopic_(-1));
