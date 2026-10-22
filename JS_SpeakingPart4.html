@@ -12,11 +12,7 @@ function p4Timer_(){
   if(p4PracticeTimer_)return p4PracticeTimer_;
   p4PracticeTimer_=window.AptisSpeakingTimer.create(function(snap){
     byId('p4Time').textContent=window.AptisSpeakingTimer.format(snap.remainingSeconds);
-    byId('p4TimerBar').style.width=Math.max(0,Math.min(100,100*snap.remainingSeconds/Math.max(1,snap.totalSeconds)))+'%';
     const running=snap.status==='running',paused=snap.status==='paused';
-    byId('p4Stage').textContent=paused?'Paused · '+(S.phase==='prep'?'Preparation':'Speaking'):
-      S.phase==='prep'?'Preparation':S.phase==='speak'?'Speaking':
-      S.phase==='done'?'Finished':'Ready';
     byId('p4Begin').disabled=running||paused;
     byId('p4Next').disabled=S.phase!=='prep'||!['running','paused'].includes(snap.status);
     byId('p4Pause').disabled=!running&&!paused;
@@ -53,7 +49,7 @@ function endSpeaking(){
   if(S.phase==='prep'){
     stopClock();S.phase='ready';S.session=null;S.saved=false;
     byId('p4Review').hidden=true;
-    byId('p4Time').textContent='01:00';byId('p4Stage').textContent='Ready';byId('p4TimerBar').style.width='100%';
+    byId('p4Time').textContent='01:00';
     byId('p4Begin').disabled=!S.current;byId('p4Next').disabled=true;
     byId('p4Pause').disabled=true;byId('p4Stop').disabled=true;
     status('Preparation cancelled. No attempt or Mastery was saved.');
@@ -63,7 +59,7 @@ function endSpeaking(){
   S.spoken=Math.max(0,Math.min(120,p4Timer_().snapshot().elapsedSeconds));
   stopClock();S.phase='done';
   byId('p4Review').hidden=!(S.current&&S.session);
-  byId('p4Stage').textContent='Finished';byId('p4Time').textContent='00:00';byId('p4TimerBar').style.width='0%';
+  byId('p4Time').textContent='00:00';
   byId('p4Begin').disabled=!S.current;byId('p4Next').disabled=true;
   byId('p4Pause').disabled=true;byId('p4Stop').disabled=true;
   status('Practice finished. Self-rate and choose Save practice to record an attempt.');
@@ -168,9 +164,13 @@ function p4AnswerHtml(answer){
 }
 function p4ApplyStudyMode(){
  const learn=S.mode==='learn';
- byId('p4LearningTools').hidden=!learn;
+ const isMemorize=S.studyStep==='memorize';
+ // Shared S6.3 Chrome owns Timer visibility for every Part.
+ // Mastery is a deliberate learner action, never a Memorize exercise.
+ window.AptisSpeakingPracticeChrome?.sync(
+   byId('p4TopicDetail')?.querySelector('.study-card'),S.studyStep);
+ byId('p4LearningTools').hidden=!learn||isMemorize;
  if(!learn){p4StopAudio();byId('p4StudyView').value='recall';}
- else if(byId('p4StudyView').value==='recall'&&S.phase==='ready'){} 
 }
 function p4ApplyMastery_(rows){
  if(!p4ValidMastery_(rows))return false;
@@ -401,7 +401,7 @@ function renderSet(){
   p4StopAudio();p4ApplyStudyMode();
   byId('p4Save').disabled=false;
   S.current=S.data.sets.find(x=>x.id===byId('p4Set').value)||S.data.sets[0]||null;
-  stopClock();S.phase='ready';S.session=null;S.saved=false;byId('p4Review').hidden=true;byId('p4Saved').textContent='';byId('p4Stage').textContent='Ready';byId('p4Time').textContent='01:00';byId('p4TimerBar').style.width='100%';
+  stopClock();S.phase='ready';S.session=null;S.saved=false;byId('p4Review').hidden=true;byId('p4Saved').textContent='';byId('p4Time').textContent='01:00';
   byId('p4Begin').disabled=!S.current;byId('p4Next').disabled=true;byId('p4Pause').disabled=true;byId('p4Stop').disabled=true;
   p4SyncMastery();
   if(!S.current){byId('p4Content').textContent='No approved exam sets are available. Use Learn mode for drafts.';byId('p4Models').textContent='';return;}
@@ -495,8 +495,8 @@ function setP4Step_(step) {
   window.AptisSpeakingCompletion?.dismiss();
   if(['prep','speak'].includes(S.phase)){
     stopClock();S.phase='ready';S.session=null;byId('p4Review').hidden=true;
-    byId('p4Time').textContent='01:00';byId('p4TimerBar').style.width='100%';
-    byId('p4Stage').textContent='Ready';
+    byId('p4Time').textContent='01:00';
+    
     byId('p4Begin').disabled=!S.current;byId('p4Next').disabled=true;
     byId('p4Pause').disabled=true;byId('p4Stop').disabled=true;
   }
@@ -511,6 +511,8 @@ function setP4Step_(step) {
     btn.setAttribute('aria-pressed',String(active));
   });
   p4StopAudio();
+  // Apply visibility BEFORE any async Exam content request resolves.
+  p4ApplyStudyMode();
   if(S.mode!==nextMode)load();
   else {p4ApplyStudyMode();p4RenderStudyCards_();}
 }
