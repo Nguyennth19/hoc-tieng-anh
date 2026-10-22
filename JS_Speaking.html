@@ -102,7 +102,18 @@
     $('backBtn').addEventListener('click', showPartHome);
     $('prevQuestionBtn').addEventListener('click', () => navigateItem(-1));
     $('nextQuestionBtn').addEventListener('click', () => navigateItem(1));
-    $('markLearnedBtn').addEventListener('click', () => saveProgress(5, 'learned'));
+    $('markLearnedBtn').addEventListener('click', () => requestSpeakingCompletion_({
+      title:'Confirm learned response',
+      detail:'You are confirming that you can answer this question independently. Your existing review schedule will be updated only after confirmation.',
+      confirmLabel:'✓ Mark learned',
+      onConfirm:()=>saveProgress(5,'learned')
+    }));
+    $('speakingCompletionCancel').addEventListener('click',closeSpeakingCompletion_);
+    $('speakingCompletionAccept').addEventListener('click',()=>{
+      const accept=speakingConfirmPending_;
+      closeSpeakingCompletion_();
+      if(typeof accept==='function')accept();
+    });
     $('favoriteBtn').addEventListener('click', toggleFavorite);
 
     $$('.part-tab[data-part]').forEach(btn => btn.addEventListener('click', () => switchPart(Number(btn.dataset.part))));
@@ -923,6 +934,82 @@
     setSpeakingPlaybackUI_(group,'idle');
     return group;
   }
+
+  /* S6: one reusable deadline-safe practice timer engine for Speaking 1–4.
+     The clock NEVER writes Mastery, Progress or Attempts. */
+  let speakingActiveTimer_ = null;
+  function speakingClockFormat_(seconds){
+    const value=Math.max(0,Math.ceil(Number(seconds)||0));
+    return String(Math.floor(value/60)).padStart(2,'0')+':'+String(value%60).padStart(2,'0');
+  }
+  function createSpeakingPracticeTimer_(onTick,onDone){
+    let totalMs=0,remainingMs=0,startedAt=0,interval=null,phase='idle';
+    function currentRemaining_(){return phase==='running'?Math.max(0,remainingMs-(Date.now()-startedAt)):remainingMs;}
+    function snapshot(){
+      const ms=currentRemaining_();
+      return {status:phase,totalSeconds:totalMs/1000,remainingSeconds:Math.ceil(ms/1000),elapsedSeconds:Math.max(0,(totalMs-ms)/1000)};
+    }
+    function notify(){if(typeof onTick==='function')onTick(snapshot());}
+    function clear_(){if(interval!==null){clearInterval(interval);interval=null;}}
+    function finish_(){
+      if(phase!=='running')return;
+      remainingMs=0;clear_();phase='done';
+      if(speakingActiveTimer_===api)speakingActiveTimer_=null;
+      notify();if(typeof onDone==='function')onDone(snapshot());
+    }
+    function tick_(){
+      if(phase!=='running')return;
+      if(currentRemaining_()<=0){finish_();return;}
+      notify();
+    }
+    function begin_(seconds){
+      const count=Math.max(1,Math.floor(Number(seconds)||0));
+      if(speakingActiveTimer_&&speakingActiveTimer_!==api)speakingActiveTimer_.stop(true);
+      clear_();totalMs=count*1000;remainingMs=totalMs;startedAt=Date.now();phase='running';
+      speakingActiveTimer_=api;notify();interval=setInterval(tick_,200);return snapshot();
+    }
+    function pause_(){
+      if(phase!=='running')return snapshot();
+      remainingMs=currentRemaining_();clear_();phase='paused';notify();return snapshot();
+    }
+    function resume_(){
+      if(phase!=='paused')return snapshot();
+      if(speakingActiveTimer_&&speakingActiveTimer_!==api)speakingActiveTimer_.stop(true);
+      speakingActiveTimer_=api;startedAt=Date.now();phase='running';notify();
+      interval=setInterval(tick_,200);return snapshot();
+    }
+    function stop_(reset){
+      const ms=currentRemaining_();clear_();
+      if(reset){remainingMs=totalMs;phase='idle';}
+      else{remainingMs=ms;phase='stopped';}
+      if(speakingActiveTimer_===api)speakingActiveTimer_=null;
+      notify();return snapshot();
+    }
+    const api=Object.freeze({start:begin_,pause:pause_,resume:resume_,stop:stop_,snapshot:snapshot});
+    return api;
+  }
+  window.AptisSpeakingTimer=Object.freeze({
+    create:createSpeakingPracticeTimer_,format:speakingClockFormat_,
+    defaultSeconds:Object.freeze({part1:30,part2:45,part3:45,part4Preparation:60,part4Speaking:120})
+  });
+
+  /* Shared confirmation UI, not a new persistence policy.
+     Only a user's explicit Confirm click invokes the supplied save callback. */
+  let speakingConfirmPending_=null;
+  function closeSpeakingCompletion_(){
+    $('speakingCompletionDialog').classList.add('hidden');
+    speakingConfirmPending_=null;
+  }
+  function requestSpeakingCompletion_(opts){
+    if(!opts||typeof opts.onConfirm!=='function')return;
+    speakingConfirmPending_=opts.onConfirm;
+    $('speakingCompletionTitle').textContent=opts.title||'Confirm completion';
+    $('speakingCompletionDetail').textContent=opts.detail||'Save your self-assessed progress?';
+    $('speakingCompletionAccept').textContent=opts.confirmLabel||'Confirm';
+    $('speakingCompletionDialog').classList.remove('hidden');
+    $('speakingCompletionAccept').focus();
+  }
+  window.AptisSpeakingCompletion=Object.freeze({confirm:requestSpeakingCompletion_,dismiss:closeSpeakingCompletion_});
   /* S5: shared, pure Memorize algorithm used by Part 2/3 and Part 4.
      Teacher answers are kept verbatim. This computes only a draft/score locally.
      The Part 1 layout and its existing LV1/LV2 cadence are intentionally preserved. */
