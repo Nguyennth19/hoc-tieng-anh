@@ -346,7 +346,10 @@
     setLoadingVisible(false);
     if (!isValidBootstrap(data)) return false;
     state.data = data;
-    $('appTitle').textContent = data.app.title || 'APTIS B2 Coach';
+    // The global shell owns the brand label; older layouts exposed #appTitle.
+    // Keep bootstrap compatible with both layouts without aborting Speaking initialization.
+    const appTitleEl = $('appTitle');
+    if (appTitleEl) appTitleEl.textContent = data.app.title || 'APTIS B2 Coach';
     $('errorView').classList.add('hidden');
     const wasStudying = !$('studyView').classList.contains('hidden');
     const wasProgress = !$('progressView').classList.contains('hidden');
@@ -503,7 +506,7 @@
       $('heroPill').textContent = 'Speaking Part 1';
       $('heroTitle').textContent = 'Small practice. Stronger answers.';
       $('heroText').textContent = 'Build the core sentence first, then speak naturally for 30 seconds.';
-      $('libraryTitle').textContent = '29 personal questions';
+      $('libraryTitle').textContent = (state.items.length || 0) + ' personal questions';
       $('progressLabel').textContent = 'mastered';
     } else if (state.activePart === 2) {
       $('heroPill').textContent = 'Speaking Part 2';
@@ -786,6 +789,7 @@
     renderPromptStepper();
     renderPromptContent();
     setMode('shadow');
+    updateMasterControls_();
   }
 
   // Shared B1 formula markers; reusable language across Speaking / Writing.
@@ -971,10 +975,13 @@
       if(!q||!item.models[i])return;
       const btn=document.createElement('button');btn.type='button';btn.className='p2-test-q';
       btn.classList.toggle('active',state.currentPrompt===i+1);
-      btn.textContent='Q'+(i+1)+' · '+q;
+      const mastered=Boolean(item.promptProgress && item.promptProgress[i] && item.promptProgress[i].status==='learned');
+      btn.textContent=(mastered?'✓ ':'○ ')+'Q'+(i+1)+' · '+q;
+      btn.setAttribute('aria-label','Question '+(i+1)+(mastered?' mastered':' not yet mastered'));
+      btn.classList.toggle('mastered',mastered);
       btn.addEventListener('click',()=>{
         stopTimer(true);stopSpeech();state.currentPrompt=i+1;
-        renderPromptStepper();renderPromptContent();renderP2TestOutline_();resetTimerDisplay();
+        renderPromptStepper();renderPromptContent();renderP2TestOutline_();resetTimerDisplay();updateMasterControls_();
       });area.appendChild(btn);
     });
   }
@@ -1054,6 +1061,7 @@
     if(unified)unified.classList.toggle('hidden',![2,3].includes(state.activePart)||!['shadow','memorize'].includes(mode));
     if([2,3].includes(state.activePart)){if(mode!=='test')renderP2Unified_();renderP2TestOutline_();}
     if (mode === 'test') resetTimerDisplay();
+    updateMasterControls_();
   }
 
   function setMemorizeLevel(level) {
@@ -1197,15 +1205,72 @@
     return state.activePart === 2 ? Number(state.data.app.timers.part2 || 45) : Number(state.data.app.timers.part1 || 30);
   }
 
+  // Accessible modal: only shown after Apps Script confirms the save.
+  function showProgressSavedDialog_(message, count, total) {
+    const existing = document.getElementById('progressSavedDialog');
+    if (existing) existing.remove();
+    const backdrop = document.createElement('div');
+    backdrop.id = 'progressSavedDialog';
+    backdrop.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;';
+    const panel = document.createElement('div');
+    panel.setAttribute('role','dialog');
+    panel.setAttribute('aria-modal','true');
+    panel.setAttribute('aria-label','Progress saved');
+    panel.style.cssText = 'width:min(420px,100%);background:#fff;color:#243050;border-radius:18px;padding:26px;box-shadow:0 16px 48px rgba(0,0,0,.2);text-align:center;';
+    const heading = document.createElement('h3');
+    heading.textContent = count === total ? '✓ Topic mastered!' : '✓ Progress saved!';
+    heading.style.cssText = 'font-size:21px;margin:0 0 12px;';
+    const explanation = document.createElement('p');
+    explanation.textContent = message;
+    explanation.style.cssText = 'line-height:1.6;margin:0 0 22px;';
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.textContent = 'Continue learning';
+    close.style.cssText = 'background:#6954ff;color:#fff;border:0;border-radius:10px;padding:12px 22px;cursor:pointer;font-weight:600;';
+    function dismiss() { backdrop.remove(); }
+    close.addEventListener('click', dismiss);
+    backdrop.addEventListener('click', function(e) { if (e.target === backdrop) dismiss(); });
+    panel.appendChild(heading);
+    panel.appendChild(explanation);
+    const status=document.createElement('div');
+    status.style.cssText='display:flex;justify-content:space-between;font-weight:600;font-size:13px;margin-bottom:8px;';
+    const title=document.createElement('span');title.textContent='Topic completion';
+    const fraction=document.createElement('span');fraction.textContent=count+'/'+total;
+    status.appendChild(title);status.appendChild(fraction);
+    const track=document.createElement('div');
+    track.style.cssText='height:9px;background:#e5e7eb;border-radius:20px;overflow:hidden;margin-bottom:20px;';
+    const filled=document.createElement('div');
+    filled.style.cssText='height:100%;background:#6954ff;width:'+Math.max(0,Math.min(100,100*count/Math.max(1,total)))+'%;';
+    track.appendChild(filled);
+    panel.appendChild(status);panel.appendChild(track);
+    panel.appendChild(close);
+    backdrop.appendChild(panel);
+    document.body.appendChild(backdrop);
+    close.focus();
+  }
+
   function saveProgress(rating, status) {
     const item = currentItem();
+    if (!item) return;
     const p = currentProgress() || {};
+    if (state.currentMode !== 'test') { toast('Finish speaking and writing practice in Test before marking mastered.'); return; }
+    if ((p.status || '') === 'learned') { toast('This response is already mastered.'); return; }
     const id = currentProgressId();
+    const savedPart = state.activePart;
+    const savedPrompt = state.currentPrompt;
+    const button = $('markLearnedBtn');
+    button.disabled = true;
 
     google.script.run
       .withSuccessHandler(result => {
-        if (state.activePart >= 2) {
-          item.promptProgress[state.currentPrompt - 1] = result.progress;
+        button.disabled = false;
+        if (!result || !result.ok || !result.progress ||
+            result.progress.questionId !== id || result.progress.status !== status) {
+          toast('Save could not be verified. Please retry.');
+          return;
+        }
+        if (savedPart >= 2) {
+          item.promptProgress[savedPrompt - 1] = result.progress;
           recalcPart2Aggregate(item);
         } else {
           item.progress = result.progress;
@@ -1213,17 +1278,34 @@
         renderSummary();
         $('statusBadge').textContent = statusLabel(item.progress.status);
         renderList();
-        persistCurrentBootstrapCache();
-        toast(status === 'learned' ? 'Marked as learned.' : 'Progress saved.');
+        renderProgressDashboard();
+        if (state.data) writeBootstrapCache(state.data);
+
+        const learnedCount = savedPart >= 2
+          ? (item.promptProgress || []).filter(x => x && x.status === 'learned').length : 1;
+        const total = savedPart >= 2 ? (item.promptProgress || []).length : 1;
+        const message = savedPart >= 2
+          ? ('Answer '+savedPrompt+' saved. '+learnedCount+'/'+total+
+            ' responses mastered in this topic. '+
+            (learnedCount === total ? 'Topic completed!' : 'Complete the remaining responses to master this topic.'))
+          : 'This response is marked as learned.';
+        showProgressSavedDialog_(message, learnedCount, total);
+        renderP2TestOutline_();
+        updateMasterControls_();
+        // Refresh from the server rather than relying on local cache after reload.
+        refreshDataInBackground(true);
       })
-      .withFailureHandler(err => toast('Could not save progress: ' + safeError(err)))
+      .withFailureHandler(err => {
+        button.disabled = false;
+        toast('Could not save progress: ' + safeError(err));
+      })
       .saveQuestionProgress({
         questionId: id,
         status: status,
         rating: rating,
         reviewCount: Number(p.reviewCount || 0),
         note: p.note || '',
-        favorite: false
+        favorite: Boolean(p.favorite)
       });
   }
 
@@ -1374,10 +1456,27 @@
     if (next !== state.currentIndex) openItem(next);
   }
 
+  function updateMasterControls_() {
+    const btn=$('markLearnedBtn');
+    if (!btn) return;
+    const multi=[2,3].includes(state.activePart);
+    const isTest=state.currentMode==='test';
+    btn.classList.toggle('hidden',!isTest);
+    btn.style.display=isTest?'block':'none';
+    btn.style.margin=isTest?'16px auto':'';
+    const item=currentItem();
+    const progress=multi && item && item.promptProgress
+      ? item.promptProgress[state.currentPrompt-1] : (item && item.progress);
+    const mastered=Boolean(progress && progress.status==='learned');
+    btn.disabled=mastered;
+    btn.textContent=mastered?'✓ '+(multi?'Q'+state.currentPrompt+' mastered':'Already mastered')
+      : multi?'✓ Master Q'+state.currentPrompt+' response':'✓ Mark learned';
+  }
+
   function syncFooter() {
     $('prevQuestionBtn').disabled = state.currentIndex <= 0;
     $('nextQuestionBtn').disabled = state.currentIndex >= state.items.length - 1;
-    $('markLearnedBtn').textContent = state.activePart >= 2 ? '✓ Master this response' : '✓ Mark learned';
+    updateMasterControls_();
   }
 
   function showHome() {

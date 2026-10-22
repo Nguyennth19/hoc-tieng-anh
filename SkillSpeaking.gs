@@ -1,6 +1,6 @@
 function getBootstrapData(forceRefresh) {
   ensureSchema_();
-  ensurePart3ExamBankReady_();
+  // P3 legacy auto-reseed is disabled. Bootstrap never modifies approved content.
 
   const bypass = forceRefresh === true;
   const p1 = getCachedSpeakingContent_('p1', bypass, getSpeakingPart1_);
@@ -71,18 +71,78 @@ function getBootstrapData(forceRefresh) {
   };
 }
 
+/**
+ * CacheService values are limited to about 100 KB each. Store JSON as
+ * conservative UTF-16 slices (18k code units => <=72 KB UTF-8 even for emoji).
+ * Write the manifest LAST: a partial/expired generation becomes a cache miss.
+ * The small manifest lives at the original key; chunks are generation-scoped.
+ * Cache failures must never alter stored Sheet data or block the loader.
+ */
+function speakingCacheRead_(cache, key) {
+  // CacheService is best-effort. A read/remove failure must fall back to
+  // the authoritative Sheet loader, never abort Speaking bootstrap.
+  const invalidate = function() {
+    try { cache.remove(key); } catch (ignored) {}
+  };
+  try {
+    const raw = cache.get(key);
+    if (!raw) return null;
+    let manifest;
+    try { manifest = JSON.parse(raw); } catch (e) { invalidate(); return null; }
+    if (!manifest || manifest.cacheFormat !== 'chunked-v1' ||
+        !Number.isInteger(manifest.parts) || manifest.parts < 1 || manifest.parts > 200 ||
+        !/^[a-zA-Z0-9-]{8,64}$/.test(String(manifest.token || ''))) {
+      invalidate();
+      return null;
+    }
+    const chunks = [];
+    for (let i = 0; i < manifest.parts; i++) {
+      const fragment = cache.get(key + ':chunk:' + manifest.token + ':' + i);
+      if (fragment == null) { invalidate(); return null; }
+      chunks.push(fragment);
+    }
+    const text = chunks.join('');
+    if (text.length !== manifest.length) { invalidate(); return null; }
+    try { return JSON.parse(text); }
+    catch (e) { invalidate(); return null; }
+  } catch (e) {
+    console.warn('Speaking cache read skipped; using Sheet loader: ' + String(e));
+    return null;
+  }
+}
+function speakingCacheWrite_(cache, key, data, ttl) {
+  const json = JSON.stringify(data);
+  if (!json) return;
+  const chunkLength = 18000;
+  const parts = Math.ceil(json.length / chunkLength);
+  if (!parts || parts > 200) return; // Bypass cache, never block live content.
+  const token = Utilities.getUuid().replace(/[^a-zA-Z0-9-]/g, '');
+  const written = [];
+  try {
+    for (let i = 0; i < parts; i++) {
+      const partKey = key + ':chunk:' + token + ':' + i;
+      cache.put(partKey, json.slice(i * chunkLength, (i + 1) * chunkLength), ttl);
+      written.push(partKey);
+    }
+    cache.put(key, JSON.stringify({cacheFormat:'chunked-v1',token:token,parts:parts,length:json.length}), ttl);
+  } catch (e) {
+    written.forEach(function(partKey) { try { cache.remove(partKey); } catch (ignored) {} });
+    try { cache.remove(key); } catch (ignored) {}
+    console.warn('Speaking cache skipped; direct Sheet read remains available: ' + String(e));
+  }
+}
+
 function getCachedSpeakingContent_(partKey, forceRefresh, loaderFn) {
   const cache = CacheService.getScriptCache();
   const dbId = getDatabase_().getId();
   const key = 'speak-content:' + APP_CONFIG.SCHEMA_VERSION + ':' + getSpeakingContentVersion_(partKey) + ':' + dbId + ':' + partKey;
   if (!forceRefresh) {
-    const hit = cache.get(key);
-    if (hit) {
-      try { return JSON.parse(hit); } catch (e) {}
-    }
+    const hit = speakingCacheRead_(cache, key);
+    if (Array.isArray(hit)) return hit;
   }
   const data = loaderFn();
-  try { cache.put(key, JSON.stringify(data), APP_CONFIG.CACHE_SECONDS); } catch (e) {}
+  if (!Array.isArray(data)) throw new Error('Invalid Speaking content for ' + partKey + ': expected array');
+  speakingCacheWrite_(cache, key, data, APP_CONFIG.CACHE_SECONDS);
   return data;
 }
 
@@ -91,13 +151,11 @@ function getCachedProgressMap_(forceRefresh) {
   const dbId = getDatabase_().getId();
   const key = 'speak-progress:' + dbId;
   if (!forceRefresh) {
-    const hit = cache.get(key);
-    if (hit) {
-      try { return JSON.parse(hit); } catch (e) {}
-    }
+    const hit = speakingCacheRead_(cache, key);
+    if (hit && typeof hit === 'object' && !Array.isArray(hit)) return hit;
   }
   const data = getProgressMap_();
-  try { cache.put(key, JSON.stringify(data), APP_CONFIG.PROGRESS_CACHE_SECONDS || 120); } catch (e) {}
+  speakingCacheWrite_(cache, key, data, APP_CONFIG.PROGRESS_CACHE_SECONDS || 120);
   return data;
 }
 
@@ -130,27 +188,9 @@ function getSpeakingContentVersion_(partKey) {
  * If the active exam bank is not present, seed content only (fast) and leave images to background batches.
  */
 function ensurePart3ExamBankReady_() {
-  try {
-    const ss = getDatabase_();
-    const p3 = ss.getSheetByName(SHEET_NAMES.SPEAKING_P3);
-    const settings = ss.getSheetByName(SHEET_NAMES.SETTINGS);
-    if (!p3 || !settings) return;
-    const currentVersion = getSetting_(settings, 'p3_description_version');
-    const idx = headerIndexMap_(p3);
-    const values = p3.getDataRange().getValues();
-    let activeExamCount = 0;
-    values.slice(1).forEach(function(row) {
-      const id = String(row[idx.id] || '');
-      const active = idx.active === undefined ? true : !(row[idx.active] === false || String(row[idx.active]).toLowerCase() === 'false');
-      if (/^SP3-EX-\d{3}$/.test(id) && active) activeExamCount++;
-    });
-    if (activeExamCount === 0) { // Seed only an empty exam bank; never overwrite curated Q2/Q3.
-      upgradeSpeakingPart3Description_(p3, settings, []);
-      clearSpeakingContentCache_();
-    }
-  } catch (e) {
-    // Bootstrap should remain resilient; the normal migration/error path can surface real failures.
-  }
+  // Deprecated API retained for compatibility. Never write production
+  // content during bootstrap. Recovery uses the independently backed-up bank.
+  return { ok: true, autoSeedDisabled: true };
 }
 
 /**

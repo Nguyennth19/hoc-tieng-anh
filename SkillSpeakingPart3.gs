@@ -592,6 +592,10 @@ function getPart3DescriptionSeedData_() {
 }
 
 function upgradeSpeakingPart3Description_(sheet, settings, report) {
+  // Phase 1B hard safety lock. NEVER seed Q1-only legacy data over curated Q1–Q3.
+  // This guard covers manual/direct execution as well as automatic callers.
+  throw new Error('P3_LEGACY_SEED_DISABLED: Restore the reviewed full Q1-Q3 bank from the Phase 0 backup using a separately approved recovery procedure.');
+
   const current = getSetting_(settings, 'p3_description_version');
   if (current === PART3_DESCRIPTION_VERSION) return;
 
