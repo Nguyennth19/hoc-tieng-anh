@@ -385,12 +385,13 @@
             </div>
           </div>
 
-          <div class="test-box speaking-practice-timer" role="group" aria-label="Speaking practice timer">
-              <div id="testLabel" class="test-label">APTIS SPEAKING PRACTICE</div>
-              <div id="timer" class="timer" aria-live="off">00:30</div><span id="speakingTimerStage" class="speaking-timer-stage" role="status" aria-live="polite">Ready to practise</span>
-              <div class="timer-bar"><div id="timerBar" class="timer-bar-fill"></div></div>
-              <p id="testInstruction" class="test-instruction">Answer aloud without reading the model.</p>
-              <div class="test-actions speaking-timer-actions"><button id="startTimerBtn" class="primary-btn large" type="button">Start speaking</button><button id="pauseTimerBtn" class="secondary-btn large" type="button" disabled>⏸ Pause</button><button id="stopTimerBtn" class="secondary-btn large" type="button" disabled>■ Stop</button></div>
+          <div class="test-box speaking-practice-timer" role="group" aria-label="Speaking practice timer" data-speaking-timer="p123">
+              <div id="timer" class="timer" aria-live="off" aria-label="Time remaining">00:30</div>
+              <div class="test-actions speaking-timer-actions">
+                <button id="startTimerBtn" class="primary-btn large" type="button">▶ Start speaking</button>
+                <button id="pauseTimerBtn" class="secondary-btn large" type="button" disabled>⏸ Pause</button>
+                <button id="stopTimerBtn" class="secondary-btn large" type="button" disabled>■ Stop</button>
+              </div>
             </div>
 
           <footer class="study-footer speaking-completion-actions">
