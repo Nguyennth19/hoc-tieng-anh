@@ -175,12 +175,68 @@ button,input,select{font:inherit}button{cursor:pointer}button:disabled{cursor:no
 .p2-test-q.active{background:#f0ecff;border-color:#c8bfff;color:#6247e7;font-weight:700}
 @media(max-width:520px){.p2-topic-card{padding:12px}.p2-memory-actions button{flex:1 1 auto}.p2-topic-card .p2-dictation{min-height:185px}}
 
+/* S6.2: Speaking owns ONE shared content width, matching the usable content
+   inside the 1440px global-stage (24px gutters per side on desktop).
+   Do not add max-width on individual P1/P2/P3/P4 cards or detail sections.
+   Reading/Listening retain their existing --skill-content-max:1120px. */
+.speaking-shell{
+  --skill-content-max:1392px;
+  width:100%;
+  min-width:0;
+}
+.speaking-shell .skill-content-frame{
+  min-width:0;
+  width:min(100%,var(--skill-content-max));
+  max-width:var(--skill-content-max);
+  margin-inline:auto;
+}
+.speaking-shell .speaking-main,
+.speaking-shell #speakingPart4Future{
+  min-width:0;
+  box-sizing:border-box;
+}
+.speaking-shell .study-topline{
+  display:flex;
+  justify-content:flex-end;
+  align-items:center;
+  min-width:0;
+  gap:8px;
+  min-height:44px;
+  margin:0 0 10px;
+}
+.speaking-shell .study-top-actions{
+  display:flex;
+  justify-content:flex-end;
+  align-items:center;
+  gap:8px;
+  width:auto;
+  margin-left:auto;
+  min-width:0;
+}
+.speaking-shell .study-top-actions .study-nav-btn{
+  min-height:44px;
+  flex:0 1 auto;
+  white-space:nowrap;
+}
+.speaking-shell .study-card,
+.speaking-shell .welcome-card,
+.speaking-shell .today-section,
+.speaking-shell .library-section{
+  min-width:0;
+  box-sizing:border-box;
+}
+@media(max-width:650px){
+  .speaking-shell .study-topline{margin-bottom:8px;gap:6px}
+  .speaking-shell .study-top-actions{gap:6px}
+  .speaking-shell .study-top-actions .study-nav-btn{min-width:0;max-width:9rem}
+}
+
 /* S2 shared Speaking layout: all Parts use the same reusable frame from Styles.html.
-   Show the shared selector for P1–P3 home and for P4; never resize per Part. */
+   Show the shared selector only on home/library, never inside Topic Detail. */
 .speaking-shell .shared-part-switch{display:none;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:12px auto 16px}
 .speaking-shell .shared-part-switch .part-tab{min-width:0}
 .speaking-shell:has(#homeView:not(.hidden)) .shared-part-switch,
-.speaking-shell.p4-mode .shared-part-switch{display:grid}
+.speaking-shell.p4-mode:not(.p4-detail-mode) .shared-part-switch{display:grid}
 .speaking-shell .shared-part-switch [data-p4-home].active{background:var(--purple-soft);border-color:#ded9fb;color:var(--purple-2)}
 /* P4 has a different view but uses the same header/selector/content frame.
    No blanket direct-child hiding: it can hide live settings and error feedback. */
