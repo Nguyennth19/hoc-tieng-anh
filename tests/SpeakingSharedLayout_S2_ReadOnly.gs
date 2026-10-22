@@ -27,7 +27,7 @@ function testSpeakingSharedLayoutS2ReadOnly() {
     tabsOwnedByCommonCSS:has(commonCss,'.speaking-shell .shared-part-switch{display:none')&&!has(p4Css,'.speaking-shell .shared-part-switch'),
     p4NoWidthOverride:!has(p4Css,'calc(100% - 32px)')&&!has(p4Css,'max-width:1020px'),
     noBlanketHide:!has(p4Css,'.p4-mode > :not(')&&has(commonCss,'.speaking-shell.p4-mode > .speaking-main{display:none!important}'),
-    uniquePart4CSSRemains:has(p4Css,'.p4dev .p4-topic-card')&&has(p4Css,'.p4dev .p4dev-time'),
+    uniquePart4CSSRemains:has(p4Css,'.p4dev .p4-topic-card')&&!has(p4Css,'.p4dev .study-topline #p4BackLibrary')&&!has(p4Css,'.p4dev .study-top-actions{'),
     p4LibraryDetailRemain:has(p4,'id="p4TopicLibrary"')&&has(p4,'id="p4TopicDetail"'),
     part123HandlersSafe:count(commonJs,/\$\$\('\.part-tab\[data-part\]'\)/g)===3&&count(commonJs,/(?<!\$)\$\('\.part-tab\[data-part\]'\)\.forEach/g)===0,
     p4MountInShell:has(p4Js,'function p4MountInsideSpeaking_')&&has(p4Js,'shell.appendChild(el)'),
@@ -39,7 +39,7 @@ function testSpeakingSharedLayoutS2ReadOnly() {
   const issues=Object.keys(checks).filter(function(k){return !checks[k];});
   const widths=[1440,1024,768,390,320].map(function(v){
     const padding=v<=600?10:v<=900?14:24;
-    return {viewport:v,expectedUnifiedWidth:Math.min(Math.min(v,1440)-2*padding,1120)};
+    return {viewport:v,expectedUnifiedWidth:Math.min(Math.min(v,1440)-2*padding,1392)};
   });
   const result={ok:issues.length===0,totalChecks:Object.keys(checks).length,failed:issues,
     part4ClientIds:ids.length,calculatedWidthReferences:widths,
