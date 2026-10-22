@@ -70,3 +70,25 @@ Safe concurrency: in-flight same-key requests share a single backend call; navig
 ## Next proposed stage (approval required)
 
 **S6.2 — Shared Layout & Header Cleanup** after user approval: harmonize page width, Topic Detail header, Prev/Next and back navigation, reuse common CSS and remove competing Part4-only styles. No backend, Mastery or migration edits.
+
+## S6.1.1 — Staging evidence and Bootstrap hard-fix (2026-10-22)
+
+User browser evidence confirms `topicCount:51`, `masteryLoaded:true`, `inflight:[]`, and accumulated S6.1 counters `content:learn=2`, `content:exam=0`, `mastery:live=3`. These counters are **since page load** and do not reveal which user actions triggered them; they are not proof of redundant calls. No real Exam-mode visit was represented in those counters.
+
+**Verified production-independent frontend defect in staging:** Chrome console reported `Uncaught TypeError: Cannot set properties of null (setting 'textContent')` at `applyBootstrap`, line 432. Direct GitHub source confirms that `JS_Speaking.html` dereferenced `$('appTitle')`, while current `ViewSpeaking.html` and `Index.html` no longer contain `id="appTitle"`. The obsolete write has been removed on **S6.1 branch only**; the page header is already owned by the shared AppShell / ViewSpeaking markup. No server/backend fix required. Additional source gates verify that this deleted DOM id is not dereferenced again.
+
+**First visit latency:** Part 4 Learn first visit and Test first visit each fetch a distinct, server-validated resource (`getSpeakingPart4Dev('learn')` and `getSpeakingPart4Dev('exam')`). A cache **cannot eliminate network latency on a true first-ever request**. Once each mode is successfully cached, mode revisits use it without showing the Blocking Loading label. The current branch deliberately does not add global speculative prefetch from the home page, which would consume extra Google Apps Script quota, slow other modules and potentially increase server traffic. A separate *controlled* warm-up gate may be proposed if first-click latency remains unacceptable after safe staging QA.
+
+Browser console `An iframe ... allow-scripts and allow-same-origin ...` is a browser warning about the Google-hosted execution environment, distinct from the real `appTitle` TypeError. No project code can categorically suppress that platform warning.
+
+**Regression after S6.1.1:** 43/43 S6.1 + 45/45 S6 + 41/41 S5 + 33/33 S4 + 30/30 S3 + 24/24 S2 + 17/17 P4 hard QA = **233/233 PASS** in source harness; two edited frontend JavaScript assets syntax PASS. AppScript staging browser retest after pulling the latest branch is **pending**.
+
+### Re-test instructions
+
+1. Pull `refactor/speaking-p4-shared-cache-s61-20261022` into the QA-only Apps Script project.
+2. Run `testSpeakingPart4SharedCacheS61ReadOnly()`; expect `ok:true`, `totalChecks:43`, `failed:[]`.
+3. Reload the staging `/dev` (not production); verify Chrome Console has **no new `applyBootstrap` / `appTitle` TypeError**, then visit Part 1, 2, 3 and 4.
+4. In the correct Apps Script iframe Console, run `window.AptisSpeakingPart4?.qaCacheInfo?.()` **before** each action and record content Learn, Exam and Mastery counters. On cached re-entry, Learn → Memorize and subsequent Learn/Test toggles, matching per-mode counters should remain unchanged. First Exam visit is allowed one call. Explicit Refresh necessarily increments its mode's counter.
+5. On a fresh browser profile, expect initial cold content load latency; the acceptance test is **no redundant re-fetch and no blocking-loader flash after verified cache has been populated**. Do not alter Google Sheet production data to test caching.
+
+**Release gate:** Do not claim final staging PASS until the user confirms the live app no longer throws, all 51 topics persist across reload, and cached navigation is nonblocking.
