@@ -1100,7 +1100,7 @@
 
   let p1RecallTargets_ = [];
   function tokenizeP1Recall_(value) {
-    return String(value || '').trim().toLowerCase().replace(/[^a-z0-9'-]/g, '');
+    return speakingNormalizeRecall_(value);
   }
   function renderMemorize() {
     const model = currentModel();
@@ -1163,13 +1163,7 @@
     if (state.memorizeLevel === 3) {
       const value = String($('p1DictationInput')?.value || '').trim();
       if (!value) { $('p1Feedback').textContent = 'Write an answer first.'; return; }
-      const target = String(currentModel() || '').toLowerCase().match(/[a-z]+(?:'[a-z]+)?/g) || [];
-      const attempt = value.toLowerCase().match(/[a-z]+(?:'[a-z]+)?/g) || [];
-      const counts = {};
-      target.forEach(function(word){counts[word] = (counts[word]||0)+1;});
-      let hits = 0;
-      attempt.forEach(function(word){if(counts[word]>0){hits++;counts[word]--;}});
-      const score = Math.round(100 * hits / Math.max(1,target.length));
+      const score = speakingWordRecallScore_(currentModel(),value);
       $('p1Feedback').textContent = 'Word recall: ' + score + '%. Compare the original answer below; clear B1 meaning matters more than exact wording.';
       return;
     }
