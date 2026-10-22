@@ -330,7 +330,12 @@
             </div>
 
             <div class="content-block">
-              <div class="block-row"><span id="fullAnswerLabel" class="block-label">Full answer</span><button id="listenBtn" class="listen-pill" type="button">▶ Listen</button></div>
+              <div class="block-row"><span id="fullAnswerLabel" class="block-label">Full answer</span>
+                <div id="learnAnswerAudio" class="speaking-audio-controls" role="group" aria-label="Answer audio">
+                  <button id="listenBtn" data-audio-action="play" class="primary-btn" type="button">▶ Play</button>
+                  <button id="listenPauseBtn" data-audio-action="pause" class="secondary-btn" type="button" disabled>⏸ Pause</button>
+                  <button id="listenStopBtn" data-audio-action="stop" class="secondary-btn" type="button" disabled>■ Stop</button>
+                </div></div>
               <p id="modelAnswer" class="model-text"></p>
             </div>
 
@@ -343,7 +348,11 @@
           <div id="shadowMode" class="mode-panel hidden">
             <div class="mode-intro" id="shadowIntro"><strong>Listen → pause → repeat</strong><span>Focus on rhythm, clear endings and natural linking.</span></div>
             <div id="shadowSentences" class="shadow-list"></div>
-            <div class="inline-actions"><button id="shadowAllBtn" class="primary-btn" type="button">▶ Shadow all</button><button id="stopSpeechBtn" class="secondary-btn" type="button">■ Stop</button></div>
+            <div id="shadowAudioControls" class="inline-actions speaking-audio-controls" role="group" aria-label="Learn audio">
+              <button id="shadowAllBtn" data-audio-action="play" class="primary-btn" type="button">▶ Play</button>
+              <button id="shadowPauseBtn" data-audio-action="pause" class="secondary-btn" type="button" disabled>⏸ Pause</button>
+              <button id="stopSpeechBtn" data-audio-action="stop" class="secondary-btn" type="button" disabled>■ Stop</button>
+            </div>
           </div>
 
           <div id="memorizeMode" class="mode-panel hidden">
