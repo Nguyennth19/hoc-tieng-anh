@@ -136,7 +136,7 @@ function p4RenderLibrary_(){
   const counts=[0,0,0,0];
   sets.forEach(x=>{counts[p4MasteryLevel_(x.id)]++;});
   const validIds=new Set(sets.map(x=>String(x.id)));
-  const tracked=new Set(P4_MASTERY.rows.filter(x=>validIds.has(String(x.questionId)) && [0,1,2,3].includes(Number(x.level))).map(x=>String(x.questionId)));
+  const tracked=new Set(P4_MASTERY.rows.filter(x=>validIds.has(String(x.questionId)) && [1,2,3].includes(Number(x.level))).map(x=>String(x.questionId)));
   byId('p4HomeNew').textContent=P4_MASTERY.loaded?tracked.size:'—';
   byId('p4HomeReading').textContent=P4_MASTERY.loaded?counts[1]:'—';
   byId('p4HomeHints').textContent=P4_MASTERY.loaded?counts[2]:'—';
@@ -152,7 +152,8 @@ function p4RenderLibrary_(){
     const levelNumber=p4MasteryLevel_(set.id);
     const level=levels[levelNumber];
     if(query&&!topicLabel(set).toLowerCase().includes(query))return;
-    if(filter!=='all'&&['new','reading','hints','independent'][levelNumber]!==filter)return;
+    if(filter==='practised'&&!tracked.has(String(set.id)))return;
+    if(filter!=='all'&&filter!=='practised'&&['new','reading','hints','independent'][levelNumber]!==filter)return;
     const button=document.createElement('button');
     button.type='button';button.className='p4-topic-card';
     const num=document.createElement('small');num.textContent=String(i+1).padStart(2,'0');
@@ -168,7 +169,8 @@ function p4RenderLibrary_(){
 function p4OpenFirstMatching_(review){
   if(!S.data?.sets?.length)return;
   const items=S.data.sets;
-  const chosen=review?items.find(x=>p4MasteryLevel_(x.id)<3):null;
+  const chosen=review?items.find(x=>[1,2].includes(p4MasteryLevel_(x.id))):items.find(x=>[1,2].includes(p4MasteryLevel_(x.id)));
+  if(review&&!chosen){byId('p4HomeFilter').value='practised';p4RenderLibrary_();byId('p4HomeLibraryTitle').scrollIntoView({block:'start'});return;}
   p4ShowDetail_((chosen||items[0]).id);
 }
 
@@ -269,7 +271,7 @@ document.addEventListener('DOMContentLoaded',()=>{
  byId('p4ContinueLearning').addEventListener('click',()=>p4OpenFirstMatching_(false));
  byId('p4QuickReview').addEventListener('click',()=>p4OpenFirstMatching_(true));
  byId('p4ReviewPlan').addEventListener('click',()=>{
-   byId('p4HomeFilter').value='all';p4RenderLibrary_();
+   byId('p4HomeFilter').value='practised';p4RenderLibrary_();
    byId('p4HomeLibraryTitle').scrollIntoView({block:'start',behavior:'smooth'});
  });
  byId('p4BackLibrary').addEventListener('click',p4ShowLibrary_);
