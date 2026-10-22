@@ -8,6 +8,7 @@ function testSpeakingPart4SharedCacheS61ReadOnly(){
   const shared=source('JS_Speaking');
   const p4=source('JS_SpeakingPart4');
   const p4View=source('ViewSpeakingPart4');
+  const speakingView=source('ViewSpeaking');
   const has=(s,needle)=>s.includes(needle);
   const n=(s,re)=>(s.match(re)||[]).length;
   const read=shared.slice(shared.indexOf('function readBootstrapCache('),shared.indexOf('function persistCurrentBootstrapCache()'));
@@ -18,6 +19,8 @@ function testSpeakingPart4SharedCacheS61ReadOnly(){
   const valid=p4.slice(p4.indexOf('function p4ValidContent_('),p4.indexOf('function p4ValidMastery_('));
   const checks={
     sharedCacheManagerOneOwner:n(shared,/window\.AptisSpeakingCache=createSpeakingContentCache_\(\)/g)===1,
+    noObsoleteBootstrapTitleWrite:!has(shared,"$('appTitle').textContent")&&has(speakingView,'<h1>Speaking</h1>'),
+    missingBootstrapIdGuard:!has(speakingView,'id="appTitle"')&&!has(shared,"$('appTitle').textContent"),
     part123UsesSharedRead:has(read,'window.AptisSpeakingCache.read({'),
     part123UsesSharedWrite:has(read,'window.AptisSpeakingCache.write({'),
     part123PrimaryKeyUnchanged:has(shared,"aptisSpeakingBootstrap:p1-reuse-49-v01-20261020"),
