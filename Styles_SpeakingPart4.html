@@ -2,8 +2,9 @@
 /* Part 4-specific Topic Library, Question, timer and mastery controls ONLY.
    App shell/width/header/part tabs are owned by shared Styles.html & Styles_Speaking.html. */
 .p4dev.hidden,.p4dev [hidden]{display:none!important}
-.p4dev .p4-topic-library,.p4dev .p4-topic-detail{width:100%;max-width:none;margin:0;padding:0}
-.p4dev .welcome-card,.p4dev .today-section,.p4dev .library-section{width:100%}
+/* Shared frame and common Home/Detail sections now own widths and gutters.
+   Part 4 controls only its two topic views' visibility, not their geometry. */
+.p4dev .p4-topic-library,.p4dev .p4-topic-detail{min-width:0;box-sizing:border-box}
 .p4dev .p4-topic-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
 .p4dev .p4-topic-card{position:relative;display:grid;grid-template-columns:36px minmax(0,1fr);align-items:start;gap:12px;text-align:left;min-height:90px;padding:14px;border:1px solid var(--border);border-radius:18px;background:var(--card);box-shadow:0 4px 14px rgba(48,68,124,.035);color:var(--ink);cursor:pointer}
 .p4dev .p4-topic-card>small{display:grid;place-items:center;width:36px;height:36px;background:var(--purple-soft);color:var(--purple-2);font-weight:700;border-radius:11px}
@@ -12,8 +13,6 @@
 .p4dev .p4-topic-card-copy span{font-size:12px;color:var(--muted)}
 .p4dev .p4-topic-card:hover{border-color:var(--purple)}
 .p4dev button:focus-visible,.p4dev select:focus-visible{outline:3px solid var(--purple);outline-offset:2px}
-/* Only Part 4 navigation wrapping is unique. Button geometry is inherited. */
-.p4dev .study-topline #p4BackLibrary{margin-right:auto;white-space:nowrap}
 .p4dev .p4-topic-study-card{min-width:0}
 .p4dev .p4-internal-controls,.p4dev #p4MasteryOverview{display:none!important}
 .p4dev .p4-feedback:empty{display:none!important}
@@ -23,5 +22,5 @@
 .p4dev #p4Begin,.p4dev #p4Save{background:var(--purple);color:#fff;border-color:transparent}
 .p4dev #p4Review{padding:16px;border:1px solid var(--border);border-radius:18px;background:#fff;margin-top:14px}
 .p4dev .p4dev-disclaimer{font-size:12px;color:var(--muted);margin:16px 0 35px}
-@media(max-width:650px){.p4dev .p4-topic-grid{grid-template-columns:1fr}.p4dev .study-topline{flex-wrap:wrap}.p4dev .study-top-actions{width:auto;flex:1;min-width:0}.p4dev .p4dev-time{position:relative;bottom:auto}}
+@media(max-width:650px){.p4dev .p4-topic-grid{grid-template-columns:1fr}}
 </style>
