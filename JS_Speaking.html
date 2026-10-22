@@ -144,6 +144,7 @@
     });
 
     $('startTimerBtn').addEventListener('click', startTimer);
+    $('pauseTimerBtn').addEventListener('click', pauseTimer);
     $('stopTimerBtn').addEventListener('click', () => stopTimer(false));
     $('showAnswerAfterTest').addEventListener('click', () => {
       $('showAnswerAfterTest').textContent = currentModel();
@@ -1163,7 +1164,7 @@
   }
   function setMode(mode) {
     if (state.activePart <= 3 && mode === 'learn') mode = 'shadow';
-    if (state.currentMode !== mode) stopSpeech();
+    if (state.currentMode !== mode) {stopSpeech();stopTimer(true);}
     state.currentMode = mode;
     if([2,3].includes(state.activePart) && currentItem()){
       $('questionText').textContent = mode==='test' ? currentQuestionText() : 'Practise all three questions in this topic';
@@ -1574,44 +1575,56 @@
     openPartHome(part);
   }
 
-  function startTimer() {
+
+  let speakingMainPracticeTimer_=null;
+  function p123Timer_(){
+    if(speakingMainPracticeTimer_)return speakingMainPracticeTimer_;
+    speakingMainPracticeTimer_=window.AptisSpeakingTimer.create(function(snap){
+      state.timerElapsed=snap.elapsedSeconds;
+      state.timerRunning=snap.status==='running';
+      $('timer').textContent=window.AptisSpeakingTimer.format(snap.remainingSeconds);
+      $('timerBar').style.width=Math.max(0,Math.min(100,100*snap.remainingSeconds/Math.max(1,snap.totalSeconds)))+'%';
+      $('startTimerBtn').disabled=snap.status==='running';
+      $('startTimerBtn').textContent=snap.status==='paused'?'▶ Resume':'▶ Start speaking';
+      $('pauseTimerBtn').disabled=snap.status!=='running';
+      $('stopTimerBtn').disabled=!['running','paused'].includes(snap.status);
+      $('speakingTimerStage').textContent=({idle:'Ready to practise',running:'Speaking',paused:'Paused',stopped:'Stopped',done:'Time finished'})[snap.status]||'Ready';
+    },function(){
+      // Timer completion is UI-only. Rating/Mark learned remain explicit learner actions.
+      if(state.currentMode==='test'){
+        $('selfCheck').classList.remove('hidden');
+        toast('Time. Rate your answer if you wish.');
+      }
+    });
+    return speakingMainPracticeTimer_;
+  }
+  function startTimer(){
     stopSpeech();
-    const total = currentTimerSeconds();
-    state.timerStartedAt = Date.now();
-    state.timerElapsed = 0;
-    state.timerRunning = true;
-    $('startTimerBtn').disabled = true;
-    $('stopTimerBtn').disabled = false;
+    const timer=p123Timer_();
+    if(timer.snapshot().status==='paused')timer.resume();
+    else {$('selfCheck').classList.add('hidden');timer.start(currentTimerSeconds());}
+  }
+  function pauseTimer(){p123Timer_().pause();}
+  function stopTimer(silent){
+    const timer=p123Timer_();
+    if(silent){
+      timer.stop(true);state.timerElapsed=0;
+      $('timer').textContent=window.AptisSpeakingTimer.format(currentTimerSeconds());
+      $('timerBar').style.width='100%';
+      $('selfCheck').classList.add('hidden');
+      return;
+    }
+    const previous=timer.snapshot().status;
+    timer.stop(false);
+    if(['running','paused'].includes(previous)&&state.currentMode==='test')
+      $('selfCheck').classList.remove('hidden');
+  }
+  function resetTimerDisplay(){
+    if(speakingMainPracticeTimer_&&['running','paused'].includes(speakingMainPracticeTimer_.snapshot().status))return;
+    $('timer').textContent=window.AptisSpeakingTimer.format(currentTimerSeconds());
+    $('timerBar').style.width='100%';
     $('selfCheck').classList.add('hidden');
-    tickTimer(total);
-    state.timerId = setInterval(() => tickTimer(total), 200);
-  }
-
-  function tickTimer(total) {
-    const elapsed = Math.min(total, (Date.now() - state.timerStartedAt) / 1000);
-    state.timerElapsed = elapsed;
-    const remaining = Math.max(0, total - elapsed);
-    $('timer').textContent = formatTime(Math.ceil(remaining));
-    $('timerBar').style.width = Math.max(0, remaining / total * 100) + '%';
-    if (remaining <= 0) stopTimer(false);
-  }
-
-  function stopTimer(silent) {
-    if (state.timerId) clearInterval(state.timerId);
-    state.timerId = null;
-    const wasRunning = state.timerRunning;
-    state.timerRunning = false;
-    $('startTimerBtn').disabled = false;
-    $('stopTimerBtn').disabled = true;
-    if (!silent && wasRunning) { $('selfCheck').classList.remove('hidden'); toast('Time. Rate your answer.'); }
-    if (silent) resetTimerDisplay();
-  }
-
-  function resetTimerDisplay() {
-    const total = currentTimerSeconds();
-    $('timer').textContent = formatTime(total);
-    $('timerBar').style.width = '100%';
-    $('selfCheck').classList.add('hidden');
+    $('speakingTimerStage').textContent='Ready to practise';
   }
 
   function formatTime(seconds) {
