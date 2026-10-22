@@ -118,4 +118,9 @@
 .p4dev .p4-topic-navigation #p4BackLibrary{margin-right:auto}
 .p4dev .p4-topic-heading h3{font-size:clamp(24px,3vw,32px)}
 @media(max-width:600px){.p4-unified-switch{gap:5px}.p4dev .p4-unified-switch button{padding:8px 4px;align-items:center;text-align:center;min-height:67px}.p4dev .p4-unified-switch strong{font-size:13px}.p4dev .p4-unified-switch small{font-size:10px}.p4dev .p4-topic-detail{padding:13px}.p4dev .p4-topic-navigation #p4BackLibrary{width:100%}}
+
+/* Four tabs in Part 1–3 Home must not wrap when Part 4 is present. */
+.speaking-shell .part-switch{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
+.speaking-shell .part-switch .part-tab{min-width:0}
+@media(max-width:600px){.speaking-shell .part-switch{gap:5px}.speaking-shell .part-switch .part-tab{padding:8px 5px}.speaking-shell .part-switch .part-tab small{font-size:10px}}
 </style>
