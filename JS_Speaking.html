@@ -111,7 +111,7 @@
     $('skillRecommendationBtn').addEventListener('click', openRecommendedSpeakingPart);
     $$('.prompt-step').forEach(btn => btn.addEventListener('click', () => setPrompt(Number(btn.dataset.prompt))));
     $$('#speakingModeTabs .mode-tab').forEach(btn => btn.addEventListener('click', () => setMode(btn.dataset.mode)));
-    $$('.level-btn').forEach(btn => btn.addEventListener('click', () => setMemorizeLevel(Number(btn.dataset.level))));
+    $$('#memorizeMode .level-btn').forEach(btn => btn.addEventListener('click', () => setMemorizeLevel(Number(btn.dataset.level))));
     $$('.rating-btn').forEach(btn => btn.addEventListener('click', () => finishSelfRating(Number(btn.dataset.rating))));
     $$('#homeView .focus-card').forEach(btn => btn.addEventListener('click', () => applyFilter(btn.dataset.filterTarget)));
 
@@ -923,6 +923,35 @@
     setSpeakingPlaybackUI_(group,'idle');
     return group;
   }
+  /* S5: shared, pure Memorize algorithm used by Part 2/3 and Part 4.
+     Teacher answers are kept verbatim. This computes only a draft/score locally.
+     The Part 1 layout and its existing LV1/LV2 cadence are intentionally preserved. */
+  function speakingMemorizePlan_(answer,level){
+    const every=Number(level)===1?5:3;
+    let ordinal=0;const parts=[],blanks=[];
+    String(answer||'').split(/([A-Za-z][A-Za-z'-]*)/g).forEach(function(piece){
+      const isWord=/^[A-Za-z][A-Za-z'-]*$/.test(piece);
+      if(isWord)ordinal++;
+      if(isWord&&piece.length>2&&ordinal%every===0){
+        parts.push({blank:true,answer:piece});blanks.push(piece);
+      }else parts.push({blank:false,text:piece});
+    });
+    return {parts:parts,blanks:blanks};
+  }
+  function speakingWordRecallScore_(answer,attempt){
+    const target=String(answer||'').toLowerCase().match(/[a-z]+(?:'[a-z]+)?/g)||[];
+    const typed=String(attempt||'').toLowerCase().match(/[a-z]+(?:'[a-z]+)?/g)||[];
+    const counts=Object.create(null);target.forEach(function(x){counts[x]=(counts[x]||0)+1;});
+    let hits=0;typed.forEach(function(x){if(counts[x]>0){counts[x]--;hits++;}});
+    return Math.round(100*hits/Math.max(1,target.length));
+  }
+  function speakingNormalizeRecall_(value){
+    return String(value||'').trim().toLowerCase().replace(/[^a-z0-9'-]/g,'');
+  }
+  window.AptisSpeakingMemorize=Object.freeze({
+    plan:speakingMemorizePlan_,recallScore:speakingWordRecallScore_,normalize:speakingNormalizeRecall_
+  });
+
   // Shared P2/P3 whole-topic study: one Learn/Memorize/Test flow, stable prompt IDs.
   const p2Drafts_ = Object.create(null);
   function p2Card_(slot, heading, model) {
@@ -957,16 +986,15 @@
         expected.push({input:area,answer});
       }else{
         const line=document.createElement('div');line.className='p2-cloze-line';
-        const tokens=answer.split(/([A-Za-z][A-Za-z'-]*)/g);let count=0,idx=0;
+        const plan=speakingMemorizePlan_(answer,state.memorizeLevel);let idx=0;
         const remembered=p2Drafts_[key]||{};
-        tokens.forEach(token=>{
-          if(/^[A-Za-z][A-Za-z'-]*$/.test(token)){count++;}
-          if(/^[A-Za-z][A-Za-z'-]*$/.test(token)&&token.length>2&&count%(state.memorizeLevel===1?5:3)===0){
+        plan.parts.forEach(piece=>{
+          if(piece.blank){
             const n=idx++,input=document.createElement('input');input.type='text';input.className='p1-cloze-input';
             input.placeholder='_____';input.setAttribute('aria-label','Q'+(i+1)+' missing word '+n);
             input.value=remembered[n]||'';input.addEventListener('input',()=>{p2Drafts_[key]??={};p2Drafts_[key][n]=input.value;});
-            line.appendChild(input);expected.push({input,answer:token}); 
-          }else line.appendChild(document.createTextNode(token));
+            line.appendChild(input);expected.push({input,answer:piece.answer});
+          }else line.appendChild(document.createTextNode(piece.text));
         });card.appendChild(line);
       }
       const controls=document.createElement('div');controls.className='p2-memory-actions';
@@ -974,11 +1002,7 @@
       const check=document.createElement('button');check.className='primary-btn';check.textContent='Check Q'+(i+1);
       check.addEventListener('click',()=>{
         if(state.memorizeLevel===3){
-          const target=answer.toLowerCase().match(/[a-z]+(?:'[a-z]+)?/g)||[];
-          const typed=expected[0].input.value.toLowerCase().match(/[a-z]+(?:'[a-z]+)?/g)||[];
-          const counts={};target.forEach(t=>counts[t]=(counts[t]||0)+1);
-          let matches=0;typed.forEach(t=>{if(counts[t]>0){matches++;counts[t]--;}});
-          feedback.textContent='Word recall '+Math.round(100*matches/Math.max(1,target.length))+'%. Check meaning as well.';
+          feedback.textContent='Word recall '+speakingWordRecallScore_(answer,expected[0].input.value)+'%. Check meaning as well.';
         }else feedback.textContent=expected.filter(t=>tokenizeP1Recall_(t.input.value)===tokenizeP1Recall_(t.answer)).length+'/'+expected.length+' correct.';
       });
       const reveal=document.createElement('button');reveal.className='secondary-btn';reveal.textContent='Show answer';
@@ -1043,7 +1067,7 @@
     $('speakingModeTabs').classList.toggle('p1-three-steps', p1);
     $('shadowIntro').classList.toggle('hidden', p1);
     $('memorizeIntro').classList.toggle('hidden', p1);
-    $$('.level-btn').forEach(function(btn) {
+    $$('#memorizeMode .level-btn').forEach(function(btn) {
       const n = Number(btn.dataset.level);
       btn.classList.toggle('hidden', p1 && n === 4);
       if (p1 && n === 3) btn.textContent = 'Level 3 · Listen & write';
@@ -1069,7 +1093,7 @@
   function setMemorizeLevel(level) {
     if (state.activePart <= 3) stopSpeech();
     state.memorizeLevel = level;
-    $$('.level-btn').forEach(btn => btn.classList.toggle('active', Number(btn.dataset.level) === level));
+    $$('#memorizeMode .level-btn').forEach(btn => btn.classList.toggle('active', Number(btn.dataset.level) === level));
     renderMemorize();
     if([2,3].includes(state.activePart) && state.currentMode==='memorize')renderP2Unified_();
   }
