@@ -859,36 +859,72 @@
     });
   }
 
-  let p1Speech = null;
-  let p1SpeechToken = 0;
-  let p1PlaybackButton = null;
-  function setP1Button_(button, playing) {
-    if (button) {
-      button.textContent = button.id === 'shadowAllBtn' ? (playing ? '⏸ Pause' : ((window.speechSynthesis && window.speechSynthesis.paused) ? '▶ Resume' : '▶ Play')) : (playing ? '⏸' : '▶');
-      button.setAttribute('aria-label', playing ? 'Pause audio' : 'Play or resume audio');
-      button.setAttribute('aria-pressed', playing ? 'true' : 'false');
-    }
+  /* S4: single SpeechSynthesis owner for Speaking 1–4. Voice settings
+     stay exclusively in the existing top Audio sheet. */
+  const speakingPlayback_ = {group:null,utterance:null,token:0,status:'idle'};
+  function setSpeakingPlaybackUI_(group,status) {
+    if(!group)return;
+    const play=group.querySelector('[data-audio-action="play"]');
+    const pause=group.querySelector('[data-audio-action="pause"]');
+    const stop=group.querySelector('[data-audio-action="stop"]');
+    group.dataset.audioState=status;
+    if(play){play.disabled=status==='playing';play.textContent=status==='paused'?'▶ Resume':(play.dataset.playLabel||'▶ Play');}
+    if(pause)pause.disabled=status!=='playing';
+    if(stop)stop.disabled=status==='idle';
   }
-  function toggleP1Audio_(text, button) {
-    if (!('speechSynthesis' in window)) { toast('Audio is not supported in this browser.'); return; }
-    const engine = window.speechSynthesis;
-    if (p1PlaybackButton === button && engine.paused) {
-      engine.resume(); setP1Button_(button, true); return;
-    }
-    if (p1PlaybackButton === button && engine.speaking) {
-      engine.pause(); setP1Button_(button, false); if (button && button.id === 'shadowAllBtn') button.textContent = '▶ Resume'; return;
+  function stopSpeech() {
+    ++speakingPlayback_.token;
+    if('speechSynthesis' in window)window.speechSynthesis.cancel();
+    setSpeakingPlaybackUI_(speakingPlayback_.group,'idle');
+    speakingPlayback_.group=null;speakingPlayback_.utterance=null;speakingPlayback_.status='idle';
+    if($('shadowAllBtn'))$('shadowAllBtn').textContent='▶ Play';
+  }
+  function sharedAudioPlay_(text,group) {
+    if(!('speechSynthesis' in window)) {toast('Text-to-speech is not supported by this browser.');return false;}
+    const utteranceText=String(text||'').trim();if(!utteranceText)return false;
+    const engine=window.speechSynthesis;
+    if(group && speakingPlayback_.group===group && speakingPlayback_.status==='paused'){
+      engine.resume();speakingPlayback_.status='playing';setSpeakingPlaybackUI_(group,'playing');return true;
     }
     stopSpeech();
-    const token = ++p1SpeechToken;
-    const utterance = makeUtterance(text);
-    p1Speech = utterance; p1PlaybackButton = button;
-    utterance.onend = utterance.onerror = function() {
-      if (token !== p1SpeechToken) return;
-      setP1Button_(button, false);
-      p1Speech = null; p1PlaybackButton = null;
+    const token=++speakingPlayback_.token;
+    const utterance=makeUtterance(utteranceText);
+    speakingPlayback_.group=group||null;speakingPlayback_.utterance=utterance;speakingPlayback_.status='playing';
+    setSpeakingPlaybackUI_(group,'playing');
+    utterance.onend=utterance.onerror=function(){
+      if(token!==speakingPlayback_.token)return;
+      setSpeakingPlaybackUI_(speakingPlayback_.group,'idle');
+      speakingPlayback_.group=null;speakingPlayback_.utterance=null;speakingPlayback_.status='idle';
     };
-    setP1Button_(button, true);
-    engine.speak(utterance);
+    engine.speak(utterance);return true;
+  }
+  function sharedAudioPause_(group) {
+    if(!('speechSynthesis' in window)||speakingPlayback_.group!==group||speakingPlayback_.status!=='playing')return false;
+    window.speechSynthesis.pause();speakingPlayback_.status='paused';setSpeakingPlaybackUI_(group,'paused');return true;
+  }
+  function createSpeakingAudioControls_(text,label) {
+    const group=document.createElement('div');group.className='speaking-audio-controls';group.setAttribute('role','group');
+    group.setAttribute('aria-label',label||'Audio playback');
+    const buttons=[
+      ['play','▶ Play','primary-btn'],['pause','⏸ Pause','secondary-btn'],['stop','■ Stop','secondary-btn']
+    ];
+    buttons.forEach(function(spec){
+      const b=document.createElement('button');b.type='button';b.className=spec[2];b.dataset.audioAction=spec[0];
+      b.dataset.playLabel=spec[1];b.textContent=spec[1];group.appendChild(b);
+      b.addEventListener('click',function(){
+        if(spec[0]==='play')sharedAudioPlay_(text,group);
+        if(spec[0]==='pause')sharedAudioPause_(group);
+        if(spec[0]==='stop')stopSpeech();
+      });
+    });
+    setSpeakingPlaybackUI_(group,'idle');
+    return group;
+  }
+  function toggleP1Audio_(text,button) {
+    // Legacy button compatibility; the normal Q controls use the three-button bar.
+    const group=button&&button.closest&&button.closest('.speaking-audio-controls');
+    if(group)return sharedAudioPlay_(text,group);
+    return sharedAudioPlay_(text,null);
   }
 
   // Shared P2/P3 whole-topic study: one Learn/Memorize/Test flow, stable prompt IDs.
@@ -1563,19 +1599,7 @@
     return u;
   }
 
-  function speakText(text) {
-    if (!('speechSynthesis' in window)) return toast('Text-to-speech is not supported by this browser.');
-    stopSpeech(); window.speechSynthesis.speak(makeUtterance(text));
-  }
-
-  function speakTextPromise(text) {
-    return new Promise((resolve, reject) => {
-      if (!('speechSynthesis' in window)) return reject(new Error('No TTS'));
-      const u = makeUtterance(text); u.onend = resolve; u.onerror = reject; window.speechSynthesis.speak(u);
-    });
-  }
-
-  function stopSpeech() { p1SpeechToken++; setP1Button_(p1PlaybackButton, false); p1PlaybackButton = null; p1Speech = null; if ('speechSynthesis' in window) window.speechSynthesis.cancel(); if ($('shadowAllBtn')) $('shadowAllBtn').textContent = '▶ Play'; }
+  function speakText(text){sharedAudioPlay_(text,null);}
   function openAudioSheet() { $('accentSelect').value = state.audio.accent; populateVoiceSelect(); syncSpeedButtons(); $('audioSheet').classList.remove('hidden'); }
   function closeAudioSheet() { stopSpeech(); $('audioSheet').classList.add('hidden'); }
   function setSpeechRate(rate) { state.audio.rate = clamp(rate,0.5,1.4); writeLocal('aptisRate',String(state.audio.rate)); syncSpeedButtons(); }
@@ -1694,6 +1718,11 @@
   function readLocal(key,fallback) { try { const v=localStorage.getItem(key); return v===null ? fallback : v; } catch(e){ return fallback; } }
   function writeLocal(key,value) { try { localStorage.setItem(key,value); } catch(e){} }
 
+  window.AptisSpeakingAudio = Object.freeze({
+    play:sharedAudioPlay_, pause:sharedAudioPause_, stop:stopSpeech,
+    createControls:createSpeakingAudioControls_,
+    settings:()=>({accent:state.audio.accent,voiceURI:state.audio.voiceURI,rate:state.audio.rate})
+  });
   window.AptisSpeaking = { enter: enter, showHome: showHome };
 
   let toastTimer = null;
