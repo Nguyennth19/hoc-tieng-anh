@@ -51,14 +51,16 @@ function p4FormulaHtml(raw){
 }
 
 const P4_MASTERY={rows:[],loaded:false};
-function p4StopAudio(){if('speechSynthesis' in window)window.speechSynthesis.cancel();}
-function p4Listen(index){
- if(S.mode!=='learn'||S.phase==='speak'||!S.current||!S.current.models||!('speechSynthesis' in window)){status('Browser speech playback is unavailable.');return;}
- p4StopAudio();
- const u=new SpeechSynthesisUtterance(String(S.current.models[index]||''));
- u.lang='en-US';u.rate=Number(byId('p4VoiceRate').value)||0.85;
- u.onerror=()=>status('Audio playback was interrupted. Check browser audio permissions.');
- window.speechSynthesis.speak(u);
+function p4StopAudio(){
+  if(window.AptisSpeakingAudio)window.AptisSpeakingAudio.stop();
+}
+function p4Listen(index,action,group){
+  if(S.mode!=='learn'||S.phase==='speak'||!S.current?.models){return;}
+  const audio=window.AptisSpeakingAudio;
+  if(!audio){status('Shared audio is unavailable. Refresh the staging app.');return;}
+  if(action==='stop')return audio.stop();
+  if(action==='pause')return audio.pause(group);
+  return audio.play(String(S.current.models[index]||''),group);
 }
 function p4AnswerHtml(answer){
  const formatted=p4FormulaHtml(answer),view=byId('p4StudyView').value;
@@ -71,7 +73,6 @@ function p4AnswerHtml(answer){
 }
 function p4ApplyStudyMode(){
  const learn=S.mode==='learn';
- byId('p4ToolsDisclosure').hidden=!learn;
  byId('p4LearningTools').hidden=!learn;
  if(!learn){p4StopAudio();byId('p4StudyView').value='recall';}
  else if(byId('p4StudyView').value==='recall'&&S.phase==='ready'){} 
@@ -194,7 +195,10 @@ function renderSet(){
       (answer?'<details class="p4dev-inline-answer speaking-answer-panel"'+(byId('p4StudyView').value==='recall'?'':' open')+'>'+
         '<summary>Study answer · Q'+(i+1)+'</summary>'+
         '<p class="model-text">'+p4AnswerHtml(answer)+'</p>'+
-        '<div class="inline-actions"><button type="button" class="listen-pill p4-listen" data-answer="'+i+'">▶ Listen Q'+(i+1)+'</button></div></details>':'')+
+        '<div class="speaking-audio-controls" data-answer="'+i+'" role="group" aria-label="Audio Q'+(i+1)+'">'+
+          '<button type="button" class="primary-btn" data-audio-action="play">▶ Play</button>'+
+          '<button type="button" class="secondary-btn" data-audio-action="pause" disabled>⏸ Pause</button>'+
+          '<button type="button" class="secondary-btn" data-audio-action="stop" disabled>■ Stop</button></div></details>':'')+
       '</article>';
   }).join('');
   byId('p4Models').textContent='';
@@ -339,8 +343,13 @@ document.addEventListener('DOMContentLoaded',()=>{
  byId('progressBtn')?.addEventListener('click',()=>setTimeout(refreshPart4Progress,20));
  document.querySelectorAll('.bottom-nav .nav-btn').forEach(b=>b.addEventListener('click',()=>{if(b.dataset.nav==='part4'){open();}else if(!byId('speakingPart4Future').classList.contains('hidden')){close();}},true));
  byId('p4StudyView').addEventListener('change',()=>{if(S.mode==='learn')renderAnswersOnly_();});
- byId('p4Content').addEventListener('click',e=>{const b=e.target.closest('button.p4-listen');if(b&&S.mode==='learn')p4Listen(Number(b.dataset.answer));});
- byId('p4StopAudio').addEventListener('click',p4StopAudio);
+ byId('p4Content').addEventListener('click',e=>{
+   const b=e.target.closest('button[data-audio-action]');
+   if(!b||S.mode!=='learn')return;
+   const group=b.closest('.speaking-audio-controls');
+   if(!group)return;
+   p4Listen(Number(group.dataset.answer),b.dataset.audioAction,group);
+ });
  byId('p4SaveMastery').addEventListener('click',()=>{
   if(S.mode!=='learn'||!S.current)return;
   const id=S.current.id,level=Number(byId('p4MasteryLevel').value);
