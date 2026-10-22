@@ -46,7 +46,7 @@ function p4FormulaHtml(raw){
  return out+escapeHtml(text.slice(at));
 }
 
-const P4_MASTERY={rows:[]};
+const P4_MASTERY={rows:[],loaded:false};
 function p4StopAudio(){if('speechSynthesis' in window)window.speechSynthesis.cancel();}
 function p4Listen(index){
  if(S.mode!=='learn'||S.phase==='speak'||!S.current||!S.current.models||!('speechSynthesis' in window)){status('Browser speech playback is unavailable.');return;}
@@ -76,10 +76,11 @@ function p4RefreshMastery(){
  if(typeof google==='undefined'||!google.script?.run)return;
  google.script.run.withSuccessHandler(items=>{
   P4_MASTERY.rows=Array.isArray(items)?items:[];
+  P4_MASTERY.loaded=true;
   const counts=[0,0,0,0];P4_MASTERY.rows.forEach(x=>{const n=Number(x.level)||0;if(n>=0&&n<=3)counts[n]++;});
   byId('p4MasteryOverview').textContent='Mastery across 51 sets: '+counts[3]+' independent · '+counts[2]+' with hints · '+counts[1]+' reading · '+counts[0]+' new';
   p4SyncMastery();p4DecorateTopics();p4RenderLibrary_();
- }).withFailureHandler(e=>byId('p4MasterySaved').textContent='Mastery unavailable: '+e.message).getSpeakingPart4Mastery();
+ }).withFailureHandler(e=>{P4_MASTERY.loaded=false;p4RenderLibrary_();byId('p4MasterySaved').textContent='Mastery unavailable: '+e.message;}).getSpeakingPart4Mastery();
 }
 function p4DecorateTopics(){
  const select=byId('p4Set');if(!S.data||!select)return;
@@ -134,12 +135,14 @@ function p4RenderLibrary_(){
   const levels=['New','Reading','With hints','Independent'];
   const counts=[0,0,0,0];
   sets.forEach(x=>{counts[p4MasteryLevel_(x.id)]++;});
-  byId('p4HomeNew').textContent=counts[0];
-  byId('p4HomeReading').textContent=counts[1];
-  byId('p4HomeHints').textContent=counts[2];
-  byId('p4HomeIndependent').textContent=counts[3];
+  const validIds=new Set(sets.map(x=>String(x.id)));
+  const tracked=new Set(P4_MASTERY.rows.filter(x=>validIds.has(String(x.questionId)) && [0,1,2,3].includes(Number(x.level))).map(x=>String(x.questionId)));
+  byId('p4HomeNew').textContent=P4_MASTERY.loaded?tracked.size:'—';
+  byId('p4HomeReading').textContent=P4_MASTERY.loaded?counts[1]:'—';
+  byId('p4HomeHints').textContent=P4_MASTERY.loaded?counts[2]:'—';
+  byId('p4HomeIndependent').textContent=P4_MASTERY.loaded?counts[3]:'—';
   const pct=sets.length?Math.round(100*counts[3]/sets.length):0;
-  byId('p4HomeProgressPct').textContent=pct+'%';
+  byId('p4HomeProgressPct').textContent=P4_MASTERY.loaded?pct+'%':'—';
   byId('p4HomeProgressRing').style.background='conic-gradient(var(--primary) '+(pct*3.6)+'deg, #e7ebf3 0deg)';
   byId('p4HomeLibraryTitle').textContent=sets.length+' Part 4 topics';
   const query=byId('p4HomeSearch').value.trim().toLowerCase();
