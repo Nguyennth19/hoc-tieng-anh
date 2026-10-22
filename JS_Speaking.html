@@ -991,6 +991,7 @@
   }
   window.AptisSpeakingTimer=Object.freeze({
     create:createSpeakingPracticeTimer_,format:speakingClockFormat_,
+    stopActive:function(){if(speakingActiveTimer_)speakingActiveTimer_.stop(true);},
     defaultSeconds:Object.freeze({part1:30,part2:45,part3:45,part4Preparation:60,part4Speaking:120})
   });
 
