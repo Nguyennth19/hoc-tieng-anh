@@ -29,7 +29,7 @@ function testSpeakingSharedLayoutS2ReadOnly() {
     noBlanketHide:!has(p4Css,'.p4-mode > :not(')&&has(commonCss,'.speaking-shell.p4-mode > .speaking-main{display:none!important}'),
     uniquePart4CSSRemains:has(p4Css,'.p4dev .p4-topic-card')&&has(p4Css,'.p4dev .p4dev-time'),
     p4LibraryDetailRemain:has(p4,'id="p4TopicLibrary"')&&has(p4,'id="p4TopicDetail"'),
-    part123HandlersSafe:count(commonJs,/\$\$\('\.part-tab\[data-part\]'\)/g)===3&&!has(commonJs,"$('.part-tab[data-part]').forEach"),
+    part123HandlersSafe:count(commonJs,/\$\$\('\.part-tab\[data-part\]'\)/g)===3&&count(commonJs,/(?<!\$)\$\('\.part-tab\[data-part\]'\)\.forEach/g)===0,
     p4MountInShell:has(p4Js,'function p4MountInsideSpeaking_')&&has(p4Js,'shell.appendChild(el)'),
     oneTopLevelInclude:count(app,/include\('ViewSpeakingPart4'\)/g)===1&&!has(view,"include('ViewSpeakingPart4')"),
     bottomNavFive:count(view,/class="bottom-nav"/g)===1&&count(view,/class="nav-btn"/g)===5&&has(commonCss,'grid-template-columns:repeat(5,minmax(0,1fr))'),
