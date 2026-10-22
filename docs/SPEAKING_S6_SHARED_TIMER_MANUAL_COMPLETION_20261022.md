@@ -63,3 +63,27 @@ These are source checks/simulations, **not physical Chrome/mobile acceptance, li
 ## Next recommendation — only after explicit acceptance
 
 **S7: Speaking final cross-Part UI & data-integrity QA, then isolated Phase 2.3 RC integration plan.** Verify Practice/Test/Timer/Audio/Mastery/Progress and Writing/Reading/Listening with a disposable workbook. Prepare a conflict-resolution PR and rollback; **do not merge/deploy production without a separate approval**.
+
+
+## S6.1 — Deep source QA after staging reported 41/43 (2026-10-22)
+
+**Original report:** `timerFactoryDoesNotWrite`, `part4StopDoesNotSave` failed on Apps Script staging. Direct GitHub source originally passed 43/43. Real staging source was NOT retrieved by the connector; therefore no claim of live staging equivalence.
+
+**Root-cause mechanism reproduced exactly:** Previous source-only test sliced JS files at two English *comment* markers. When both end comments are changed/absent, `indexOf()` returns `-1` and `slice(start,-1)` reaches unrelated valid progress/mastery save handlers. The test then gives the exact **41/43** result and the same two failed names despite the timer functions having no save calls. This proves the test is vulnerable; whether staging has this exact comment drift must be checked with the new diagnostic.
+
+**QA hardening:** In `tests/SpeakingSharedTimer_S6_ReadOnly.gs`, added `s6QaFunction_()` that extracts balanced named function scopes without comment-marker boundaries. Its missing/unbalanced functions fail closed. Checks now inspect only the shared factory and five P4 timer functions, with `s6QaForbiddenWrites_()`. Added read-only `diagnoseSpeakingSharedTimerS6ReadOnly()`, which prints source lengths, old marker presence/positions, function-extraction results and any forbidden write token detections.
+
+**Negative tests:** On latest GitHub source the revised QA passes with original comments (**45/45**) and when both comments are deliberately renamed (**45/45**). Injecting an actual `saveProgress()` call inside the shared timer factory makes the correct guard FAIL. No production data or service calls were needed.
+
+**Additional genuine lifecycle defect identified and fixed on S6 branch:** Opening Part 4 while a Part 1–3 timer is active previously did not immediately stop that clock (P4 only stopped it when starting another clock). Added a `stopActive()` method to the already-shared timer controller and invoked it inside Part 4 `open()`. Mock timer regression confirms the former interval is canceled and status resets to idle. Two new read-only checks prevent this from regressing.
+
+**Current branch QA:** S6 45/45 + S5 41/41 + S4 33/33 + S3 30/30 + S2 24/24 + P4 regression 17/17 = **190/190 PASS** in source-harness tests. Client JS syntax checks PASS. This is not yet the Apps Script staging `/dev` acceptance.
+
+### Correct staging action
+
+1. In the **isolated** `APTIS_B2_PART4_UI01_STAGING` Apps Script project, pull `refactor/speaking-shared-timer-s6-20261022` (do not pull into production).
+2. Run `diagnoseSpeakingSharedTimerS6ReadOnly()` first. This is strictly source-only. Inspect whether the old comment markers were absent on that staging copy; a `-1` value supports the root-cause hypothesis.
+3. Run `testSpeakingSharedTimerS6ReadOnly()` and expect `ok:true`, `totalChecks:45`, `failed:[]`.
+4. Reconfirm runtime timer handoff Part1/2/3 → Part4 and that Cancel/Stop never saves. Test all writes only against QA workbook. Do NOT merge, release or deploy production.
+
+**Release gate remains CLOSED** until staging source and browser QA pass.
