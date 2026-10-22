@@ -115,8 +115,11 @@
     $$('.rating-btn').forEach(btn => btn.addEventListener('click', () => finishSelfRating(Number(btn.dataset.rating))));
     $$('#homeView .focus-card').forEach(btn => btn.addEventListener('click', () => applyFilter(btn.dataset.filterTarget)));
 
-    $('listenBtn').addEventListener('click', () => speakText(currentModel()));
+    $('listenBtn').addEventListener('click', () => sharedAudioPlay_(currentModel(), $('learnAnswerAudio')));
+    $('listenPauseBtn').addEventListener('click', () => sharedAudioPause_($('learnAnswerAudio')));
+    $('listenStopBtn').addEventListener('click', stopSpeech);
     $('shadowAllBtn').addEventListener('click', shadowAll);
+    $('shadowPauseBtn').addEventListener('click', () => sharedAudioPause_($('shadowAudioControls')));
     $('stopSpeechBtn').addEventListener('click', stopSpeech);
     $('revealBtn').addEventListener('click', () => {
       if (state.activePart <= 3) { $('p1Feedback').textContent = currentModel(); return; }
@@ -140,12 +143,12 @@
     $('closeAudioBtn').addEventListener('click', closeAudioSheet);
     $('audioSheet').addEventListener('click', e => { if (e.target === $('audioSheet')) closeAudioSheet(); });
     $('accentSelect').addEventListener('change', () => {
-      state.audio.accent = $('accentSelect').value;
+      stopSpeech();state.audio.accent = $('accentSelect').value;
       writeLocal('aptisAccent', state.audio.accent);
       populateVoiceSelect();
     });
     $('voiceSelect').addEventListener('change', () => {
-      state.audio.voiceURI = $('voiceSelect').value;
+      stopSpeech();state.audio.voiceURI = $('voiceSelect').value;
       writeLocal('aptisVoiceURI', state.audio.voiceURI);
     });
     $$('.speed-btn').forEach(btn => btn.addEventListener('click', () => setSpeechRate(Number(btn.dataset.speed))));
@@ -934,9 +937,7 @@
     const title=document.createElement('h3');title.textContent='Q'+slot+' · '+heading;card.appendChild(title);
     const words=document.createElement('div');words.className='p2-topic-answer';card.appendChild(words);
     renderSharedFormulaText(words,model);
-    const listen=document.createElement('button');listen.type='button';listen.className='secondary-btn';
-    listen.textContent='▶ Listen Q'+slot;listen.addEventListener('click',()=>toggleP1Audio_(model,listen));
-    card.appendChild(listen);return card;
+    card.appendChild(createSpeakingAudioControls_(model,'Listen Q'+slot));return card;
   }
   function renderP2Unified_(){
     const wrapper=$('p2Unified'),list=$('p2UnifiedCards'),footer=$('p2UnifiedFooter'),item=currentItem();
@@ -955,9 +956,7 @@
       const key=item.id+':Q'+(i+1)+':L'+state.memorizeLevel;
       const expected=[];
       if(state.memorizeLevel===3){
-        const play=document.createElement('button');play.type='button';play.className='secondary-btn';
-        play.textContent='▶ Listen Q'+(i+1);play.addEventListener('click',()=>toggleP1Audio_(answer,play));
-        card.appendChild(play);
+        card.appendChild(createSpeakingAudioControls_(answer,'Memorize Q'+(i+1)));
         const area=document.createElement('textarea');area.className='p2-dictation';area.rows=5;
         area.placeholder='Write the full answer for Q'+(i+1)+' here...';
         area.value=p2Drafts_[key]||'';area.addEventListener('input',()=>{p2Drafts_[key]=area.value;});
@@ -993,10 +992,7 @@
       reveal.addEventListener('click',()=>{feedback.textContent=answer;});
       controls.append(check,reveal,feedback);card.appendChild(controls);list.appendChild(card);
     }
-    if(!isMemory){
-      const all=document.createElement('button');all.className='primary-btn';all.textContent='▶ Listen to all 3 answers';
-      all.addEventListener('click',()=>toggleP1Audio_(m.filter((a,j)=>q[j]&&a).join('. '),all));footer.appendChild(all);
-    }
+    // Each question has its own audio controls; no redundant all-answers playback.
   }
   function renderP2TestOutline_(){
     const area=$('p2TestOutline');if(!area)return;
@@ -1029,29 +1025,14 @@
     splitSentences(currentModel()).forEach(function(sentence) {
       const row = document.createElement('div');
       row.className = 'shadow-sentence';
-      const btn = document.createElement('button');
-      btn.type = 'button'; btn.textContent = '▶';
-      btn.setAttribute('aria-label', 'Play or resume audio');
-      btn.addEventListener('click', function() {
-        if (state.activePart <= 3) toggleP1Audio_(sentence, btn);
-        else speakText(sentence);
-      });
+      const audio = createSpeakingAudioControls_(sentence,'Listen to sentence');
       const div = document.createElement('div');
       if(state.activePart<=2)renderSharedFormulaText(div,sentence);else div.textContent = sentence;
-      row.appendChild(btn); row.appendChild(div); box.appendChild(row);
+      row.appendChild(audio); row.appendChild(div); box.appendChild(row);
     });
   }
-  async function shadowAll() {
-    if (state.activePart <= 3) {
-      toggleP1Audio_(currentModel(), $('shadowAllBtn'));
-      return;
-    }
-    stopSpeech();
-    const sentences = splitSentences(currentModel());
-    for (const sentence of sentences) {
-      try { await speakTextPromise(sentence); await wait(800); }
-      catch (e) { break; }
-    }
+  function shadowAll() {
+    sharedAudioPlay_(currentModel(),$('shadowAudioControls'));
   }
   function configureP1Modes_() {
     const p1 = [1,2,3].includes(state.activePart);
@@ -1129,11 +1110,7 @@
       const hint = document.createElement('p');
       hint.textContent = 'Listen, then write the full answer from memory.';
       typing.appendChild(hint);
-      const audioButton = document.createElement('button');
-      audioButton.type = 'button'; audioButton.className = 'secondary-btn';
-      audioButton.textContent = '▶ Listen';
-      audioButton.addEventListener('click', function(){toggleP1Audio_(model,audioButton);});
-      typing.appendChild(audioButton);
+      typing.appendChild(createSpeakingAudioControls_(model,'Memorize full answer'));
       const area = document.createElement('textarea');
       area.id = 'p1DictationInput'; area.rows = 5;
       area.setAttribute('aria-label', 'Write the answer you hear');
@@ -1602,7 +1579,7 @@
   function speakText(text){sharedAudioPlay_(text,null);}
   function openAudioSheet() { $('accentSelect').value = state.audio.accent; populateVoiceSelect(); syncSpeedButtons(); $('audioSheet').classList.remove('hidden'); }
   function closeAudioSheet() { stopSpeech(); $('audioSheet').classList.add('hidden'); }
-  function setSpeechRate(rate) { state.audio.rate = clamp(rate,0.5,1.4); writeLocal('aptisRate',String(state.audio.rate)); syncSpeedButtons(); }
+  function setSpeechRate(rate) { stopSpeech(); state.audio.rate = clamp(rate,0.5,1.4); writeLocal('aptisRate',String(state.audio.rate)); syncSpeedButtons(); }
   function syncSpeedButtons() { $$('.speed-btn').forEach(btn => btn.classList.toggle('active', Number(btn.dataset.speed) === Number(state.audio.rate))); }
 
 
