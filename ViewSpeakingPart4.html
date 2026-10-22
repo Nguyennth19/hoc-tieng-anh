@@ -51,17 +51,25 @@
   <div class="p4dev-controls p4-internal-controls" hidden aria-hidden="true"><label for="p4Mode">Study path</label><select id="p4Mode"><option value="learn">01–02 · Learn & Memorize</option><option value="exam">03 · Test (approved sets)</option></select><label for="p4Set">Topic</label><select id="p4Set"></select><button id="p4Load" type="button">Load</button></div>
 
   <p id="p4Status" class="p4-feedback" role="status" aria-live="polite"></p><div id="p4Models" class="p4dev-models"></div><div id="p4Content" class="p4dev-content"></div>
-  <details id="p4ToolsDisclosure" class="p4-tools-disclosure"><summary>Study tools · Audio & mastery</summary><div id="p4LearningTools" class="p4-learning-tools">
-    <label for="p4StudyView">01 Learn / 02 Memorize</label>
-    <select id="p4StudyView"><option value="full">01 Learn · Full teacher-first model</option><option value="formula">02 Memorize · Formula cues</option><option value="recall">02 Memorize · No help</option></select>
-    <label for="p4VoiceRate">Listening speed</label><select id="p4VoiceRate"><option value="0.85" selected>0.85×</option><option value="0.75">0.75×</option><option value="1">1.00×</option></select>
-    <button id="p4StopAudio" type="button">Stop audio</button>
-    <label for="p4MasteryLevel">Memorized</label>
-    <select id="p4MasteryLevel"><option value="0">0 · Not started</option><option value="1">1 · Reading</option><option value="2">2 · Recall with hints</option><option value="3">3 · Speak without looking</option></select>
-    <button id="p4SaveMastery" type="button">Save mastery</button>
+  <!-- The top Speaking Audio sheet alone owns Accent, Voice and Speed.
+       P4 study view is an internal model for its existing Learn/Memorize modes. -->
+  <div id="p4LearningTools" class="speaking-mastery-controls" aria-label="Part 4 mastery">
+    <select id="p4StudyView" hidden aria-label="Part 4 study visibility">
+      <option value="full">Full teacher model</option>
+      <option value="formula">Formula cues</option>
+      <option value="recall">No help</option>
+    </select>
+    <label for="p4MasteryLevel">My mastery</label>
+    <select id="p4MasteryLevel" class="select" aria-label="Self-assessed mastery">
+      <option value="0">0 · Not started</option>
+      <option value="1">1 · Reading</option>
+      <option value="2">2 · Recall with hints</option>
+      <option value="3">3 · Speak without looking</option>
+    </select>
+    <button id="p4SaveMastery" class="secondary-btn" type="button">Save mastery</button>
     <span id="p4MasterySaved" role="status" aria-live="polite"></span>
     <div id="p4MasteryOverview" class="p4-mastery-overview" hidden></div>
-  </div></details>
+  </div>
   <div class="p4dev-time"><span id="p4Stage">Ready</span><strong id="p4Time">01:00</strong><button id="p4Begin" type="button">Start preparation</button><button id="p4Next" type="button" disabled>Start speaking</button><button id="p4Stop" type="button" disabled>Stop</button></div>
   <div id="p4Review" class="p4dev-models" hidden><label for="p4Rating">Self-rating (0–5)</label><select id="p4Rating"><option value="0">0 · Not rated</option><option value="1">1 · Difficult</option><option value="2">2 · Needs practice</option><option value="3">3 · Fair</option><option value="4">4 · Good</option><option value="5">5 · Confident</option></select><label for="p4Note">Note</label><input id="p4Note" maxlength="300" placeholder="What should I improve?"><button id="p4Save" type="button">Save practice</button><button id="p4Read" type="button">Check saved progress</button><p id="p4Saved" aria-live="polite"></p></div>
   <p class="p4dev-disclaimer">Learn mode has listening, formula-only and recall practice. Exam mode hides all model answers. Microphone recording is not enabled.</p>
