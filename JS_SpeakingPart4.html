@@ -242,6 +242,7 @@ function p4RenderStudyCards_(){
 function renderAnswersOnly_(){if(!S.current)return;p4RenderStudyCards_();}
 
 function p4ShowLibrary_(){
+  window.AptisSpeakingCompletion?.dismiss();
   p4StopAudio();stopClock();S.session=null;
   byId('p4TopicLibrary').hidden=false;
   byId('p4TopicDetail').hidden=true;
@@ -249,6 +250,7 @@ function p4ShowLibrary_(){
 }
 function p4ShowDetail_(id){
   if(!S.data||!S.data.sets.some(x=>x.id===id))return;
+  window.AptisSpeakingCompletion?.dismiss();
   byId('p4Set').value=id;
   byId('p4TopicLibrary').hidden=true;
   byId('p4TopicDetail').hidden=false;
@@ -386,6 +388,8 @@ function load(forceRefresh){
 
 function setP4Step_(step) {
   if (!['learn','memorize','test'].includes(step)) return;
+  window.AptisSpeakingCompletion?.dismiss();
+  if(['prep','speak'].includes(S.phase)){stopClock();S.phase='ready';S.session=null;}
   const wantExam=step==='test',nextMode=wantExam?'exam':'learn';
   S.studyStep=step;
   byId('p4Mode').value=nextMode;
@@ -428,7 +432,7 @@ function open(){
   document.querySelectorAll('.shared-part-switch .part-tab').forEach(b=>b.classList.toggle('active',b.hasAttribute('data-p4-home')));
   window.scrollTo(0,0);p4ShowLibrary_();load();
 }
-function close(){p4StopAudio();++S.requestSeq;stopClock();S.session=null;S.phase='ready';byId('speakingPart4Future').classList.add('hidden');const shell=qs('.speaking-shell');if(shell)shell.classList.remove('p4-mode');
+function close(){window.AptisSpeakingCompletion?.dismiss();p4StopAudio();++S.requestSeq;stopClock();S.session=null;S.phase='ready';byId('speakingPart4Future').classList.add('hidden');const shell=qs('.speaking-shell');if(shell)shell.classList.remove('p4-mode');
   document.querySelectorAll('.bottom-nav .nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.nav==='home'));
   document.querySelectorAll('.shared-part-switch [data-p4-home]').forEach(b=>b.classList.remove('active'));}
 function p4MountInsideSpeaking_(){
@@ -482,12 +486,24 @@ document.addEventListener('DOMContentLoaded',()=>{
  byId('p4SaveMastery').addEventListener('click',()=>{
   if(S.mode!=='learn'||!S.current)return;
   const id=S.current.id,level=Number(byId('p4MasteryLevel').value);
-  byId('p4SaveMastery').disabled=true;
-  google.script.run.withSuccessHandler(()=>{
-   byId('p4SaveMastery').disabled=false;byId('p4MasterySaved').textContent='Mastery saved.';
-   p4RefreshMastery();refreshPart4Progress();
-  }).withFailureHandler(e=>{byId('p4SaveMastery').disabled=false;byId('p4MasterySaved').textContent='Save failed: '+e.message;})
-  .saveSpeakingPart4Mastery({questionId:id,level,practiceMode:byId('p4StudyView').value==='recall'?'recall':'learn'});
+  const confirm=window.AptisSpeakingCompletion;
+  if(!confirm){byId('p4MasterySaved').textContent='Confirmation controls unavailable. Please reload.';return;}
+  confirm.confirm({
+    title:'Confirm Part 4 mastery',
+    detail:'Confirm your own learning level for this topic. This is a manual assessment, not an automatic timer result.',
+    confirmLabel:'Save mastery',
+    onConfirm:()=>{
+      if(S.current?.id!==id||S.mode!=='learn')return;
+      byId('p4SaveMastery').disabled=true;
+      google.script.run.withSuccessHandler(()=>{
+        if(S.current?.id!==id)return;
+        byId('p4SaveMastery').disabled=false;byId('p4MasterySaved').textContent='Mastery saved.';
+        p4RefreshMastery();refreshPart4Progress();
+      }).withFailureHandler(e=>{
+        byId('p4SaveMastery').disabled=false;byId('p4MasterySaved').textContent='Save failed: '+e.message;
+      }).saveSpeakingPart4Mastery({questionId:id,level,practiceMode:byId('p4StudyView').value==='recall'?'recall':'learn'});
+    }
+  });
  });
  document.querySelectorAll('[data-p4-step]').forEach(btn=>btn.addEventListener('click',()=>setP4Step_(btn.dataset.p4Step)));
  document.querySelectorAll('#p4MemorizeLevels [data-p4-level]').forEach(btn=>btn.addEventListener('click',()=>{
