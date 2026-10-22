@@ -215,20 +215,20 @@ function open(){
   el.classList.remove('hidden');
   const shell=qs('.speaking-shell');if(shell)shell.classList.add('p4-mode');
   document.querySelectorAll('.bottom-nav .nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.nav==='part4'));
+  document.querySelectorAll('.shared-part-switch .part-tab').forEach(b=>b.classList.toggle('active',b.hasAttribute('data-p4-home')));
   window.scrollTo(0,0);p4ShowLibrary_();load();
 }
 function close(){p4StopAudio();++S.requestSeq;stopClock();S.session=null;S.phase='ready';byId('speakingPart4Future').classList.add('hidden');const shell=qs('.speaking-shell');if(shell)shell.classList.remove('p4-mode');
-  document.querySelectorAll('.bottom-nav .nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.nav==='home'));}
+  document.querySelectorAll('.bottom-nav .nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.nav==='home'));
+  document.querySelectorAll('.shared-part-switch [data-p4-home]').forEach(b=>b.classList.remove('active'));}
 document.addEventListener('DOMContentLoaded',()=>{
  const card=qs('.speaking-module-card.is-coming');
  if(card&&/Part 4/.test(card.textContent)){card.disabled=false;card.classList.remove('is-coming');const label=qs('.module-status',card);if(label)label.textContent='DEV preview';card.addEventListener('click',open);}
- document.querySelectorAll('[data-p4-switch]').forEach(button=>{
+ // Capture a shared tab click before P1-P3 handlers update their active view.
+ document.querySelectorAll('.shared-part-switch [data-part]').forEach(button=>{
    button.addEventListener('click',()=>{
-     const target=button.dataset.p4Switch;
-     if(target==='part4')return;
-     const nav=document.querySelector('.bottom-nav .nav-btn[data-nav="'+target+'"]');
-     if(nav)nav.click();
-   });
+     if(!byId('speakingPart4Future').classList.contains('hidden'))close();
+   },true);
  });
  byId('p4BackLibrary').addEventListener('click',p4ShowLibrary_);
  byId('p4PrevTopic').addEventListener('click',()=>p4MoveTopic_(-1));
