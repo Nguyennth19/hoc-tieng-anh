@@ -317,6 +317,8 @@ function renderAnswersOnly_(){if(!S.current)return;p4RenderStudyCards_();}
 function p4ShowLibrary_(){
   window.AptisSpeakingCompletion?.dismiss();
   p4StopAudio();stopClock();S.session=null;
+  // Shared shell owns the Part selector; it only appears on the library.
+  qs('.speaking-shell')?.classList.remove('p4-detail-mode');
   byId('p4TopicLibrary').hidden=false;
   byId('p4TopicDetail').hidden=true;
   p4RenderLibrary_();
@@ -324,6 +326,7 @@ function p4ShowLibrary_(){
 function p4ShowDetail_(id){
   if(!S.data||!S.data.sets.some(x=>x.id===id))return;
   window.AptisSpeakingCompletion?.dismiss();
+  qs('.speaking-shell')?.classList.add('p4-detail-mode');
   byId('p4Set').value=id;
   byId('p4TopicLibrary').hidden=true;
   byId('p4TopicDetail').hidden=false;
@@ -541,7 +544,7 @@ function open(){
   document.querySelectorAll('.shared-part-switch .part-tab').forEach(b=>b.classList.toggle('active',b.hasAttribute('data-p4-home')));
   window.scrollTo(0,0);p4ShowLibrary_();load();
 }
-function close(){window.AptisSpeakingCompletion?.dismiss();p4StopAudio();++S.requestSeq;stopClock();S.session=null;S.phase='ready';byId('speakingPart4Future').classList.add('hidden');const shell=qs('.speaking-shell');if(shell)shell.classList.remove('p4-mode');
+function close(){window.AptisSpeakingCompletion?.dismiss();p4StopAudio();++S.requestSeq;stopClock();S.session=null;S.phase='ready';byId('speakingPart4Future').classList.add('hidden');const shell=qs('.speaking-shell');if(shell)shell.classList.remove('p4-mode','p4-detail-mode');
   document.querySelectorAll('.bottom-nav .nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.nav==='home'));
   document.querySelectorAll('.shared-part-switch [data-p4-home]').forEach(b=>b.classList.remove('active'));}
 function p4MountInsideSpeaking_(){
@@ -576,7 +579,6 @@ document.addEventListener('DOMContentLoaded',()=>{
    byId('p4HomeFilter').value='practised';p4RenderLibrary_();
    byId('p4HomeLibraryTitle').scrollIntoView({block:'start',behavior:'smooth'});
  });
- byId('p4BackLibrary').addEventListener('click',p4ShowLibrary_);
  byId('p4PrevTopic').addEventListener('click',()=>p4MoveTopic_(-1));
  byId('p4NextTopic').addEventListener('click',()=>p4MoveTopic_(1));
  document.querySelectorAll('[data-p4-home]').forEach(btn=>btn.addEventListener('click',open));
