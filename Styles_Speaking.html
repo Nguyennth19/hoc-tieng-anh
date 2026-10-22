@@ -232,4 +232,28 @@ button,input,select{font:inherit}button{cursor:pointer}button:disabled{cursor:no
  .p4-memorize-levels .level-btn{flex:1 1 100%;min-height:42px}
  .p4-memorize-card .p2-dictation{width:100%;min-width:0}
 }
+
+/* S6: a single timer / manual completion visual contract for Speaking Parts 1–4.
+   No Part-specific timer width, sticky overlay, button state, or save behavior. */
+.speaking-practice-timer{position:static;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;width:100%;min-width:0;box-sizing:border-box;margin:18px 0;padding:18px 14px;text-align:center;background:linear-gradient(180deg,#fff,#f5f4ff);border:1px solid #dfdaf8;border-radius:18px}
+.speaking-practice-timer .timer{font-size:clamp(32px,5vw,48px);line-height:1.15;font-weight:900;letter-spacing:-.04em;margin:2px 0}
+.speaking-practice-timer .timer-bar{width:min(100%,460px);margin:4px 0}
+.speaking-timer-stage{font-size:13px;font-weight:850;color:var(--purple-2)}
+.speaking-timer-actions{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px;width:100%;min-width:0}
+.speaking-timer-actions button{min-height:44px;min-width:108px;font:inherit;font-size:13px;font-weight:800}
+.speaking-timer-actions button:disabled{opacity:.55;cursor:not-allowed}
+.speaking-completion-actions{display:flex;align-items:center;justify-content:flex-start;flex-wrap:wrap;gap:10px;min-width:0}
+.speaking-confirm-overlay{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:20px;background:rgba(26,29,52,.48)}
+.speaking-confirm-overlay.hidden{display:none!important}
+.speaking-confirm-card{width:min(100%,450px);box-sizing:border-box;background:var(--card,#fff);border-radius:18px;padding:24px;box-shadow:0 18px 70px rgba(20,25,55,.23)}
+.speaking-confirm-card h3{margin:0 0 10px;font-size:20px}
+.speaking-confirm-card p{margin:0 0 18px;color:var(--muted);line-height:1.6}
+.speaking-confirm-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:9px}
+.speaking-confirm-actions button{min-height:44px}
+@media(max-width:650px){
+ .speaking-practice-timer{padding:14px 10px}
+ .speaking-timer-actions button{flex:1 1 120px;min-width:0;padding:10px 7px;font-size:12px}
+ .speaking-confirm-card{padding:18px}
+ .speaking-confirm-actions button{flex:1 1 120px}
+}
 </style>
