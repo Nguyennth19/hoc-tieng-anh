@@ -8,6 +8,12 @@
       <span id="syncStatus" class="sync-status" aria-live="polite"></span>
     </div>
   </div>
+  <div class="part-switch shared-part-switch" role="tablist" aria-label="Speaking part">
+          <button class="part-tab active" data-part="1" type="button"><span>Part 1</span><small>Personal questions · 30s</small></button>
+          <button class="part-tab" data-part="2" type="button"><span>Part 2</span><small>Photo + 2 questions · 45s</small></button>
+          <button class="part-tab" data-part="3" type="button"><span>Part 3</span><small>2 photos · compare · 45s</small></button>
+          <button class="part-tab" data-p4-home="true" type="button"><span>Part 4</span><small>3 questions · 2 min</small></button>
+        </div>
   <main class="speaking-main">
       <section id="loadingView" class="panel loading-panel hidden" style="display:none" hidden aria-hidden="true">
         <div class="spinner"></div>
@@ -83,13 +89,6 @@
       </section>
 
       <section id="homeView" class="view hidden">
-        <div class="part-switch" role="tablist" aria-label="Speaking part">
-          <button class="part-tab active" data-part="1" type="button"><span>Part 1</span><small>Personal questions · 30s</small></button>
-          <button class="part-tab" data-part="2" type="button"><span>Part 2</span><small>Photo + 2 questions · 45s</small></button>
-          <button class="part-tab" data-part="3" type="button"><span>Part 3</span><small>2 photos · compare · 45s</small></button>
-          <button class="part-tab" data-p4-home="true" type="button"><span>Part 4</span><small>3 questions · 2 min</small></button>
-        </div>
-
         <article class="welcome-card">
           <div class="welcome-copy">
             <span id="heroPill" class="pill">Speaking Part 1</span>
