@@ -5,19 +5,67 @@ const byId=id=>document.getElementById(id);
 const S={data:null,current:null,mode:'learn',studyStep:'learn',memLevel:1,phase:'ready',deadline:0,timer:null,spoken:0,session:null,saved:false,requestSeq:0};
 const P4_MEM_DRAFTS=Object.create(null); // Client-session drafts only. Never sent to Sheets or Mastery.
 const qs=(sel,root=document)=>root.querySelector(sel);
-const duration=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
-function stopClock(){if(S.timer){clearInterval(S.timer);S.timer=null;}}
+/* P4 delegates its preparation/speaking stages to the same timer as P1–3.
+   No timer transition may save progress or change Mastery. */
+let p4PracticeTimer_=null;
+function p4Timer_(){
+  if(p4PracticeTimer_)return p4PracticeTimer_;
+  p4PracticeTimer_=window.AptisSpeakingTimer.create(function(snap){
+    byId('p4Time').textContent=window.AptisSpeakingTimer.format(snap.remainingSeconds);
+    const running=snap.status==='running',paused=snap.status==='paused';
+    byId('p4Stage').textContent=paused?'Paused · '+(S.phase==='prep'?'Preparation':'Speaking'):
+      S.phase==='prep'?'Preparation':S.phase==='speak'?'Speaking':
+      S.phase==='done'?'Finished':'Ready';
+    byId('p4Begin').disabled=running||paused;
+    byId('p4Next').disabled=S.phase!=='prep'||!['running','paused'].includes(snap.status);
+    byId('p4Pause').disabled=!running&&!paused;
+    byId('p4Pause').textContent=paused?'▶ Resume':'⏸ Pause';
+    byId('p4Stop').disabled=!running&&!paused;
+  },function(){
+    if(S.phase==='prep')startSpeaking();
+    else if(S.phase==='speak')endSpeaking();
+  });
+  return p4PracticeTimer_;
+}
+function stopClock(){
+  if(p4PracticeTimer_)p4PracticeTimer_.stop(true);
+}
 function status(message){
   byId('p4Status').textContent=message;
-  const libraryStatus=byId('p4LibraryStatus');
-  if(libraryStatus)libraryStatus.textContent=message;
+  const libraryStatus=byId('p4LibraryStatus');if(libraryStatus)libraryStatus.textContent=message;
 }
 function topicLabel(x){const t=String(x.topic||x.questions?.[0]||'').trim();return t.length>94?t.slice(0,91)+'…':t||'Untitled topic';}
-function renderClock(){const sec=Math.max(0,Math.ceil((S.deadline-Date.now())/1000));byId('p4Time').textContent=duration(sec);if(sec===0){stopClock();if(S.phase==='prep'){startSpeaking();}else if(S.phase==='speak'){endSpeaking();}}}
 function escapeHtml(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function clock(phase,seconds){stopClock();S.phase=phase;S.deadline=Date.now()+seconds*1000;byId('p4Time').textContent=duration(seconds);byId('p4Stage').textContent=phase==='prep'?'Preparation':phase==='speak'?'Speaking':'Ready';S.timer=setInterval(renderClock,200);byId('p4Begin').disabled=true;byId('p4Next').disabled=phase!=='prep';byId('p4Stop').disabled=false;}
-function startSpeaking(){p4StopAudio();/* Timer never changes Learn or Memorize visibility; Exam mode is already answer-free. */S.session='p4_'+Date.now()+'_'+Math.random().toString(36).slice(2,12);S.saved=false;clock('speak',120);status('Speaking: answer all three questions within the same 120-second window.');}
-function endSpeaking(){if(S.phase==='speak')S.spoken=Math.max(0,Math.min(120,120-Math.ceil((S.deadline-Date.now())/1000)));stopClock();S.phase='done';byId('p4Review').hidden=!(S.current&&S.session);byId('p4Stage').textContent='Finished';byId('p4Begin').disabled=false;byId('p4Next').disabled=true;byId('p4Stop').disabled=true;status('Practice finished. Rate your performance and save your practice attempt below. Audio recording is not enabled.');}
+function clock(phase,seconds){
+  stopClock();S.phase=phase;
+  p4Timer_().start(seconds);
+}
+function startSpeaking(){
+  p4StopAudio();
+  // Keep Learn/Memorize text visible. Test hides teacher models independently.
+  S.session='p4_'+Date.now()+'_'+Math.random().toString(36).slice(2,12);
+  S.saved=false;S.spoken=0;byId('p4Review').hidden=true;
+  clock('speak',120);
+  status('Speaking: answer all three questions within 120 seconds.');
+}
+function endSpeaking(){
+  if(S.phase==='prep'){
+    stopClock();S.phase='ready';S.session=null;
+    byId('p4Time').textContent='01:00';byId('p4Stage').textContent='Ready';
+    byId('p4Begin').disabled=!S.current;byId('p4Next').disabled=true;
+    byId('p4Pause').disabled=true;byId('p4Stop').disabled=true;
+    status('Preparation cancelled. No attempt or Mastery was saved.');
+    return;
+  }
+  if(S.phase!=='speak')return;
+  S.spoken=Math.max(0,Math.min(120,p4Timer_().snapshot().elapsedSeconds));
+  stopClock();S.phase='done';
+  byId('p4Review').hidden=!(S.current&&S.session);
+  byId('p4Stage').textContent='Finished';byId('p4Time').textContent='00:00';
+  byId('p4Begin').disabled=!S.current;byId('p4Next').disabled=true;
+  byId('p4Pause').disabled=true;byId('p4Stop').disabled=true;
+  status('Practice finished. Self-rate and choose Save practice to record an attempt.');
+}
 /** Highlight only approved reusable language patterns, not topic-specific details. */
 const P4_FIXED_PHRASES=[
 'I would like to talk about a time when','The main reason is that',
@@ -276,7 +324,7 @@ function renderSet(){
   byId('p4Save').disabled=false;
   S.current=S.data.sets.find(x=>x.id===byId('p4Set').value)||S.data.sets[0]||null;
   stopClock();S.phase='ready';S.session=null;S.saved=false;byId('p4Review').hidden=true;byId('p4Saved').textContent='';byId('p4Stage').textContent='Ready';byId('p4Time').textContent='01:00';
-  byId('p4Begin').disabled=!S.current;byId('p4Next').disabled=true;byId('p4Stop').disabled=true;
+  byId('p4Begin').disabled=!S.current;byId('p4Next').disabled=true;byId('p4Pause').disabled=true;byId('p4Stop').disabled=true;
   p4SyncMastery();
   if(!S.current){byId('p4Content').textContent='No approved exam sets are available. Use Learn mode for drafts.';byId('p4Models').textContent='';return;}
   p4RenderStudyCards_();
@@ -456,8 +504,13 @@ document.addEventListener('DOMContentLoaded',()=>{
  byId('p4Mode').addEventListener('change',load);
  byId('p4Load').addEventListener('click',()=>load(true));
  byId('p4Set').addEventListener('change',renderSet);
- byId('p4Begin').addEventListener('click',()=>{if(S.current)clock('prep',60);});
+ byId('p4Begin').addEventListener('click',()=>{if(S.current){S.session=null;S.saved=false;byId('p4Review').hidden=true;clock('prep',60);}});
  byId('p4Next').addEventListener('click',()=>{if(S.phase==='prep')startSpeaking();});
+ byId('p4Pause').addEventListener('click',()=>{
+   const timer=p4Timer_(),snap=timer.snapshot();
+   if(snap.status==='running')timer.pause();
+   else if(snap.status==='paused')timer.resume();
+ });
  byId('p4Stop').addEventListener('click',endSpeaking);
 
  byId('p4Save').addEventListener('click',()=>{
