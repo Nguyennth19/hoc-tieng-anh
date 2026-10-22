@@ -2,7 +2,7 @@
 (function(){
 'use strict';
 const byId=id=>document.getElementById(id);
-const S={data:null,current:null,mode:'learn',studyStep:'learn',memLevel:1,phase:'ready',spoken:0,session:null,saved:false,requestSeq:0};
+const S={data:null,dataMode:null,current:null,mode:'learn',studyStep:'learn',memLevel:1,phase:'ready',spoken:0,session:null,saved:false,requestSeq:0};
 const P4_MEM_DRAFTS=Object.create(null); // Client-session drafts only. Never sent to Sheets or Mastery.
 const qs=(sel,root=document)=>root.querySelector(sel);
 /* P4 delegates its preparation/speaking stages to the same timer as P1–3.
@@ -102,6 +102,50 @@ function p4FormulaHtml(raw){
 }
 
 const P4_MASTERY={rows:[],loaded:false};
+
+/* S6.1: Part 4 uses the SAME shared frontend cache manager as P1–P3.
+   Only mode-qualified keys, eligibility validation and QA backend methods
+   remain Part4-specific. Never coerce unapproved Learn sets into Test. */
+const P4_CACHE_NAMESPACE='aptisSpeaking:staging:p4:s61';
+const P4_CONTENT_FRESH_MS=6*60*60*1000;
+const P4_CONTENT_MAX_MS=7*24*60*60*1000;
+const P4_MASTERY_FRESH_MS=90*1000;
+const P4_MASTERY_MAX_MS=10*60*1000;
+function p4Cache_(){return window.AptisSpeakingCache;}
+function p4ContentKey_(mode){return P4_CACHE_NAMESPACE+':content:'+(mode==='exam'?'exam':'learn');}
+function p4MasteryKey_(){return P4_CACHE_NAMESPACE+':mastery:live';}
+function p4ValidContent_(data,mode){
+ if(!data||data.isDev!==true||data.mode!==mode||!Array.isArray(data.sets))return false;
+ if(mode==='learn'&&data.sets.length!==51)return false;
+ if(mode==='exam'&&data.sets.length>51)return false;
+ const ids=new Set();
+ return data.sets.every(x=>{
+   if(!x||!x.id||ids.has(String(x.id))||!Array.isArray(x.questions)||x.questions.length!==3)return false;
+   if(!x.questions.every(q=>String(q||'').trim()))return false;
+   if(mode==='learn'&&(!Array.isArray(x.models)||x.models.length!==3||!x.models.every(a=>String(a||'').trim())))return false;
+   if(mode==='exam'&&(!Boolean(x.releaseApproved)||x.qaStatus!=='APPROVED'))return false;
+   ids.add(String(x.id));return true;
+ });
+}
+function p4ValidMastery_(rows){
+ if(!Array.isArray(rows)||rows.length!==51)return false;
+ const ids=new Set();
+ return rows.every(row=>{
+   const id=String(row?.questionId||''),level=Number(row?.level);
+   if(!id||ids.has(id)||!Number.isInteger(level)||level<0||level>3)return false;
+   ids.add(id);return true;
+ });
+}
+function p4CacheDiagnostic_(){
+ const cache=p4Cache_(),stats=cache?.metrics()||{requests:{},inflight:[],memoryKeys:[]};
+ const safeKeys=[p4ContentKey_('learn'),p4ContentKey_('exam'),p4MasteryKey_()];
+ return {
+  contentMode:S.dataMode||null,topicCount:S.data?.sets?.length||0,masteryLoaded:P4_MASTERY.loaded,
+  requests:Object.fromEntries(safeKeys.map(key=>[key,stats.requests[key]||0])),
+  inflight:stats.inflight.filter(key=>safeKeys.includes(key))
+ };
+}
+
 function p4StopAudio(){
   if(window.AptisSpeakingAudio)window.AptisSpeakingAudio.stop();
 }
@@ -128,15 +172,42 @@ function p4ApplyStudyMode(){
  if(!learn){p4StopAudio();byId('p4StudyView').value='recall';}
  else if(byId('p4StudyView').value==='recall'&&S.phase==='ready'){} 
 }
-function p4RefreshMastery(){
+function p4ApplyMastery_(rows){
+ if(!p4ValidMastery_(rows))return false;
+ P4_MASTERY.rows=rows;
+ P4_MASTERY.loaded=true;
+ const counts=[0,0,0,0];
+ rows.forEach(x=>counts[Number(x.level)]++);
+ byId('p4MasteryOverview').textContent='Mastery across '+rows.length+' sets: '+counts[3]+' independent · '+counts[2]+' with hints · '+counts[1]+' reading · '+counts[0]+' new';
+ p4SyncMastery();p4DecorateTopics();p4RenderLibrary_();
+ return true;
+}
+function p4RefreshMastery(force){
+ const cache=p4Cache_();
+ if(!cache)return;
+ const key=p4MasteryKey_();
+ if(force===true)cache.clear(key);
+ const saved=force===true?null:cache.read({
+   key,memoryOnly:true,freshMs:P4_MASTERY_FRESH_MS,maxAgeMs:P4_MASTERY_MAX_MS,validate:p4ValidMastery_
+ });
+ if(saved){
+   if(!P4_MASTERY.loaded||saved.data!==P4_MASTERY.rows)p4ApplyMastery_(saved.data);
+   if(!saved.stale)return;
+ }
  if(typeof google==='undefined'||!google.script?.run)return;
- google.script.run.withSuccessHandler(items=>{
-  P4_MASTERY.rows=Array.isArray(items)?items:[];
-  P4_MASTERY.loaded=true;
-  const counts=[0,0,0,0];P4_MASTERY.rows.forEach(x=>{const n=Number(x.level)||0;if(n>=0&&n<=3)counts[n]++;});
-  byId('p4MasteryOverview').textContent='Mastery across 51 sets: '+counts[3]+' independent · '+counts[2]+' with hints · '+counts[1]+' reading · '+counts[0]+' new';
-  p4SyncMastery();p4DecorateTopics();p4RenderLibrary_();
- }).withFailureHandler(e=>{P4_MASTERY.loaded=false;p4RenderLibrary_();byId('p4MasterySaved').textContent='Mastery unavailable: '+e.message;}).getSpeakingPart4Mastery();
+ cache.request(key,(resolve,reject)=>{
+   google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).getSpeakingPart4Mastery();
+ },items=>{
+   if(!p4ValidMastery_(items)){
+     if(!saved)byId('p4MasterySaved').textContent='Part 4 Mastery data is incomplete. Refresh the QA workbook.';
+     return;
+   }
+   cache.write({key,data:items,memoryOnly:true,validate:p4ValidMastery_});
+   p4ApplyMastery_(items);
+ },error=>{
+   // Never replace a previously verified Mastery record with an invented zero.
+   if(!P4_MASTERY.loaded)byId('p4MasterySaved').textContent='Mastery unavailable: '+(error?.message||error);
+ },force===true);
 }
 function p4DecorateTopics(){
  const select=byId('p4Set');if(!S.data||!select)return;
@@ -336,56 +407,84 @@ function renderSet(){
   // QA approval is enforced by the data source, not shown as a learner-facing banner.
   status('');
 }
-const P4_CONTENT_CACHE={learn:null,exam:null};
-const P4_CONTENT_TTL_MS=120000;
-function p4ApplyPayload_(data,requestId){
-  if(requestId!==S.requestSeq)return;
-  if(!data||data.isDev!==true||!Array.isArray(data.sets)){
-    status('Safety check failed: verified DEV content required.');return;
-  }
-  S.data=data;
-  const select=byId('p4Set'),previousId=select.value;
-  select.replaceChildren();
-  data.sets.forEach(x=>{
-    const o=document.createElement('option');
-    o.value=x.id;
-    o.textContent=topicLabel(x)+(x.qaStatus==='QA_HOLD'?' · QA hold':'');
-    o.title=x.id+' · '+String(x.questions?.[0]||'');
-    select.appendChild(o);
-  });
-  if(data.sets.some(x=>x.id===previousId))select.value=previousId;
-  if(!byId('p4TopicDetail').hidden && select.value)p4ShowDetail_(select.value);
-  else renderSet();
-  // Progress is never served from the content cache: refresh separately.
-  p4RefreshMastery();
-  p4RenderLibrary_();
-  if(S.mode==='exam'&&data.sets.length===0)
-    status('Exam mode locked: no QA-approved sets. All source drafts remain available in Learn mode.');
+
+function p4ApplyPayload_(data,requestId,mode){
+ if(requestId!==S.requestSeq||S.mode!==mode)return false;
+ if(!p4ValidContent_(data,mode)){
+   status('Safety check failed: verified Part 4 '+mode+' content required.');return false;
+ }
+ // Do not reinitialize a Topic or interrupt a speaking session on cache hits.
+ if(S.data===data&&S.dataMode===mode){
+   p4RenderLibrary_();status('');return true;
+ }
+ S.data=data;S.dataMode=mode;
+ const select=byId('p4Set'),previousId=select.value||S.current?.id;
+ select.replaceChildren();
+ data.sets.forEach(x=>{
+   const o=document.createElement('option');o.value=x.id;
+   o.textContent=topicLabel(x)+(x.qaStatus==='QA_HOLD'?' · QA hold':'');
+   o.title=x.id+' · '+String(x.questions?.[0]||'');
+   select.appendChild(o);
+ });
+ if(data.sets.some(x=>x.id===previousId))select.value=previousId;
+ if(!byId('p4TopicDetail').hidden&&select.value)p4ShowDetail_(select.value);
+ else renderSet();
+ p4RenderLibrary_();
+ if(mode==='exam'&&!data.sets.length)status('No approved Exam topics are available.');
+ else status('');
+ return true;
 }
 function load(forceRefresh){
-  const requestId=++S.requestSeq;
-  p4StopAudio();stopClock();S.session=null;byId('p4Review').hidden=true;
-  S.mode=byId('p4Mode').value;
-  status('Loading Part 4 data...');
-  byId('p4Content').textContent='';
-  const mode=S.mode;
-  const cached=P4_CONTENT_CACHE[mode];
-  if(forceRefresh!==true && cached && Date.now()-cached.savedAt<P4_CONTENT_TTL_MS){
-    p4ApplyPayload_(cached.data,requestId);return;
-  }
-  if(typeof google==='undefined'||!google.script||!google.script.run){
-    status('Google Apps Script runtime is not connected.');return;
-  }
-  google.script.run.withSuccessHandler(data=>{
-    if(requestId!==S.requestSeq)return;
-    if(!data||data.isDev!==true||!Array.isArray(data.sets)){
-      status('Safety check failed: verified DEV content required.');return;
-    }
-    P4_CONTENT_CACHE[mode]={data,savedAt:Date.now()};
-    p4ApplyPayload_(data,requestId);
-  }).withFailureHandler(error=>{
-    if(requestId===S.requestSeq)status('DEV not configured: '+(error?.message||'Unable to load data'));
-  }).getSpeakingPart4Dev(mode);
+ const requestId=++S.requestSeq;
+ const mode=byId('p4Mode').value==='exam'?'exam':'learn',cache=p4Cache_();
+ S.mode=mode;
+ if(!cache){status('Shared Speaking cache unavailable. Reload the staging app.');return;}
+ const key=p4ContentKey_(mode);
+ if(forceRefresh===true)cache.clear([p4ContentKey_('learn'),p4ContentKey_('exam')]);
+ const saved=forceRefresh===true?null:cache.read({
+   key,freshMs:P4_CONTENT_FRESH_MS,maxAgeMs:P4_CONTENT_MAX_MS,
+   validate:data=>p4ValidContent_(data,mode)
+ });
+ const existing=Boolean(S.data&&S.dataMode===mode);
+ if(saved){
+   p4ApplyPayload_(saved.data,requestId,mode);
+   if(!saved.stale){p4RefreshMastery();return;}
+ }else if(existing&&forceRefresh!==true){
+   // In-session copy remains usable while the persistent cache is unavailable.
+   status('');p4RenderLibrary_();p4RefreshMastery();return;
+ }else{
+   // Block only on first load or when changing to an uncached mode. Never
+   // flash a loader or clear teacher text when a valid cached copy exists.
+   if(!existing){
+     S.data=null;S.dataMode=null;S.current=null;
+     p4StopAudio();stopClock();S.session=null;byId('p4Review').hidden=true;
+     byId('p4Content').replaceChildren();
+     byId('p4TopicCards').replaceChildren();
+     status('Loading Part 4 data...');
+   }else status('Refreshing Part 4 content in background…');
+ }
+ p4RefreshMastery(forceRefresh===true);
+ if(typeof google==='undefined'||!google.script?.run){
+   if(!saved&&!existing)status('Google Apps Script runtime is not connected.');
+   return;
+ }
+ cache.request(key,(resolve,reject)=>{
+   google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).getSpeakingPart4Dev(mode);
+ },data=>{
+   if(!p4ValidContent_(data,mode)){
+     if(requestId===S.requestSeq&&S.mode===mode)status('Part 4 QA validation failed: expected approved, complete Topic bank.');
+     return;
+   }
+   // Commit the valid response to cache even if the user has navigated away.
+   cache.write({key,data,validate:value=>p4ValidContent_(value,mode)});
+   if(requestId!==S.requestSeq||S.mode!==mode)return;
+   if(['prep','speak'].includes(S.phase))return; // Never interrupt an active exam.
+   p4ApplyPayload_(data,requestId,mode);
+ },error=>{
+   if(requestId!==S.requestSeq||S.mode!==mode)return;
+   if(saved||existing)status('Saved Part 4 data · background refresh unavailable.');
+   else status('Part 4 data unavailable: '+(error?.message||error));
+ },forceRefresh===true);
 }
 
 function setP4Step_(step) {
@@ -562,6 +661,6 @@ document.addEventListener('DOMContentLoaded',()=>{
  });
 
 });
-window.AptisSpeakingPart4={open,close};
+window.AptisSpeakingPart4={open,close,qaCacheInfo:p4CacheDiagnostic_};
 })();
 </script>
