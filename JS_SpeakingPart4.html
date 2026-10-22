@@ -192,22 +192,56 @@ function renderSet(){
   // QA approval is enforced by the data source, not shown as a learner-facing banner.
   status('');
 }
-function load(){
+const P4_CONTENT_CACHE={learn:null,exam:null};
+const P4_CONTENT_TTL_MS=120000;
+function p4ApplyPayload_(data,requestId){
+  if(requestId!==S.requestSeq)return;
+  if(!data||data.isDev!==true||!Array.isArray(data.sets)){
+    status('Safety check failed: verified DEV content required.');return;
+  }
+  S.data=data;
+  const select=byId('p4Set'),previousId=select.value;
+  select.replaceChildren();
+  data.sets.forEach(x=>{
+    const o=document.createElement('option');
+    o.value=x.id;
+    o.textContent=topicLabel(x)+(x.qaStatus==='QA_HOLD'?' · QA hold':'');
+    o.title=x.id+' · '+String(x.questions?.[0]||'');
+    select.appendChild(o);
+  });
+  if(data.sets.some(x=>x.id===previousId))select.value=previousId;
+  if(!byId('p4TopicDetail').hidden && select.value)p4ShowDetail_(select.value);
+  else renderSet();
+  // Progress is never served from the content cache: refresh separately.
+  p4RefreshMastery();
+  p4RenderLibrary_();
+  if(S.mode==='exam'&&data.sets.length===0)
+    status('Exam mode locked: no QA-approved sets. All source drafts remain available in Learn mode.');
+}
+function load(forceRefresh){
   const requestId=++S.requestSeq;
-  p4StopAudio();stopClock();S.session=null;byId('p4Review').hidden=true;S.mode=byId('p4Mode').value;status('Loading Part 4 data...');
+  p4StopAudio();stopClock();S.session=null;byId('p4Review').hidden=true;
+  S.mode=byId('p4Mode').value;
+  status('Loading Part 4 data...');
   byId('p4Content').textContent='';
-  if(typeof google==='undefined'||!google.script||!google.script.run){status('Google Apps Script runtime is not connected.');return;}
+  const mode=S.mode;
+  const cached=P4_CONTENT_CACHE[mode];
+  if(forceRefresh!==true && cached && Date.now()-cached.savedAt<P4_CONTENT_TTL_MS){
+    p4ApplyPayload_(cached.data,requestId);return;
+  }
+  if(typeof google==='undefined'||!google.script||!google.script.run){
+    status('Google Apps Script runtime is not connected.');return;
+  }
   google.script.run.withSuccessHandler(data=>{
     if(requestId!==S.requestSeq)return;
-    if(!data||data.isDev!==true){status('Safety check failed: DEV response required.');return;}
-    S.data=data;
-    const select=byId('p4Set');select.replaceChildren();
-    data.sets.forEach(x=>{const o=document.createElement('option');o.value=x.id;o.textContent=topicLabel(x)+(x.qaStatus==='QA_HOLD'?' · QA hold':'');o.title=x.id+' · '+String(x.questions?.[0]||'');select.appendChild(o);});
-    renderSet();
-    p4RefreshMastery();
-    p4RenderLibrary_();
-    if(S.mode==='exam'&&data.sets.length===0)status('Exam mode locked: no QA-approved sets. All source drafts remain available in Learn mode.');
-  }).withFailureHandler(error=>{if(requestId===S.requestSeq)status('DEV not configured: '+(error?.message||'Unable to load data'));}).getSpeakingPart4Dev(S.mode);
+    if(!data||data.isDev!==true||!Array.isArray(data.sets)){
+      status('Safety check failed: verified DEV content required.');return;
+    }
+    P4_CONTENT_CACHE[mode]={data,savedAt:Date.now()};
+    p4ApplyPayload_(data,requestId);
+  }).withFailureHandler(error=>{
+    if(requestId===S.requestSeq)status('DEV not configured: '+(error?.message||'Unable to load data'));
+  }).getSpeakingPart4Dev(mode);
 }
 
 function setP4Step_(step) {
@@ -272,6 +306,10 @@ document.addEventListener('DOMContentLoaded',()=>{
      if(!byId('speakingPart4Future').classList.contains('hidden'))close();
    },true);
  });
+ byId('refreshBtn')?.addEventListener('click',event=>{
+   if(byId('speakingPart4Future').classList.contains('hidden'))return;
+   event.preventDefault();event.stopImmediatePropagation();load(true);
+ },true);
  byId('p4HomeSearch').addEventListener('input',p4RenderLibrary_);
  byId('p4HomeFilter').addEventListener('change',p4RenderLibrary_);
  document.querySelectorAll('[data-p4-filter]').forEach(b=>b.addEventListener('click',()=>{
@@ -306,7 +344,7 @@ document.addEventListener('DOMContentLoaded',()=>{
  });
  document.querySelectorAll('[data-p4-step]').forEach(btn=>btn.addEventListener('click',()=>setP4Step_(btn.dataset.p4Step)));
  byId('p4Mode').addEventListener('change',load);
- byId('p4Load').addEventListener('click',load);
+ byId('p4Load').addEventListener('click',()=>load(true));
  byId('p4Set').addEventListener('change',renderSet);
  byId('p4Begin').addEventListener('click',()=>{if(S.current)clock('prep',60);});
  byId('p4Next').addEventListener('click',()=>{if(S.phase==='prep')startSpeaking();});
