@@ -67,6 +67,7 @@ function p4AnswerHtml(answer){
 }
 function p4ApplyStudyMode(){
  const learn=S.mode==='learn';
+ byId('p4ToolsDisclosure').hidden=!learn;
  byId('p4LearningTools').hidden=!learn;
  if(!learn){p4StopAudio();byId('p4StudyView').value='recall';}
  else if(byId('p4StudyView').value==='recall'&&S.phase==='ready'){} 
@@ -157,7 +158,8 @@ function renderSet(){
       (answer?'<details class="p4dev-inline-answer"'+(byId('p4StudyView').value==='recall'?'':' open')+'><summary>Study answer · Q'+(i+1)+'</summary><button type="button" class="p4-listen" data-answer="'+i+'">▶ Listen Q'+(i+1)+'</button><p>'+p4AnswerHtml(answer)+'</p></details>':'')+'</article>';
   }).join('');
   byId('p4Models').textContent='';
-  status(S.mode==='learn'?'Learn by Formula · QA status: '+S.current.qaStatus:'Exam mode · approved test set.');
+  // QA approval is enforced by the data source, not shown as a learner-facing banner.
+  status('');
 }
 function load(){
   const requestId=++S.requestSeq;
