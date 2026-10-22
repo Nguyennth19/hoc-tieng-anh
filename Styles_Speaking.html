@@ -161,8 +161,8 @@ button,input,select{font:inherit}button{cursor:pointer}button:disabled{cursor:no
 .p2-unified{display:block;min-width:0;width:100%;box-sizing:border-box}
 .p2-unified.hidden{display:none!important}
 #p2UnifiedCards{display:grid;grid-template-columns:1fr;gap:14px}
-.p2-topic-card{min-width:0;border:1px solid #e2e7f1;border-radius:16px;background:#fff;padding:clamp(14px,2vw,22px);display:flex;flex-direction:column;align-items:flex-start;gap:12px}
-.p2-topic-card h3{font-size:clamp(1rem,2.2vw,1.22rem);line-height:1.45;color:#253353;margin:0;overflow-wrap:anywhere}
+.p2-topic-card,.speaking-question-card{min-width:0;border:1px solid #e2e7f1;border-radius:16px;background:#fff;padding:clamp(14px,2vw,22px);display:flex;flex-direction:column;align-items:flex-start;gap:12px}
+.p2-topic-card h3,.speaking-question-card h3{font-size:clamp(1rem,2.2vw,1.22rem);line-height:1.45;color:#253353;margin:0;overflow-wrap:anywhere}
 .p2-topic-answer,.p2-cloze-line{width:100%;min-width:0;line-height:1.8;font-size:clamp(1rem,2vw,1.12rem);overflow-wrap:anywhere}
 .p2-memory-hint{color:#66718c;margin:0}
 .p2-topic-card .p2-dictation{display:block;width:100%;max-width:100%;min-height:160px;box-sizing:border-box;padding:14px;resize:vertical;font:inherit;line-height:1.65}
@@ -191,5 +191,15 @@ button,input,select{font:inherit}button{cursor:pointer}button:disabled{cursor:no
  .speaking-shell .shared-part-switch .part-tab{padding:8px 5px}
  .speaking-shell .shared-part-switch .part-tab small{font-size:10px}
 }
+
+
+/* S3 — single Speaking Topic Detail component contract.
+   P1–3 already use .study-topline/.study-card/.mode-tabs/.model-text.
+   P2–3 and P4 reuse the same question-card rule above (no separate P4 card system). */
+.speaking-question-card{min-width:0;width:100%}
+.speaking-answer-panel{width:100%;border-top:1px solid var(--border);padding-top:12px}
+.speaking-answer-panel summary{cursor:pointer;color:var(--purple-2);font-weight:800}
+.speaking-answer-panel .model-text{width:100%;min-width:0;overflow-wrap:anywhere}
+.speaking-answer-panel .inline-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px}
 
 </style>
