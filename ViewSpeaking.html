@@ -1,5 +1,5 @@
 <section class="skill-shell speaking-shell app-shell">
-  <div class="skill-page-head">
+  <div class="skill-page-head skill-content-frame">
     <div><div class="eyebrow">APTIS ESOL · SPEAKING</div><h1>Speaking</h1></div>
     <div class="skill-head-actions">
       <button id="progressBtn" class="icon-btn" type="button" title="Speaking progress">▥</button>
@@ -8,13 +8,13 @@
       <span id="syncStatus" class="sync-status" aria-live="polite"></span>
     </div>
   </div>
-  <div class="part-switch shared-part-switch" role="tablist" aria-label="Speaking part">
+  <div class="part-switch shared-part-switch skill-content-frame" role="tablist" aria-label="Speaking part">
           <button class="part-tab active" data-part="1" type="button"><span>Part 1</span><small>Personal questions · 30s</small></button>
           <button class="part-tab" data-part="2" type="button"><span>Part 2</span><small>Photo + 2 questions · 45s</small></button>
           <button class="part-tab" data-part="3" type="button"><span>Part 3</span><small>2 photos · compare · 45s</small></button>
           <button class="part-tab" data-p4-home="true" type="button"><span>Part 4</span><small>3 questions · 2 min</small></button>
         </div>
-  <main class="speaking-main">
+  <div class="speaking-main skill-content-frame">
       <section id="loadingView" class="panel loading-panel hidden" style="display:none" hidden aria-hidden="true">
         <div class="spinner"></div>
         <div><strong>Preparing your study plan</strong><p>Checking database and loading Speaking...</p></div>
@@ -387,7 +387,7 @@
           </footer>
         </article>
       </section>
-    </main>
+    </div>
   <nav class="bottom-nav">
       <button class="nav-btn" data-nav="part1" type="button"><span>1</span>Part 1</button>
       <button class="nav-btn" data-nav="part2" type="button"><span>2</span>Part 2</button>
