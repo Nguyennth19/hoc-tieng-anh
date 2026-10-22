@@ -244,6 +244,7 @@ function refreshPart4Progress(){
   }).withFailureHandler(err=>{el.textContent='Part 4 progress unavailable: '+(err?.message||'check connection');}).getSpeakingPart4DevProgress();
 }
 function open(){
+  if(!p4MountInsideSpeaking_())return;
   const el=byId('speakingPart4Future');if(!el)return;
   el.classList.remove('hidden');
   const shell=qs('.speaking-shell');if(shell)shell.classList.add('p4-mode');
@@ -254,7 +255,15 @@ function open(){
 function close(){p4StopAudio();++S.requestSeq;stopClock();S.session=null;S.phase='ready';byId('speakingPart4Future').classList.add('hidden');const shell=qs('.speaking-shell');if(shell)shell.classList.remove('p4-mode');
   document.querySelectorAll('.bottom-nav .nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.nav==='home'));
   document.querySelectorAll('.shared-part-switch [data-p4-home]').forEach(b=>b.classList.remove('active'));}
+function p4MountInsideSpeaking_(){
+  const el=byId('speakingPart4Future');
+  const shell=qs('#page-speaking .speaking-shell');
+  if(!el||!shell)return false;
+  if(el.parentElement!==shell)shell.appendChild(el);
+  return true;
+}
 document.addEventListener('DOMContentLoaded',()=>{
+ if(!p4MountInsideSpeaking_()){console.error('Part 4 DOM mount not found. Check Index.html includes.');return;}
  const card=qs('.speaking-module-card.is-coming');
  if(card&&/Part 4/.test(card.textContent)){card.disabled=false;card.classList.remove('is-coming');const label=qs('.module-status',card);if(label)label.textContent='DEV preview';card.addEventListener('click',open);}
  // Capture a shared tab click before P1-P3 handlers update their active view.
