@@ -607,7 +607,8 @@ document.addEventListener('DOMContentLoaded',()=>{
       google.script.run.withSuccessHandler(()=>{
         if(S.current?.id!==id)return;
         byId('p4SaveMastery').disabled=false;byId('p4MasterySaved').textContent='Mastery saved.';
-        p4RefreshMastery();refreshPart4Progress();
+        // A successful write invalidates only the short-lived Mastery cache.
+        p4RefreshMastery(true);refreshPart4Progress();
       }).withFailureHandler(e=>{
         byId('p4SaveMastery').disabled=false;byId('p4MasterySaved').textContent='Save failed: '+e.message;
       }).saveSpeakingPart4Mastery({questionId:id,level,practiceMode:byId('p4StudyView').value==='recall'?'recall':'learn'});
