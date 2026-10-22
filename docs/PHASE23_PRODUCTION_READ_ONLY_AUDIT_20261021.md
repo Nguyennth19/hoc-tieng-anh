@@ -49,3 +49,25 @@ Before PR approval or deploy, authorized project operator must provide READ-ONLY
 Production Google Sheet identity/content structure: VERIFIED READ ONLY.
 Runtime script property ID, live deployment, actual production media permissions: UNKNOWN (must be supplied by owner/authorized operator).
 Not ready to merge/deploy.
+
+## Operator-provided production deployment snapshot — 2026-10-22
+- Apps Script project editor: https://script.google.com/u/0/home/projects/1AM0lir8dXszB0oYzQwgZTOV8Nkp0zBYmGe1UTdl65zuBvIYZjY744F1j/edit
+- Script Property APTIS_DATABASE_ID (operator-reported): 10ObMk8MNwv0Wbf9hyjCsVqWNAUTGongngmCwPBscMY0 (matches read-only verified original workbook).
+- Script Property APTIS_MEDIA_FOLDER_ID (operator-reported): 1ePeeEej3E_E-NkdIw2X7L2oHKxa3Msmc (matches the media_folder_id recorded in production SETTINGS). Drive folder ownership, access and files not independently verified.
+- Published deployment ID (operator-reported): AKfycbwRIZDVJVkZAfY2vS4jzM-ULezgzu2aZAW3Y85hUL8D2iBvf8jo3LC4FHqa0nFQIXk1wg
+- Published deployment version (operator-reported): 74, dated 2026-10-21 08:53 local.
+- Published /exec URL (operator-reported): https://script.google.com/macros/s/AKfycbwRIZDVJVkZAfY2vS4jzM-ULezgzu2aZAW3Y85hUL8D2iBvf8jo3LC4FHqa0nFQIXk1wg/exec
+- Previously provided /dev URL is separate; do not mistake it for published /exec.
+- These items are operator-provided; this tool connection does not independently inspect Apps Script deployment management or Script Properties. Production sheet identity and stored media folder setting were independently read through Google Drive.
+
+### Updated release gates
+- [x] Exact production Apps Script editor URL supplied.
+- [x] Production database property value supplied and matches original workbook.
+- [x] Media folder property value supplied and matches SETTINGS media_folder_id.
+- [x] Published deployment ID, version 74 and /exec URL supplied as baseline for rollback.
+- [ ] Independently verify Drive folder permissions and image URLs, if feasible.
+- [ ] Create and verify a fresh backup of all 50 production workbook tabs before ANY production update.
+- [ ] Preserve Apps Script production source snapshot for version 74, plus deployment settings and access settings.
+- [ ] Run production-scope release smoke/compatibility tests on a separate copy, including Writing/Part 4.
+- [ ] Explicit user authorization for merge and separate authorization for production deploy.
+No production write/merge/deployment carried out.
