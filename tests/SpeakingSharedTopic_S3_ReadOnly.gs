@@ -41,7 +41,7 @@ function testSpeakingSharedTopicS3ReadOnly() {
     commonModeEventsAreScoped:count(sharedJs,/\$\$\('#speakingModeTabs \.mode-tab'\)/g)===3&&count(sharedJs,/\$\$\('\.mode-tab'\)/g)===0,
     commonFocusEventsAreScoped:count(sharedJs,/\$\$\('#homeView \.focus-card'\)/g)===1&&count(sharedJs,/\$\$\('\.focus-card'\)/g)===0,
     p4SpecificEventsStillBound:has(p4Js,"document.querySelectorAll('[data-p4-filter]')"),
-    p4IdsAreUnique:ids.every(function(id){return count(view+'\n'+p4,new RegExp('id="'+id+'"','g'))===1;}
+    p4IdsAreUnique:ids.every(function(id){return count(view+'\n'+p4,new RegExp('id="'+id+'"','g'))===1;})
   };
   const failed=Object.keys(checks).filter(function(k){return !checks[k];});
   const result={ok:failed.length===0,totalChecks:Object.keys(checks).length,
