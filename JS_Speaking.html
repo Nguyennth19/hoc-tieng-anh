@@ -105,7 +105,7 @@
     $('markLearnedBtn').addEventListener('click', () => saveProgress(5, 'learned'));
     $('favoriteBtn').addEventListener('click', toggleFavorite);
 
-    $$('.part-tab').forEach(btn => btn.addEventListener('click', () => switchPart(Number(btn.dataset.part))));
+    $('.part-tab[data-part]').forEach(btn => btn.addEventListener('click', () => switchPart(Number(btn.dataset.part))));
     $$('[data-open-speaking-part]').forEach(btn => btn.addEventListener('click', () => openPartHome(Number(btn.dataset.openSpeakingPart))));
     $('skillProgressLink').addEventListener('click', showProgress);
     $('skillRecommendationBtn').addEventListener('click', openRecommendedSpeakingPart);
@@ -473,7 +473,7 @@
     if (!isValidBootstrap(state.data)) {
       state.items = [];
       state.currentPrompt = 1;
-      $$('.part-tab').forEach(btn => btn.classList.toggle('active', Number(btn.dataset.part) === state.activePart));
+      $('.part-tab[data-part]').forEach(btn => btn.classList.toggle('active', Number(btn.dataset.part) === state.activePart));
       $('skillHomeView').classList.add('hidden');
       $('homeView').classList.add('hidden');
       $('studyView').classList.add('hidden');
@@ -488,7 +488,7 @@
     state.quickQueue = [];
     state.quickPosition = -1;
 
-    $$('.part-tab').forEach(btn => btn.classList.toggle('active', Number(btn.dataset.part) === state.activePart));
+    $('.part-tab[data-part]').forEach(btn => btn.classList.toggle('active', Number(btn.dataset.part) === state.activePart));
     updatePartCopy();
     renderSummary();
     renderList();
