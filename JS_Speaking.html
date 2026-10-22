@@ -22,6 +22,77 @@
   const CLIENT_CACHE_STALE_MS = 7 * 24 * 60 * 60 * 1000;
   const LOADER_WATCHDOG_MS = 10000;
 
+  // S6.1 — Shared Speaking frontend content cache: ONE owner for P1–P4.
+  // Cache policy/validation remain Part-specific; storage, stale fallback,
+  // in-flight deduplication and request accounting are common.
+  function createSpeakingContentCache_(){
+    const memory=new Map(),pending=new Map(),calls=new Map();
+    function valid_(data,check){try{return typeof check!=='function'||check(data)===true;}catch(e){return false;}}
+    function read(opts){
+      const keys=opts.keys||[opts.key],now=Date.now(),max=Number(opts.maxAgeMs)||604800000,ageFresh=Number(opts.freshMs)||21600000;
+      for(const key of keys){
+        let record=memory.get(key);
+        if(!record&&!opts.memoryOnly){
+          try{
+            const raw=localStorage.getItem(key);
+            if(raw)record=JSON.parse(raw);
+          }catch(e){record=null;}
+        }
+        if(!record||!record.data||!Number.isFinite(Number(record.savedAt)))continue;
+        const age=now-Number(record.savedAt);
+        if(age<0||age>max||!valid_(record.data,opts.validate))continue;
+        memory.set(key,record);
+        return {data:record.data,savedAt:Number(record.savedAt),stale:age>ageFresh,key};
+      }
+      return null;
+    }
+    function write(opts){
+      if(!valid_(opts.data,opts.validate))return false;
+      const record={savedAt:Date.now(),data:opts.data};
+      for(const key of opts.keys||[opts.key]){
+        memory.set(key,record);
+        if(opts.memoryOnly)continue;
+        try{localStorage.setItem(key,JSON.stringify(record));}catch(e){}
+      }
+      return true;
+    }
+    function clear(keys){
+      (Array.isArray(keys)?keys:[keys]).forEach(key=>{
+        memory.delete(key);
+        try{localStorage.removeItem(key);}catch(e){}
+      });
+    }
+    // One transport call per identical pending resource; stale responses from a
+    // cancelled force request cannot overwrite a newer request. No auto writes.
+    function request(key,invoke,onSuccess,onFailure,force){
+      if(force)pending.delete(key);
+      const existing=pending.get(key);
+      if(existing){
+        existing.success.push(onSuccess);existing.failure.push(onFailure);
+        return false;
+      }
+      const job={success:[onSuccess],failure:[onFailure]};
+      pending.set(key,job);calls.set(key,(calls.get(key)||0)+1);
+      const dispatch=(kind,value)=>{
+        if(pending.get(key)!==job)return;
+        pending.delete(key);
+        for(const callback of job[kind]){
+          if(typeof callback==='function'){
+            try{callback(value);}catch(e){console.error('Speaking cache callback failed:',e);}
+          }
+        }
+      };
+      try{invoke(value=>dispatch('success',value),err=>dispatch('failure',err));}
+      catch(error){dispatch('failure',error);}
+      return true;
+    }
+    function metrics(){
+      return {requests:Object.fromEntries(calls),inflight:Array.from(pending.keys()),memoryKeys:Array.from(memory.keys())};
+    }
+    return Object.freeze({read,write,clear,request,metrics});
+  }
+  window.AptisSpeakingCache=createSpeakingContentCache_();
+
   const state = {
     data: null,
     hydratedFromCache: false,
@@ -221,10 +292,7 @@
   }
 
   function clearAptisSpeakingBootstrapCache_() {
-    const keys = [CLIENT_CACHE_KEY, CLIENT_CACHE_BACKUP_KEY].concat(LEGACY_CACHE_KEYS);
-    keys.forEach(function(key) {
-      try { localStorage.removeItem(key); } catch (e) {}
-    });
+    window.AptisSpeakingCache.clear([CLIENT_CACHE_KEY, CLIENT_CACHE_BACKUP_KEY].concat(LEGACY_CACHE_KEYS));
   }
 
   function forceRefreshFromButton() {
@@ -451,28 +519,20 @@
   }
 
   function readBootstrapCache(allowVeryStale) {
-    // Do not hydrate from old releases with stale P3 question arrays.
-    const keys = [CLIENT_CACHE_KEY, CLIENT_CACHE_BACKUP_KEY];
-    for (let i = 0; i < keys.length; i++) {
-      try {
-        const raw = localStorage.getItem(keys[i]);
-        if (!raw) continue;
-        const box = JSON.parse(raw);
-        if (!box || !box.data || !box.savedAt || !isUsableSpeakingPayload_(box.data)) continue;
-        const age = Date.now() - Number(box.savedAt);
-        const maxAge = allowVeryStale ? CLIENT_CACHE_STALE_MS : CLIENT_CACHE_STALE_MS;
-        if (age > maxAge) continue;
-        return { data: box.data, stale: age > CLIENT_CACHE_FRESH_MS, savedAt: Number(box.savedAt), key: keys[i] };
-      } catch (e) {}
-    }
-    return null;
+    return window.AptisSpeakingCache.read({
+      keys:[CLIENT_CACHE_KEY,CLIENT_CACHE_BACKUP_KEY],
+      freshMs:CLIENT_CACHE_FRESH_MS,
+      maxAgeMs:CLIENT_CACHE_STALE_MS,
+      validate:isUsableSpeakingPayload_
+    });
   }
 
   function writeBootstrapCache(data) {
-    if (!isUsableSpeakingPayload_(data)) return;
-    const payload = JSON.stringify({ savedAt: Date.now(), data: data });
-    try { localStorage.setItem(CLIENT_CACHE_KEY, payload); } catch (e) {}
-    try { localStorage.setItem(CLIENT_CACHE_BACKUP_KEY, payload); } catch (e) {}
+    window.AptisSpeakingCache.write({
+      keys:[CLIENT_CACHE_KEY,CLIENT_CACHE_BACKUP_KEY],
+      data,
+      validate:isUsableSpeakingPayload_
+    });
   }
 
   function persistCurrentBootstrapCache() {
