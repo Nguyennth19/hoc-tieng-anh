@@ -923,13 +923,6 @@
     setSpeakingPlaybackUI_(group,'idle');
     return group;
   }
-  function toggleP1Audio_(text,button) {
-    // Legacy button compatibility; the normal Q controls use the three-button bar.
-    const group=button&&button.closest&&button.closest('.speaking-audio-controls');
-    if(group)return sharedAudioPlay_(text,group);
-    return sharedAudioPlay_(text,null);
-  }
-
   // Shared P2/P3 whole-topic study: one Learn/Memorize/Test flow, stable prompt IDs.
   const p2Drafts_ = Object.create(null);
   function p2Card_(slot, heading, model) {
