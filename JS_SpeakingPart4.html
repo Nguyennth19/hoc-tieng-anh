@@ -77,7 +77,7 @@ function p4RefreshMastery(){
   P4_MASTERY.rows=Array.isArray(items)?items:[];
   const counts=[0,0,0,0];P4_MASTERY.rows.forEach(x=>{const n=Number(x.level)||0;if(n>=0&&n<=3)counts[n]++;});
   byId('p4MasteryOverview').textContent='Mastery across 51 sets: '+counts[3]+' independent · '+counts[2]+' with hints · '+counts[1]+' reading · '+counts[0]+' new';
-  p4SyncMastery();p4DecorateTopics();
+  p4SyncMastery();p4DecorateTopics();p4RenderLibrary_();
  }).withFailureHandler(e=>byId('p4MasterySaved').textContent='Mastery unavailable: '+e.message).getSpeakingPart4Mastery();
 }
 function p4DecorateTopics(){
@@ -94,6 +94,54 @@ function p4SyncMastery(){
  byId('p4MasteryLevel').value=String(row?row.level:0);
 }
 function renderAnswersOnly_(){if(!S.current)return;byId('p4Content').querySelectorAll('.p4dev-inline-answer').forEach((el,i)=>{const p=el.querySelector('p');if(p)p.innerHTML=p4AnswerHtml(S.current.models[i]);el.open=byId('p4StudyView').value!=='recall';});}
+
+function p4ShowLibrary_(){
+  p4StopAudio();stopClock();S.session=null;
+  byId('p4TopicLibrary').hidden=false;
+  byId('p4TopicDetail').hidden=true;
+  p4RenderLibrary_();
+}
+function p4ShowDetail_(id){
+  if(!S.data||!S.data.sets.some(x=>x.id===id))return;
+  byId('p4Set').value=id;
+  byId('p4TopicLibrary').hidden=true;
+  byId('p4TopicDetail').hidden=false;
+  renderSet();
+  const i=S.data.sets.findIndex(x=>x.id===id),total=S.data.sets.length;
+  byId('p4TopicPosition').textContent='Topic '+(i+1)+' / '+total;
+  byId('p4TopicTitle').textContent=topicLabel(S.current);
+  const row=P4_MASTERY.rows.find(x=>x.questionId===id);
+  byId('p4TopicBadge').textContent=['New','Reading','With hints','Independent'][Math.max(0,Math.min(3,Number(row?.level)||0))];
+  byId('p4PrevTopic').disabled=i===0;
+  byId('p4NextTopic').disabled=i===total-1;
+  window.scrollTo(0,0);
+}
+function p4MoveTopic_(delta){
+  if(!S.current||!S.data)return;
+  const index=S.data.sets.findIndex(x=>x.id===S.current.id)+delta;
+  const target=S.data.sets[index];
+  if(target)p4ShowDetail_(target.id);
+}
+function p4RenderLibrary_(){
+  const box=byId('p4TopicCards');
+  if(!box||!S.data)return;
+  const levels=['New','Reading','With hints','Independent'];
+  box.replaceChildren();
+  S.data.sets.forEach((set,i)=>{
+    const row=P4_MASTERY.rows.find(x=>x.questionId===set.id);
+    const level=levels[Math.max(0,Math.min(3,Number(row?.level)||0))];
+    const button=document.createElement('button');
+    button.type='button';button.className='p4-topic-card';
+    const num=document.createElement('small');num.textContent='Topic '+String(i+1).padStart(2,'0');
+    const title=document.createElement('strong');title.textContent=topicLabel(set);
+    const meta=document.createElement('span');meta.textContent='3 questions · '+level;
+    button.append(num,title,meta);
+    button.addEventListener('click',()=>p4ShowDetail_(set.id));
+    box.appendChild(button);
+  });
+  if(!S.data.sets.length)box.textContent='No topics available in this study path.';
+}
+
 function renderSet(){
   if(!S.data)return;
   p4StopAudio();p4ApplyStudyMode();
@@ -124,6 +172,7 @@ function load(){
     data.sets.forEach(x=>{const o=document.createElement('option');o.value=x.id;o.textContent=topicLabel(x)+(x.qaStatus==='QA_HOLD'?' · QA hold':'');o.title=x.id+' · '+String(x.questions?.[0]||'');select.appendChild(o);});
     renderSet();
     p4RefreshMastery();
+    p4RenderLibrary_();
     if(S.mode==='exam'&&data.sets.length===0)status('Exam mode locked: no QA-approved sets. All source drafts remain available in Learn mode.');
   }).withFailureHandler(error=>{if(requestId===S.requestSeq)status('DEV not configured: '+(error?.message||'Unable to load data'));}).getSpeakingPart4Dev(S.mode);
 }
@@ -166,7 +215,7 @@ function open(){
   el.classList.remove('hidden');
   const shell=qs('.speaking-shell');if(shell)shell.classList.add('p4-mode');
   document.querySelectorAll('.bottom-nav .nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.nav==='part4'));
-  window.scrollTo(0,0);load();
+  window.scrollTo(0,0);p4ShowLibrary_();load();
 }
 function close(){p4StopAudio();++S.requestSeq;stopClock();S.session=null;S.phase='ready';byId('speakingPart4Future').classList.add('hidden');const shell=qs('.speaking-shell');if(shell)shell.classList.remove('p4-mode');
   document.querySelectorAll('.bottom-nav .nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.nav==='home'));}
@@ -174,6 +223,10 @@ document.addEventListener('DOMContentLoaded',()=>{
  const card=qs('.speaking-module-card.is-coming');
  if(card&&/Part 4/.test(card.textContent)){card.disabled=false;card.classList.remove('is-coming');const label=qs('.module-status',card);if(label)label.textContent='DEV preview';card.addEventListener('click',open);}
  byId('p4Close').addEventListener('click',close);
+ byId('p4BackLibrary').addEventListener('click',p4ShowLibrary_);
+ byId('p4PrevTopic').addEventListener('click',()=>p4MoveTopic_(-1));
+ byId('p4NextTopic').addEventListener('click',()=>p4MoveTopic_(1));
+ document.querySelectorAll('[data-p4-home]').forEach(btn=>btn.addEventListener('click',open));
  byId('p4ProgressOpen')?.addEventListener('click',open);
  document.querySelectorAll('.bottom-nav [data-nav="progress"]').forEach(x=>x.addEventListener('click',()=>setTimeout(refreshPart4Progress,20)));
  byId('progressBtn')?.addEventListener('click',()=>setTimeout(refreshPart4Progress,20));
