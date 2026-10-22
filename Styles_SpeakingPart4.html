@@ -130,4 +130,16 @@
 .speaking-shell .shared-part-switch .part-tab{min-width:0}
 .speaking-shell .shared-part-switch [data-p4-home].active{background:#eeebff;border-color:#d8d0ff;color:#6757ef}
 @media(max-width:600px){.speaking-shell .shared-part-switch{width:calc(100% - 20px);gap:5px}.speaking-shell .shared-part-switch .part-tab{padding:9px 5px}.speaking-shell .shared-part-switch .part-tab small{font-size:10px}}
+
+/* UI-01B.2 — compact learner-facing Topic Detail. Keep legacy DOM IDs for handlers. */
+.p4dev .p4-internal-controls[hidden],.p4dev #p4ToolsDisclosure[hidden],.p4dev #p4LearningTools[hidden],.p4dev #p4MasteryOverview[hidden]{display:none!important}
+.p4dev .p4-feedback:empty{display:none!important}
+.p4dev .p4-tools-disclosure{border:1px solid #e1e5f0;border-radius:12px;background:#fafaff;margin:8px 0 18px;padding:0}
+.p4dev .p4-tools-disclosure>summary{cursor:pointer;list-style:none;font-weight:700;font-size:13px;padding:12px 15px;color:#6555de}
+.p4dev .p4-tools-disclosure>summary::-webkit-details-marker{display:none}
+.p4dev .p4-tools-disclosure>summary:before{content:'⚙ ';font-weight:400}
+.p4dev .p4-tools-disclosure[open]>summary{border-bottom:1px solid #e5e8f3}
+.p4dev #p4LearningTools{border:0;margin:0;padding:14px;background:transparent;box-shadow:none}
+.p4dev .p4-topic-navigation{margin-bottom:8px}
+.p4dev .p4-topic-heading{margin-bottom:8px}
 </style>
