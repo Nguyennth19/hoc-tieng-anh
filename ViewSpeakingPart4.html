@@ -1,5 +1,33 @@
 <section id="speakingPart4Future" class="p4dev hidden" aria-label="Speaking Part 4">
-  <section id="p4TopicLibrary" class="p4-topic-library" aria-label="Part 4 topic library"><div class="p4-library-title"><h3>Part 4 · Topic library</h3><p>Choose one topic to practise all three questions.</p></div><div id="p4TopicCards" class="p4-topic-grid"></div></section>
+  <section id="p4TopicLibrary" class="p4-topic-library" aria-label="Part 4 topic library">
+    <article class="welcome-card">
+      <div class="welcome-copy">
+        <span class="pill">Speaking Part 4</span>
+        <h2>Tell your story. Speak with confidence.</h2>
+        <p>Practise three related questions, then speak for two minutes after one minute of preparation.</p>
+        <div class="welcome-actions">
+          <button id="p4ContinueLearning" class="primary-btn large" type="button">Continue learning</button>
+          <button id="p4QuickReview" class="secondary-btn large" type="button">Quick review</button>
+        </div>
+      </div>
+      <div class="progress-hero"><div class="progress-ring" id="p4HomeProgressRing"><span id="p4HomeProgressPct">0%</span></div><small>topics mastered</small></div>
+    </article>
+    <section class="today-section">
+      <div class="section-title-row"><div><div class="eyebrow">TODAY</div><h3>What to practise</h3></div><button id="p4ReviewPlan" class="text-btn" type="button">Review topics →</button></div>
+      <div class="focus-grid">
+        <button class="focus-card" data-p4-filter="new" type="button"><span class="focus-icon">↻</span><strong id="p4HomeNew">0</strong><span>New</span></button>
+        <button class="focus-card" data-p4-filter="reading" type="button"><span class="focus-icon">◎</span><strong id="p4HomeReading">0</strong><span>Reading</span></button>
+        <button class="focus-card" data-p4-filter="hints" type="button"><span class="focus-icon">★</span><strong id="p4HomeHints">0</strong><span>With hints</span></button>
+        <button class="focus-card" data-p4-filter="independent" type="button"><span class="focus-icon">✓</span><strong id="p4HomeIndependent">0</strong><span>Independent</span></button>
+      </div>
+    </section>
+    <section class="library-section"><div class="section-title-row stack-mobile">
+      <div><div class="eyebrow">PRACTICE BANK</div><h3 id="p4HomeLibraryTitle">Part 4 topics</h3><p class="section-note">Pick a topic and continue from where you left off.</p></div>
+      <div class="library-controls"><div class="search-wrap"><span>⌕</span><input id="p4HomeSearch" type="search" placeholder="Search..." autocomplete="off" aria-label="Search Part 4 topics"></div>
+        <select id="p4HomeFilter" class="select" aria-label="Filter Part 4 topics"><option value="all">All</option><option value="new">New</option><option value="reading">Reading</option><option value="hints">With hints</option><option value="independent">Independent</option></select>
+      </div>
+    </div><div id="p4TopicCards" class="p4-topic-grid"></div></section>
+  </section>
   <div id="p4TopicDetail" class="p4-topic-detail" hidden><div class="p4-topic-navigation"><button id="p4BackLibrary" type="button">← All topics</button><span id="p4TopicPosition" aria-live="polite"></span><button id="p4PrevTopic" type="button">← Prev</button><button id="p4NextTopic" type="button">Next →</button></div><div class="p4-topic-heading"><div class="p4-topic-meta"><span id="p4TopicBadge"></span></div><h3 id="p4TopicTitle"></h3></div>
   <div class="p4-study-tabs" role="group" aria-label="Part 4 learning steps">
     <button type="button" data-p4-step="learn" class="p4-step-btn active">01 Learn</button>
