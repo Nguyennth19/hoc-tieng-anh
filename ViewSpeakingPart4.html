@@ -48,6 +48,11 @@
         <button type="button" data-p4-step="memorize" class="mode-tab" aria-pressed="false"><span>02</span> Memorize</button>
         <button type="button" data-p4-step="test" class="mode-tab" aria-pressed="false"><span>03</span> Test</button>
       </div>
+      <div id="p4MemorizeLevels" class="memorize-levels p4-memorize-levels" role="group" aria-label="Part 4 Memorize levels" hidden>
+        <button class="level-btn active" type="button" data-p4-level="1" aria-pressed="true">LV1 · Fill a few words</button>
+        <button class="level-btn" type="button" data-p4-level="2" aria-pressed="false">LV2 · Fill more words</button>
+        <button class="level-btn" type="button" data-p4-level="3" aria-pressed="false">LV3 · Listen & write</button>
+      </div>
   <div class="p4dev-controls p4-internal-controls" hidden aria-hidden="true"><label for="p4Mode">Study path</label><select id="p4Mode"><option value="learn">01–02 · Learn & Memorize</option><option value="exam">03 · Test (approved sets)</option></select><label for="p4Set">Topic</label><select id="p4Set"></select><button id="p4Load" type="button">Load</button></div>
 
   <p id="p4Status" class="p4-feedback" role="status" aria-live="polite"></p><div id="p4Models" class="p4dev-models"></div><div id="p4Content" class="p4dev-content"></div>
