@@ -189,8 +189,13 @@ function renderSet(){
   if(!S.current){byId('p4Content').textContent='No approved exam sets are available. Use Learn mode for drafts.';byId('p4Models').textContent='';return;}
   byId('p4Content').innerHTML=S.current.questions.map((q,i)=>{
     const answer=S.mode==='learn'&&S.current.models?S.current.models[i]:'';
-    return '<article class="p4dev-question"><b>Q'+(i+1)+'</b><p class="p4dev-prompt">'+escapeHtml(q)+'</p>'+
-      (answer?'<details class="p4dev-inline-answer"'+(byId('p4StudyView').value==='recall'?'':' open')+'><summary>Study answer · Q'+(i+1)+'</summary><button type="button" class="p4-listen" data-answer="'+i+'">▶ Listen Q'+(i+1)+'</button><p>'+p4AnswerHtml(answer)+'</p></details>':'')+'</article>';
+    return '<article class="speaking-question-card" data-p4-question="'+(i+1)+'">'+
+      '<h3 class="speaking-question-prompt">Q'+(i+1)+' · '+escapeHtml(q)+'</h3>'+
+      (answer?'<details class="p4dev-inline-answer speaking-answer-panel"'+(byId('p4StudyView').value==='recall'?'':' open')+'>'+
+        '<summary>Study answer · Q'+(i+1)+'</summary>'+
+        '<p class="model-text">'+p4AnswerHtml(answer)+'</p>'+
+        '<div class="inline-actions"><button type="button" class="listen-pill p4-listen" data-answer="'+i+'">▶ Listen Q'+(i+1)+'</button></div></details>':'')+
+      '</article>';
   }).join('');
   byId('p4Models').textContent='';
   // QA approval is enforced by the data source, not shown as a learner-facing banner.
