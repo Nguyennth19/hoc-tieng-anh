@@ -32,7 +32,7 @@ function testPart4FullSourceHardQAReadOnly() {
     noDuplicateIds: Object.keys(ids).every(function(id){return ids[id] === 1;}),
     sharedHeroAndStats: p4.indexOf('class="welcome-card"') >= 0 && p4.indexOf('class="focus-grid"') >= 0 && p4.indexOf('class="library-section"') >= 0,
     sharedFiveColumnNav: commonStyle.indexOf('repeat(5,minmax(0,1fr))') >= 0,
-    part1To3HandlersExcludeP4: commonJs.indexOf("$('.part-tab[data-part]')") >= 0 && commonJs.indexOf("$('.part-tab')") === -1,
+    part1To3HandlersExcludeP4: (commonJs.match(/\$\$\('\.part-tab\[data-part\]'\)/g) || []).length === 3 && (commonJs.match(/(?<!\$)\$\('\.part-tab\[data-part\]'\)\.forEach/g) || []).length === 0 && commonJs.indexOf("$$('.part-tab')") === -1,
     libraryLoadingErrorVisible: p4.indexOf('id="p4LibraryStatus"') >= 0 && js.indexOf("byId('p4LibraryStatus')") >= 0,
     noLegacyP4HomeCSS: style.indexOf('.p4-unified-switch') === -1 && style.indexOf('max-width:1020px') === -1,
     noAutoHideModelOnSpeaking: js.indexOf("if(S.mode==='learn')byId('p4StudyView').value='recall'") === -1,
