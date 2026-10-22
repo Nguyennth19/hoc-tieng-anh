@@ -12,16 +12,9 @@
 .p4dev .p4-topic-card-copy span{font-size:12px;color:var(--muted)}
 .p4dev .p4-topic-card:hover{border-color:var(--purple)}
 .p4dev button:focus-visible,.p4dev select:focus-visible{outline:3px solid var(--purple);outline-offset:2px}
-.p4dev .p4-topic-navigation{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:0 0 14px}
-.p4dev .p4-topic-navigation #p4BackLibrary{margin-right:auto}
-.p4dev .p4-topic-navigation #p4TopicPosition{font-size:13px;color:var(--muted)}
-.p4dev .p4-topic-detail{background:#fff;border:1px solid var(--border);border-radius:24px;box-shadow:var(--shadow);padding:clamp(16px,3vw,28px)}
-.p4dev .p4-topic-heading{margin:0 0 16px}
-.p4dev .p4-topic-heading .p4-topic-meta span{display:inline-flex;border-radius:999px;background:var(--purple-soft);color:var(--purple-2);padding:5px 11px;font-size:12px;font-weight:700}
-.p4dev .p4-topic-heading h3{font-size:clamp(24px,3vw,32px);margin:10px 0;color:var(--ink)}
-.p4dev .p4-study-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;background:#e9ecf3;border-radius:15px;padding:5px;margin:0 0 16px}
-.p4dev .p4-step-btn{border:0;border-radius:12px;min-width:0;padding:13px 6px;background:transparent;color:var(--muted);font-weight:800}
-.p4dev .p4-step-btn.active{background:#fff;color:var(--purple-2);box-shadow:var(--shadow-soft)}
+/* Only Part 4 navigation wrapping is unique. Button geometry is inherited. */
+.p4dev .study-topline #p4BackLibrary{margin-right:auto;white-space:nowrap}
+.p4dev .p4-topic-study-card{min-width:0}
 .p4dev .p4-internal-controls,.p4dev #p4MasteryOverview{display:none!important}
 .p4dev .p4-tools-disclosure{border:1px solid var(--border);border-radius:12px;background:#fafaff;margin:8px 0 18px}
 .p4dev .p4-tools-disclosure>summary{cursor:pointer;padding:12px 15px;color:var(--purple-2);font-size:13px;font-weight:700}
@@ -30,21 +23,14 @@
 .p4dev #p4MasterySaved{grid-column:1/-1}
 .p4dev .p4-feedback:empty{display:none!important}
 .p4dev .p4dev-content{display:grid;gap:14px}
-.p4dev .p4dev-question{padding:20px;background:#fff;border:1px solid var(--border);border-radius:19px}
-.p4dev .p4dev-question>b{font-size:13px;color:var(--purple-2)}
-.p4dev .p4dev-prompt{font-size:clamp(17px,2vw,21px);font-weight:750;line-height:1.5;color:var(--ink)}
-.p4dev .p4dev-inline-answer{border-top:1px solid var(--border);padding-top:12px}
-.p4dev .p4dev-inline-answer summary{cursor:pointer;color:var(--purple-2);font-weight:700}
-.p4dev .p4dev-inline-answer p{line-height:1.8;color:var(--ink)}
-.p4dev .p4-listen{border:1px solid #ded8ff;border-radius:11px;padding:10px 12px;color:var(--purple-2);background:var(--purple-soft)}
 .p4-fixed-formula{color:#c45c08!important;font-weight:800}
 .p4-hidden-slot,.p4-recall-prompt{font-style:italic;color:var(--muted)}
 .p4dev .p4dev-time{position:sticky;bottom:8px;display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:14px;background:var(--purple-soft);border:1px solid #ded9fb;border-radius:18px;margin-top:16px;z-index:2}
 .p4dev .p4dev-time strong{font-size:26px;color:var(--purple-2);font-variant-numeric:tabular-nums;margin-left:auto}
-.p4dev .p4dev-time button,.p4dev .p4-topic-navigation button,.p4dev .p4-learning-tools button{padding:10px 14px;border:1px solid var(--border);border-radius:12px;background:#fff;color:var(--ink);font:inherit;cursor:pointer}
+.p4dev .p4dev-time button,.p4dev .p4-learning-tools button{padding:10px 14px;border:1px solid var(--border);border-radius:12px;background:#fff;color:var(--ink);font:inherit;cursor:pointer}
 .p4dev .p4dev-time button:disabled{opacity:.5;cursor:not-allowed}
 .p4dev #p4Begin,.p4dev #p4Save{background:var(--purple);color:#fff;border-color:transparent}
 .p4dev #p4Review{padding:16px;border:1px solid var(--border);border-radius:18px;background:#fff;margin-top:14px}
 .p4dev .p4dev-disclaimer{font-size:12px;color:var(--muted);margin:16px 0 35px}
-@media(max-width:650px){.p4dev .p4-topic-grid{grid-template-columns:1fr}.p4dev .p4-topic-navigation #p4BackLibrary{width:100%;text-align:left}.p4dev .p4-learning-tools{grid-template-columns:1fr}.p4dev .p4dev-time{position:relative;bottom:auto}}
+@media(max-width:650px){.p4dev .p4-topic-grid{grid-template-columns:1fr}.p4dev .study-topline{flex-wrap:wrap}.p4dev .study-top-actions{width:auto;flex:1;min-width:0}.p4dev .p4-learning-tools{grid-template-columns:1fr}.p4dev .p4dev-time{position:relative;bottom:auto}}
 </style>
