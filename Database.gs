@@ -101,7 +101,28 @@ function getSetting_(sheet, key) {
   if (!sheet || sheet.getLastRow() < 2) return '';
   const values = sheet.getRange(2, 1, sheet.getLastRow() - 1, Math.min(2, Math.max(2, sheet.getLastColumn()))).getDisplayValues();
   for (let i = 0; i < values.length; i++) {
-    if (String(values[i][0] || '') === key) return String(values[i][1] || '');
+    if (String(values[i][0] || '') === key) {
+      const shown=String(values[i][1] || '');
+      // An old SETTINGS version may physically be a Date, with displayed
+      // text depending on Sheets locale. Read the ORIGINAL cell in the
+      // spreadsheet time zone; NEVER modify it during a normal load.
+      // Only these three explicit version keys may be normalized logically.
+      const required={
+        schema_version:typeof APP_CONFIG==='undefined'?'':String(APP_CONFIG.SCHEMA_VERSION),
+        p2_description_version:typeof PART2_DESCRIPTION_VERSION==='undefined'?'':String(PART2_DESCRIPTION_VERSION),
+        p3_description_version:typeof PART3_DESCRIPTION_VERSION==='undefined'?'':String(PART3_DESCRIPTION_VERSION)
+      };
+      const expected=required[key]||'';
+      if (expected) {
+        const raw=sheet.getRange(i+2,2).getValue();
+        if(Object.prototype.toString.call(raw)==='[object Date]'&&!isNaN(raw.getTime())) {
+          const timezone=sheet.getParent().getSpreadsheetTimeZone();
+          const dateDisplay=Utilities.formatDate(raw,timezone,'d.M.yyyy');
+          if(speakingStoredVersionMatches_(dateDisplay,expected))return expected;
+        }
+      }
+      return shown;
+    }
   }
   return '';
 }
