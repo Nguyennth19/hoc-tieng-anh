@@ -21,6 +21,78 @@
   const CLIENT_CACHE_FRESH_MS = 6 * 60 * 60 * 1000;
   const CLIENT_CACHE_STALE_MS = 7 * 24 * 60 * 60 * 1000;
   const LOADER_WATCHDOG_MS = 10000;
+  const LOADER_HARD_TIMEOUT_MS = 30000;
+
+  // S6.1 — Shared Speaking frontend content cache: ONE owner for P1–P4.
+  // Cache policy/validation remain Part-specific; storage, stale fallback,
+  // in-flight deduplication and request accounting are common.
+  function createSpeakingContentCache_(){
+    const memory=new Map(),pending=new Map(),calls=new Map();
+    function valid_(data,check){try{return typeof check!=='function'||check(data)===true;}catch(e){return false;}}
+    function read(opts){
+      const keys=opts.keys||[opts.key],now=Date.now(),max=Number(opts.maxAgeMs)||604800000,ageFresh=Number(opts.freshMs)||21600000;
+      for(const key of keys){
+        let record=memory.get(key);
+        if(!record&&!opts.memoryOnly){
+          try{
+            const raw=localStorage.getItem(key);
+            if(raw)record=JSON.parse(raw);
+          }catch(e){record=null;}
+        }
+        if(!record||!record.data||!Number.isFinite(Number(record.savedAt)))continue;
+        const age=now-Number(record.savedAt);
+        if(age<0||age>max||!valid_(record.data,opts.validate))continue;
+        memory.set(key,record);
+        return {data:record.data,savedAt:Number(record.savedAt),stale:age>ageFresh,key};
+      }
+      return null;
+    }
+    function write(opts){
+      if(!valid_(opts.data,opts.validate))return false;
+      const record={savedAt:Date.now(),data:opts.data};
+      for(const key of opts.keys||[opts.key]){
+        memory.set(key,record);
+        if(opts.memoryOnly)continue;
+        try{localStorage.setItem(key,JSON.stringify(record));}catch(e){}
+      }
+      return true;
+    }
+    function clear(keys){
+      (Array.isArray(keys)?keys:[keys]).forEach(key=>{
+        memory.delete(key);
+        try{localStorage.removeItem(key);}catch(e){}
+      });
+    }
+    // One transport call per identical pending resource; stale responses from a
+    // cancelled force request cannot overwrite a newer request. No auto writes.
+    function request(key,invoke,onSuccess,onFailure,force){
+      if(force)pending.delete(key);
+      const existing=pending.get(key);
+      if(existing){
+        existing.success.push(onSuccess);existing.failure.push(onFailure);
+        return false;
+      }
+      const job={success:[onSuccess],failure:[onFailure]};
+      pending.set(key,job);calls.set(key,(calls.get(key)||0)+1);
+      const dispatch=(kind,value)=>{
+        if(pending.get(key)!==job)return;
+        pending.delete(key);
+        for(const callback of job[kind]){
+          if(typeof callback==='function'){
+            try{callback(value);}catch(e){console.error('Speaking cache callback failed:',e);}
+          }
+        }
+      };
+      try{invoke(value=>dispatch('success',value),err=>dispatch('failure',err));}
+      catch(error){dispatch('failure',error);}
+      return true;
+    }
+    function metrics(){
+      return {requests:Object.fromEntries(calls),inflight:Array.from(pending.keys()),memoryKeys:Array.from(memory.keys())};
+    }
+    return Object.freeze({read,write,clear,request,metrics});
+  }
+  window.AptisSpeakingCache=createSpeakingContentCache_();
 
   const state = {
     data: null,
@@ -50,14 +122,16 @@
   const $$ = selector => Array.from(document.querySelectorAll(selector));
 
   let initialized = false;
+  let startupFailure_ = null;
 
   document.addEventListener('DOMContentLoaded', init);
 
   function init() {
     if (initialized) return;
     initialized = true;
-    bindEvents();
-    initSpeechVoices();
+    try {
+      bindEvents();
+      initSpeechVoices();
 
     const cached = readBootstrapCache();
     // Part 1 release gate: old cached 29-question payload must not render on V2.
@@ -72,6 +146,17 @@
     } else {
       loadData({ force: false, blocking: true });
     }
+    } catch (error) {
+      startupFailure_ = error;
+      console.error('SPEAKING_BOOTSTRAP_INIT_FAILED', error);
+      state.refreshing = false;
+      setLoadingVisible(false);
+      $('skillHomeView')?.classList.add('hidden');
+      $('errorView')?.classList.remove('hidden');
+      if ($('errorText')) $('errorText').textContent =
+        'Speaking initialization error: ' + (error?.message || String(error)) + '. Reload staging.';
+      setSyncStatus('Initialization failed', 'syncing');
+    }
   }
 
   function enter() {
@@ -79,7 +164,15 @@
     $('studyView').classList.add('hidden');
     $('progressView').classList.add('hidden');
     $('homeView').classList.add('hidden');
-    if (state.data) {
+    if (startupFailure_) {
+      setLoadingVisible(false);
+      $('errorView')?.classList.remove('hidden');
+    } else if (!($('errorView')?.classList.contains('hidden'))) {
+      // A failed Apps Script request may finish before the global router
+      // activates Speaking. Do not resurrect the spinner on navigation.
+      $('skillHomeView')?.classList.add('hidden');
+      setLoadingVisible(false);
+    } else if (state.data) {
       setLoadingVisible(false);
       $('errorView').classList.add('hidden');
       showHome();
@@ -102,34 +195,38 @@
     $('backBtn').addEventListener('click', showPartHome);
     $('prevQuestionBtn').addEventListener('click', () => navigateItem(-1));
     $('nextQuestionBtn').addEventListener('click', () => navigateItem(1));
-    $('markLearnedBtn').addEventListener('click', () => saveProgress(5, 'learned'));
+    $('markLearnedBtn').addEventListener('click', () => requestSpeakingCompletion_({
+      title:'Confirm learned response',
+      detail:'You are confirming that you can answer this question independently. Your existing review schedule will be updated only after confirmation.',
+      confirmLabel:'✓ Mark learned',
+      onConfirm:()=>saveProgress(5,'learned')
+    }));
+    $('speakingCompletionCancel').addEventListener('click',closeSpeakingCompletion_);
+    $('speakingCompletionAccept').addEventListener('click',()=>{
+      const accept=speakingConfirmPending_;
+      closeSpeakingCompletion_();
+      if(typeof accept==='function')accept();
+    });
     $('favoriteBtn').addEventListener('click', toggleFavorite);
 
-    $$('.part-tab').forEach(btn => btn.addEventListener('click', () => switchPart(Number(btn.dataset.part))));
+    $$('.part-tab[data-part]').forEach(btn => btn.addEventListener('click', () => switchPart(Number(btn.dataset.part))));
     $$('[data-open-speaking-part]').forEach(btn => btn.addEventListener('click', () => openPartHome(Number(btn.dataset.openSpeakingPart))));
     $('skillProgressLink').addEventListener('click', showProgress);
     $('skillRecommendationBtn').addEventListener('click', openRecommendedSpeakingPart);
     $$('.prompt-step').forEach(btn => btn.addEventListener('click', () => setPrompt(Number(btn.dataset.prompt))));
-    $$('.mode-tab').forEach(btn => btn.addEventListener('click', () => setMode(btn.dataset.mode)));
-    $$('.level-btn').forEach(btn => btn.addEventListener('click', () => setMemorizeLevel(Number(btn.dataset.level))));
+    $$('#speakingModeTabs .mode-tab').forEach(btn => btn.addEventListener('click', () => setMode(btn.dataset.mode)));
+    $$('#speakingMemorizeLevels .level-btn').forEach(btn => btn.addEventListener('click', () => setMemorizeLevel(Number(btn.dataset.level))));
     $$('.rating-btn').forEach(btn => btn.addEventListener('click', () => finishSelfRating(Number(btn.dataset.rating))));
-    $$('.focus-card').forEach(btn => btn.addEventListener('click', () => applyFilter(btn.dataset.filterTarget)));
+    $$('#homeView .focus-card').forEach(btn => btn.addEventListener('click', () => applyFilter(btn.dataset.filterTarget)));
 
-    $('listenBtn').addEventListener('click', () => speakText(currentModel()));
+    $('listenBtn').addEventListener('click', () => sharedAudioPlay_(currentModel(), $('learnAnswerAudio')));
+    $('listenPauseBtn').addEventListener('click', () => sharedAudioPause_($('learnAnswerAudio')));
+    $('listenStopBtn').addEventListener('click', stopSpeech);
     $('shadowAllBtn').addEventListener('click', shadowAll);
+    $('shadowPauseBtn').addEventListener('click', () => sharedAudioPause_($('shadowAudioControls')));
     $('stopSpeechBtn').addEventListener('click', stopSpeech);
-    $('revealBtn').addEventListener('click', () => {
-      if (state.activePart <= 3) { $('p1Feedback').textContent = currentModel(); return; }
-      $('memorizeText').textContent = currentModel();
-      toast('Full answer revealed.');
-    });
-    $('p1CheckBtn').addEventListener('click', checkP1Recall_);
-    $('p1TryAgainBtn').addEventListener('click', renderMemorize);
-    $('p1RevealBtn').addEventListener('click', () => {
-      $('p1Feedback').textContent = currentModel();
-    });
-
     $('startTimerBtn').addEventListener('click', startTimer);
+    $('pauseTimerBtn').addEventListener('click', pauseTimer);
     $('stopTimerBtn').addEventListener('click', () => stopTimer(false));
     $('showAnswerAfterTest').addEventListener('click', () => {
       $('showAnswerAfterTest').textContent = currentModel();
@@ -140,12 +237,12 @@
     $('closeAudioBtn').addEventListener('click', closeAudioSheet);
     $('audioSheet').addEventListener('click', e => { if (e.target === $('audioSheet')) closeAudioSheet(); });
     $('accentSelect').addEventListener('change', () => {
-      state.audio.accent = $('accentSelect').value;
+      stopSpeech();state.audio.accent = $('accentSelect').value;
       writeLocal('aptisAccent', state.audio.accent);
       populateVoiceSelect();
     });
     $('voiceSelect').addEventListener('change', () => {
-      state.audio.voiceURI = $('voiceSelect').value;
+      stopSpeech();state.audio.voiceURI = $('voiceSelect').value;
       writeLocal('aptisVoiceURI', state.audio.voiceURI);
     });
     $$('.speed-btn').forEach(btn => btn.addEventListener('click', () => setSpeechRate(Number(btn.dataset.speed))));
@@ -206,10 +303,7 @@
   }
 
   function clearAptisSpeakingBootstrapCache_() {
-    const keys = [CLIENT_CACHE_KEY, CLIENT_CACHE_BACKUP_KEY].concat(LEGACY_CACHE_KEYS);
-    keys.forEach(function(key) {
-      try { localStorage.removeItem(key); } catch (e) {}
-    });
+    window.AptisSpeakingCache.clear([CLIENT_CACHE_KEY, CLIENT_CACHE_BACKUP_KEY].concat(LEGACY_CACHE_KEYS));
   }
 
   function forceRefreshFromButton() {
@@ -303,16 +397,32 @@
       }
     }, LOADER_WATCHDOG_MS) : null;
 
-    google.script.run
-      .withSuccessHandler(function(data) {
-        if (watchdog) clearTimeout(watchdog);
-        onBootstrap(data, { background: !blocking });
-      })
-      .withFailureHandler(function(err) {
-        if (watchdog) clearTimeout(watchdog);
-        onError(err, { background: !blocking });
-      })
-      .getBootstrapData(Boolean(opts.force));
+    // A server error must not leave an infinite spinner. Late success may recover.
+    const hardTimeout = blocking ? setTimeout(function() {
+      if (!state.data) onError(new Error(
+        'No Speaking data after 30 seconds. Check Apps Script executions and reload.'
+      ), { background: false });
+    }, LOADER_HARD_TIMEOUT_MS) : null;
+    const clearLoadTimers = () => {
+      if (watchdog) clearTimeout(watchdog);
+      if (hardTimeout) clearTimeout(hardTimeout);
+    };
+    try {
+      if (!google?.script?.run) throw new Error('Google Apps Script runtime unavailable.');
+      google.script.run
+        .withSuccessHandler(function(data) {
+          clearLoadTimers();
+          onBootstrap(data, { background: !blocking });
+        })
+        .withFailureHandler(function(err) {
+          clearLoadTimers();
+          onError(err, { background: !blocking });
+        })
+        .getBootstrapData(Boolean(opts.force));
+    } catch (error) {
+      clearLoadTimers();
+      onError(error, { background: !blocking });
+    }
   }
 
   function refreshDataInBackground(force) {
@@ -346,7 +456,9 @@
     setLoadingVisible(false);
     if (!isValidBootstrap(data)) return false;
     state.data = data;
-    $('appTitle').textContent = data.app.title || 'APTIS B2 Coach';
+    // S6.1 hard-fix: old #appTitle was removed when the app received the
+    // shared global B2 Coach shell. Never dereference a deleted DOM node.
+    // The visible Speaking heading is owned by ViewSpeaking.html.
     $('errorView').classList.add('hidden');
     const wasStudying = !$('studyView').classList.contains('hidden');
     const wasProgress = !$('progressView').classList.contains('hidden');
@@ -436,28 +548,20 @@
   }
 
   function readBootstrapCache(allowVeryStale) {
-    // Do not hydrate from old releases with stale P3 question arrays.
-    const keys = [CLIENT_CACHE_KEY, CLIENT_CACHE_BACKUP_KEY];
-    for (let i = 0; i < keys.length; i++) {
-      try {
-        const raw = localStorage.getItem(keys[i]);
-        if (!raw) continue;
-        const box = JSON.parse(raw);
-        if (!box || !box.data || !box.savedAt || !isUsableSpeakingPayload_(box.data)) continue;
-        const age = Date.now() - Number(box.savedAt);
-        const maxAge = allowVeryStale ? CLIENT_CACHE_STALE_MS : CLIENT_CACHE_STALE_MS;
-        if (age > maxAge) continue;
-        return { data: box.data, stale: age > CLIENT_CACHE_FRESH_MS, savedAt: Number(box.savedAt), key: keys[i] };
-      } catch (e) {}
-    }
-    return null;
+    return window.AptisSpeakingCache.read({
+      keys:[CLIENT_CACHE_KEY,CLIENT_CACHE_BACKUP_KEY],
+      freshMs:CLIENT_CACHE_FRESH_MS,
+      maxAgeMs:CLIENT_CACHE_STALE_MS,
+      validate:isUsableSpeakingPayload_
+    });
   }
 
   function writeBootstrapCache(data) {
-    if (!isUsableSpeakingPayload_(data)) return;
-    const payload = JSON.stringify({ savedAt: Date.now(), data: data });
-    try { localStorage.setItem(CLIENT_CACHE_KEY, payload); } catch (e) {}
-    try { localStorage.setItem(CLIENT_CACHE_BACKUP_KEY, payload); } catch (e) {}
+    window.AptisSpeakingCache.write({
+      keys:[CLIENT_CACHE_KEY,CLIENT_CACHE_BACKUP_KEY],
+      data,
+      validate:isUsableSpeakingPayload_
+    });
   }
 
   function persistCurrentBootstrapCache() {
@@ -473,7 +577,7 @@
     if (!isValidBootstrap(state.data)) {
       state.items = [];
       state.currentPrompt = 1;
-      $$('.part-tab').forEach(btn => btn.classList.toggle('active', Number(btn.dataset.part) === state.activePart));
+      $$('.part-tab[data-part]').forEach(btn => btn.classList.toggle('active', Number(btn.dataset.part) === state.activePart));
       $('skillHomeView').classList.add('hidden');
       $('homeView').classList.add('hidden');
       $('studyView').classList.add('hidden');
@@ -488,7 +592,7 @@
     state.quickQueue = [];
     state.quickPosition = -1;
 
-    $$('.part-tab').forEach(btn => btn.classList.toggle('active', Number(btn.dataset.part) === state.activePart));
+    $$('.part-tab[data-part]').forEach(btn => btn.classList.toggle('active', Number(btn.dataset.part) === state.activePart));
     updatePartCopy();
     renderSummary();
     renderList();
@@ -835,15 +939,9 @@
     renderMemorize();
     resetTimerDisplay();
 
-    $('testLabel').textContent = state.activePart === 3 ? 'APTIS PART 3 · COMPARE TWO PICTURES' : (state.activePart === 2 ? 'APTIS PART 2 · PICTURE DESCRIPTION' : 'APTIS PART 1 PRACTICE');
-
-    const seconds = currentTimerSeconds();
-    $('testInstruction').textContent = state.activePart === 2
-      ? 'Describe the picture for up to ' + seconds + ' seconds. Say the yellow MUST SAY block first; add the blue SAY MORE ideas only if there is time.'
-      : (state.activePart === 3
-        ? 'Compare the two pictures for up to ' + seconds + ' seconds. Follow COMMON → PICTURE 1 → PICTURE 2 → DIFFERENCE first; add the blue SAY MORE idea only if there is time.'
-        : 'Answer aloud without reading the model. Keep speaking until the timer ends.');
-    $('startTimerBtn').textContent = 'Start ' + seconds + '-second test';
+    // S6.3: the common timer is self-explanatory. Keep the duration at its
+    // authoritative per-Part/per-Q source, not duplicated in UI instructions.
+    $('startTimerBtn').textContent = '▶ Start speaking';
     $('showAnswerAfterTest').textContent = 'Show model answer';
     $('showAnswerAfterTest').disabled = false;
   }
@@ -859,37 +957,267 @@
     });
   }
 
-  let p1Speech = null;
-  let p1SpeechToken = 0;
-  let p1PlaybackButton = null;
-  function setP1Button_(button, playing) {
-    if (button) {
-      button.textContent = button.id === 'shadowAllBtn' ? (playing ? '⏸ Pause' : ((window.speechSynthesis && window.speechSynthesis.paused) ? '▶ Resume' : '▶ Play')) : (playing ? '⏸' : '▶');
-      button.setAttribute('aria-label', playing ? 'Pause audio' : 'Play or resume audio');
-      button.setAttribute('aria-pressed', playing ? 'true' : 'false');
-    }
+  /* S4: single SpeechSynthesis owner for Speaking 1–4. Voice settings
+     stay exclusively in the existing top Audio sheet. */
+  const speakingPlayback_ = {group:null,utterance:null,token:0,status:'idle'};
+  function setSpeakingPlaybackUI_(group,status) {
+    if(!group)return;
+    const play=group.querySelector('[data-audio-action="play"]');
+    const pause=group.querySelector('[data-audio-action="pause"]');
+    const stop=group.querySelector('[data-audio-action="stop"]');
+    group.dataset.audioState=status;
+    if(play){play.disabled=status==='playing';play.textContent=status==='paused'?'▶ Resume':(play.dataset.playLabel||'▶ Play');}
+    if(pause)pause.disabled=status!=='playing';
+    if(stop)stop.disabled=status==='idle';
   }
-  function toggleP1Audio_(text, button) {
-    if (!('speechSynthesis' in window)) { toast('Audio is not supported in this browser.'); return; }
-    const engine = window.speechSynthesis;
-    if (p1PlaybackButton === button && engine.paused) {
-      engine.resume(); setP1Button_(button, true); return;
-    }
-    if (p1PlaybackButton === button && engine.speaking) {
-      engine.pause(); setP1Button_(button, false); if (button && button.id === 'shadowAllBtn') button.textContent = '▶ Resume'; return;
+  function stopSpeech() {
+    ++speakingPlayback_.token;
+    if('speechSynthesis' in window)window.speechSynthesis.cancel();
+    setSpeakingPlaybackUI_(speakingPlayback_.group,'idle');
+    speakingPlayback_.group=null;speakingPlayback_.utterance=null;speakingPlayback_.status='idle';
+    if($('shadowAllBtn'))$('shadowAllBtn').textContent='▶ Play';
+  }
+  function sharedAudioPlay_(text,group) {
+    if(!('speechSynthesis' in window)) {toast('Text-to-speech is not supported by this browser.');return false;}
+    const utteranceText=String(text||'').trim();if(!utteranceText)return false;
+    const engine=window.speechSynthesis;
+    if(group && speakingPlayback_.group===group && speakingPlayback_.status==='paused'){
+      engine.resume();speakingPlayback_.status='playing';setSpeakingPlaybackUI_(group,'playing');return true;
     }
     stopSpeech();
-    const token = ++p1SpeechToken;
-    const utterance = makeUtterance(text);
-    p1Speech = utterance; p1PlaybackButton = button;
-    utterance.onend = utterance.onerror = function() {
-      if (token !== p1SpeechToken) return;
-      setP1Button_(button, false);
-      p1Speech = null; p1PlaybackButton = null;
+    const token=++speakingPlayback_.token;
+    const utterance=makeUtterance(utteranceText);
+    speakingPlayback_.group=group||null;speakingPlayback_.utterance=utterance;speakingPlayback_.status='playing';
+    setSpeakingPlaybackUI_(group,'playing');
+    utterance.onend=utterance.onerror=function(){
+      if(token!==speakingPlayback_.token)return;
+      setSpeakingPlaybackUI_(speakingPlayback_.group,'idle');
+      speakingPlayback_.group=null;speakingPlayback_.utterance=null;speakingPlayback_.status='idle';
     };
-    setP1Button_(button, true);
-    engine.speak(utterance);
+    engine.speak(utterance);return true;
   }
+  function sharedAudioPause_(group) {
+    if(!('speechSynthesis' in window)||speakingPlayback_.group!==group||speakingPlayback_.status!=='playing')return false;
+    window.speechSynthesis.pause();speakingPlayback_.status='paused';setSpeakingPlaybackUI_(group,'paused');return true;
+  }
+  function createSpeakingAudioControls_(text,label) {
+    const group=document.createElement('div');group.className='speaking-audio-controls';group.setAttribute('role','group');
+    group.setAttribute('aria-label',label||'Audio playback');
+    const buttons=[
+      ['play','▶ Play','primary-btn'],['pause','⏸ Pause','secondary-btn'],['stop','■ Stop','secondary-btn']
+    ];
+    buttons.forEach(function(spec){
+      const b=document.createElement('button');b.type='button';b.className=spec[2];b.dataset.audioAction=spec[0];
+      b.dataset.playLabel=spec[1];b.textContent=spec[1];group.appendChild(b);
+      b.addEventListener('click',function(){
+        if(spec[0]==='play')sharedAudioPlay_(text,group);
+        if(spec[0]==='pause')sharedAudioPause_(group);
+        if(spec[0]==='stop')stopSpeech();
+      });
+    });
+    setSpeakingPlaybackUI_(group,'idle');
+    return group;
+  }
+
+  /* S6: one reusable deadline-safe practice timer engine for Speaking 1–4.
+     The clock NEVER writes Mastery, Progress or Attempts. */
+  let speakingActiveTimer_ = null;
+  function speakingClockFormat_(seconds){
+    const value=Math.max(0,Math.ceil(Number(seconds)||0));
+    return String(Math.floor(value/60)).padStart(2,'0')+':'+String(value%60).padStart(2,'0');
+  }
+  function createSpeakingPracticeTimer_(onTick,onDone){
+    let totalMs=0,remainingMs=0,startedAt=0,interval=null,phase='idle';
+    function currentRemaining_(){return phase==='running'?Math.max(0,remainingMs-(Date.now()-startedAt)):remainingMs;}
+    function snapshot(){
+      const ms=currentRemaining_();
+      return {status:phase,totalSeconds:totalMs/1000,remainingSeconds:Math.ceil(ms/1000),elapsedSeconds:Math.max(0,(totalMs-ms)/1000)};
+    }
+    function notify(){if(typeof onTick==='function')onTick(snapshot());}
+    function clear_(){if(interval!==null){clearInterval(interval);interval=null;}}
+    function finish_(){
+      if(phase!=='running')return;
+      remainingMs=0;clear_();phase='done';
+      if(speakingActiveTimer_===api)speakingActiveTimer_=null;
+      notify();if(typeof onDone==='function')onDone(snapshot());
+    }
+    function tick_(){
+      if(phase!=='running')return;
+      if(currentRemaining_()<=0){finish_();return;}
+      notify();
+    }
+    function begin_(seconds){
+      const count=Math.max(1,Math.floor(Number(seconds)||0));
+      if(speakingActiveTimer_&&speakingActiveTimer_!==api)speakingActiveTimer_.stop(true);
+      clear_();totalMs=count*1000;remainingMs=totalMs;startedAt=Date.now();phase='running';
+      speakingActiveTimer_=api;notify();interval=setInterval(tick_,200);return snapshot();
+    }
+    function pause_(){
+      if(phase!=='running')return snapshot();
+      remainingMs=currentRemaining_();clear_();phase='paused';notify();return snapshot();
+    }
+    function resume_(){
+      if(phase!=='paused')return snapshot();
+      if(speakingActiveTimer_&&speakingActiveTimer_!==api)speakingActiveTimer_.stop(true);
+      speakingActiveTimer_=api;startedAt=Date.now();phase='running';notify();
+      interval=setInterval(tick_,200);return snapshot();
+    }
+    function stop_(reset){
+      const ms=currentRemaining_();clear_();
+      if(reset){remainingMs=totalMs;phase='idle';}
+      else{remainingMs=ms;phase='stopped';}
+      if(speakingActiveTimer_===api)speakingActiveTimer_=null;
+      notify();return snapshot();
+    }
+    const api=Object.freeze({start:begin_,pause:pause_,resume:resume_,stop:stop_,snapshot:snapshot});
+    return api;
+  }
+  window.AptisSpeakingTimer=Object.freeze({
+    create:createSpeakingPracticeTimer_,format:speakingClockFormat_,
+    stopActive:function(){if(speakingActiveTimer_)speakingActiveTimer_.stop(true);},
+    defaultSeconds:Object.freeze({part1:30,part2:45,part3:45,part4Preparation:60,part4Speaking:120})
+  });
+
+  /* Shared confirmation UI, not a new persistence policy.
+     Only a user's explicit Confirm click invokes the supplied save callback. */
+  let speakingConfirmPending_=null;
+  function closeSpeakingCompletion_(){
+    $('speakingCompletionDialog').classList.add('hidden');
+    speakingConfirmPending_=null;
+  }
+  function requestSpeakingCompletion_(opts){
+    if(!opts||typeof opts.onConfirm!=='function')return;
+    speakingConfirmPending_=opts.onConfirm;
+    $('speakingCompletionTitle').textContent=opts.title||'Confirm completion';
+    $('speakingCompletionDetail').textContent=opts.detail||'Save your self-assessed progress?';
+    $('speakingCompletionAccept').textContent=opts.confirmLabel||'Confirm';
+    $('speakingCompletionDialog').classList.remove('hidden');
+    $('speakingCompletionAccept').focus();
+  }
+  window.AptisSpeakingCompletion=Object.freeze({confirm:requestSpeakingCompletion_,dismiss:closeSpeakingCompletion_});
+  /* S6.4 — ONE Memorize contract for Speaking Parts 1–4.
+     Level 1: cloze; Level 2: listen and write the complete teacher model.
+     All drafts and checks stay client-side: no Progress, Mastery or Sheet writes. */
+  function speakingMemorizePlan_(answer){
+    const pieces=String(answer||'').split(/([A-Za-z][A-Za-z'-]*)/g);
+    let ordinal=0;
+    const eligible=[],chosen=[];
+    pieces.forEach(function(piece,i){
+      if(!/^[A-Za-z][A-Za-z'-]*$/.test(piece))return;
+      ordinal++;
+      if(piece.length>2){
+        eligible.push(i);
+        if(ordinal%5===0)chosen.push(i);
+      }
+    });
+    // Short answers must still have a useful, non-empty practice blank.
+    if(!chosen.length&&eligible.length)chosen.push(eligible[Math.floor(eligible.length/2)]);
+    const indices=new Set(chosen),parts=[],blanks=[];
+    pieces.forEach(function(piece,i){
+      if(indices.has(i)){parts.push({blank:true,answer:piece});blanks.push(piece);}
+      else parts.push({blank:false,text:piece});
+    });
+    return {parts,blanks};
+  }
+  function speakingWordRecallScore_(answer,attempt){
+    const target=String(answer||'').toLowerCase().match(/[a-z]+(?:'[a-z]+)?/g)||[];
+    const typed=String(attempt||'').toLowerCase().match(/[a-z]+(?:'[a-z]+)?/g)||[];
+    const counts=Object.create(null);target.forEach(function(x){counts[x]=(counts[x]||0)+1;});
+    let hits=0;typed.forEach(function(x){if(counts[x]>0){counts[x]--;hits++;}});
+    return Math.round(100*hits/Math.max(1,target.length));
+  }
+  function speakingNormalizeRecall_(value){
+    return String(value||'').trim().toLowerCase().replace(/[^a-z0-9'-]/g,'');
+  }
+  function speakingRenderMemorize_(opts){
+    const {container,answer:source,level:rawLevel,key,drafts,createAudio}=opts;
+    const answer=String(source||'').trim(),level=Number(rawLevel)===2?2:1;
+    container.replaceChildren();
+    const panel=document.createElement('div');panel.className='speaking-memorize-panel';
+    const hint=document.createElement('p');hint.className='p2-memory-hint speaking-memorize-hint';
+    hint.textContent=level===1?'Fill in the missing words.':'Listen and write the full answer.';
+    panel.appendChild(hint);
+    const inputs=[];let dictation=null;
+    if(level===2){
+      if(typeof createAudio==='function'){
+        const group=createAudio();
+        if(group)panel.appendChild(group);
+      }
+      dictation=document.createElement('textarea');
+      dictation.className='p2-dictation speaking-memorize-dictation';
+      dictation.rows=6;dictation.spellcheck=false;
+      dictation.setAttribute('aria-label','Write the full answer you hear');
+      dictation.placeholder='Write the full answer here...';
+      dictation.value=typeof drafts[key]==='string'?drafts[key]:'';
+      dictation.addEventListener('input',()=>{drafts[key]=dictation.value;});
+      panel.appendChild(dictation);
+    }else{
+      const line=document.createElement('div');line.className='p2-cloze-line speaking-memorize-cloze';
+      const plan=speakingMemorizePlan_(answer);let n=0;
+      const stored=drafts[key]&&typeof drafts[key]==='object'?drafts[key]:{};
+      plan.parts.forEach(function(piece){
+        if(!piece.blank){line.appendChild(document.createTextNode(piece.text));return;}
+        const index=n++,input=document.createElement('input');
+        input.type='text';input.className='p1-cloze-input';input.placeholder='_____';
+        input.autocomplete='off';input.spellcheck=false;
+        input.setAttribute('aria-label','Missing word '+(index+1));
+        input.value=stored[index]||'';
+        input.addEventListener('input',()=>{
+          if(!drafts[key]||typeof drafts[key]!=='object')drafts[key]={};
+          drafts[key][index]=input.value;
+          input.classList.remove('p1-cloze-correct','p1-cloze-wrong');
+        });
+        line.appendChild(input);inputs.push({input,expected:piece.answer});
+      });
+      panel.appendChild(line);
+    }
+    const actions=document.createElement('div');
+    actions.className='p2-memory-actions speaking-memorize-actions';
+    const check=document.createElement('button');check.type='button';check.className='primary-btn';check.textContent='Check';
+    const retry=document.createElement('button');retry.type='button';retry.className='secondary-btn';retry.textContent='Try again';
+    const show=document.createElement('button');show.type='button';show.className='secondary-btn';show.textContent='Show answer';show.setAttribute('aria-expanded','false');
+    const feedback=document.createElement('p');feedback.className='speaking-memorize-feedback';feedback.setAttribute('role','status');feedback.setAttribute('aria-live','polite');
+    const revealed=document.createElement('section');revealed.className='speaking-memorize-revealed';revealed.hidden=true;
+    const answerLabel=document.createElement('strong');answerLabel.textContent='Teacher model answer';
+    const full=document.createElement('p');full.className='model-text';full.textContent=answer;
+    revealed.append(answerLabel,full);
+    check.addEventListener('click',()=>{
+      if(level===2){
+        const value=dictation.value.trim();
+        feedback.textContent=value?'Word recall: '+speakingWordRecallScore_(answer,value)+'%. Compare word order and meaning with the teacher model.':'Write an answer first.';
+        return;
+      }
+      let correct=0;
+      inputs.forEach(function(entry){
+        const ok=speakingNormalizeRecall_(entry.input.value)===speakingNormalizeRecall_(entry.expected);
+        entry.input.classList.toggle('p1-cloze-correct',ok);
+        entry.input.classList.toggle('p1-cloze-wrong',!ok);
+        if(ok)correct++;
+      });
+      feedback.textContent=correct+'/'+inputs.length+' words correct.';
+    });
+    retry.addEventListener('click',()=>{
+      delete drafts[key];
+      if(dictation)dictation.value='';
+      inputs.forEach(function(entry){
+        entry.input.value='';
+        entry.input.classList.remove('p1-cloze-correct','p1-cloze-wrong');
+      });
+      feedback.textContent='';revealed.hidden=true;show.setAttribute('aria-expanded','false');
+      const first=dictation||(inputs[0]&&inputs[0].input);if(first)first.focus();
+    });
+    show.addEventListener('click',()=>{
+      revealed.hidden=false;show.setAttribute('aria-expanded','true');
+    });
+    actions.append(check,retry,show);
+    panel.append(actions,feedback,revealed);
+    container.appendChild(panel);
+    return panel;
+  }
+  window.AptisSpeakingMemorize=Object.freeze({
+    plan:speakingMemorizePlan_,recallScore:speakingWordRecallScore_,
+    normalize:speakingNormalizeRecall_,render:speakingRenderMemorize_
+  });
 
   // Shared P2/P3 whole-topic study: one Learn/Memorize/Test flow, stable prompt IDs.
   const p2Drafts_ = Object.create(null);
@@ -898,9 +1226,7 @@
     const title=document.createElement('h3');title.textContent='Q'+slot+' · '+heading;card.appendChild(title);
     const words=document.createElement('div');words.className='p2-topic-answer';card.appendChild(words);
     renderSharedFormulaText(words,model);
-    const listen=document.createElement('button');listen.type='button';listen.className='secondary-btn';
-    listen.textContent='▶ Listen Q'+slot;listen.addEventListener('click',()=>toggleP1Audio_(model,listen));
-    card.appendChild(listen);return card;
+    card.appendChild(createSpeakingAudioControls_(model,'Listen Q'+slot));return card;
   }
   function renderP2Unified_(){
     const wrapper=$('p2Unified'),list=$('p2UnifiedCards'),footer=$('p2UnifiedFooter'),item=currentItem();
@@ -911,55 +1237,16 @@
       const question=String(q[i]||'').trim(),answer=String(m[i]||'').trim();
       if(!question||!answer)continue;
       if(!isMemory){list.appendChild(p2Card_(i+1,question,answer));continue;}
-      const card=document.createElement('section');card.className='p2-topic-card';
-      const head=document.createElement('h3');head.textContent='Q'+(i+1)+' · '+question;card.appendChild(head);
-      const label=document.createElement('p');label.className='p2-memory-hint';
-      label.textContent=state.memorizeLevel===3?'Listen and write the full answer.':'Fill in the missing words (Level '+state.memorizeLevel+').';
-      card.appendChild(label);
-      const key=item.id+':Q'+(i+1)+':L'+state.memorizeLevel;
-      const expected=[];
-      if(state.memorizeLevel===3){
-        const play=document.createElement('button');play.type='button';play.className='secondary-btn';
-        play.textContent='▶ Listen Q'+(i+1);play.addEventListener('click',()=>toggleP1Audio_(answer,play));
-        card.appendChild(play);
-        const area=document.createElement('textarea');area.className='p2-dictation';area.rows=5;
-        area.placeholder='Write the full answer for Q'+(i+1)+' here...';
-        area.value=p2Drafts_[key]||'';area.addEventListener('input',()=>{p2Drafts_[key]=area.value;});
-        card.appendChild(area);
-        expected.push({input:area,answer});
-      }else{
-        const line=document.createElement('div');line.className='p2-cloze-line';
-        const tokens=answer.split(/([A-Za-z][A-Za-z'-]*)/g);let count=0,idx=0;
-        const remembered=p2Drafts_[key]||{};
-        tokens.forEach(token=>{
-          if(/^[A-Za-z][A-Za-z'-]*$/.test(token)){count++;}
-          if(/^[A-Za-z][A-Za-z'-]*$/.test(token)&&token.length>2&&count%(state.memorizeLevel===1?5:3)===0){
-            const n=idx++,input=document.createElement('input');input.type='text';input.className='p1-cloze-input';
-            input.placeholder='_____';input.setAttribute('aria-label','Q'+(i+1)+' missing word '+n);
-            input.value=remembered[n]||'';input.addEventListener('input',()=>{p2Drafts_[key]??={};p2Drafts_[key][n]=input.value;});
-            line.appendChild(input);expected.push({input,answer:token}); 
-          }else line.appendChild(document.createTextNode(token));
-        });card.appendChild(line);
-      }
-      const controls=document.createElement('div');controls.className='p2-memory-actions';
-      const feedback=document.createElement('span');feedback.setAttribute('role','status');
-      const check=document.createElement('button');check.className='primary-btn';check.textContent='Check Q'+(i+1);
-      check.addEventListener('click',()=>{
-        if(state.memorizeLevel===3){
-          const target=answer.toLowerCase().match(/[a-z]+(?:'[a-z]+)?/g)||[];
-          const typed=expected[0].input.value.toLowerCase().match(/[a-z]+(?:'[a-z]+)?/g)||[];
-          const counts={};target.forEach(t=>counts[t]=(counts[t]||0)+1);
-          let matches=0;typed.forEach(t=>{if(counts[t]>0){matches++;counts[t]--;}});
-          feedback.textContent='Word recall '+Math.round(100*matches/Math.max(1,target.length))+'%. Check meaning as well.';
-        }else feedback.textContent=expected.filter(t=>tokenizeP1Recall_(t.input.value)===tokenizeP1Recall_(t.answer)).length+'/'+expected.length+' correct.';
+      const card=document.createElement('section');card.className='p2-topic-card speaking-memorize-question-card';
+      const title=document.createElement('h3');title.textContent='Q'+(i+1)+' · '+question;
+      card.appendChild(title);
+      speakingRenderMemorize_({
+        container:card,answer,level:state.memorizeLevel,
+        key:'P'+state.activePart+':'+item.id+':Q'+(i+1)+':L'+state.memorizeLevel,
+        drafts:p2Drafts_,
+        createAudio:()=>createSpeakingAudioControls_(answer,'Memorize Q'+(i+1))
       });
-      const reveal=document.createElement('button');reveal.className='secondary-btn';reveal.textContent='Show answer';
-      reveal.addEventListener('click',()=>{feedback.textContent=answer;});
-      controls.append(check,reveal,feedback);card.appendChild(controls);list.appendChild(card);
-    }
-    if(!isMemory){
-      const all=document.createElement('button');all.className='primary-btn';all.textContent='▶ Listen to all 3 answers';
-      all.addEventListener('click',()=>toggleP1Audio_(m.filter((a,j)=>q[j]&&a).join('. '),all));footer.appendChild(all);
+      list.appendChild(card);
     }
   }
   function renderP2TestOutline_(){
@@ -993,33 +1280,18 @@
     splitSentences(currentModel()).forEach(function(sentence) {
       const row = document.createElement('div');
       row.className = 'shadow-sentence';
-      const btn = document.createElement('button');
-      btn.type = 'button'; btn.textContent = '▶';
-      btn.setAttribute('aria-label', 'Play or resume audio');
-      btn.addEventListener('click', function() {
-        if (state.activePart <= 3) toggleP1Audio_(sentence, btn);
-        else speakText(sentence);
-      });
+      const audio = createSpeakingAudioControls_(sentence,'Listen to sentence');
       const div = document.createElement('div');
       if(state.activePart<=2)renderSharedFormulaText(div,sentence);else div.textContent = sentence;
-      row.appendChild(btn); row.appendChild(div); box.appendChild(row);
+      row.appendChild(audio); row.appendChild(div); box.appendChild(row);
     });
   }
-  async function shadowAll() {
-    if (state.activePart <= 3) {
-      toggleP1Audio_(currentModel(), $('shadowAllBtn'));
-      return;
-    }
-    stopSpeech();
-    const sentences = splitSentences(currentModel());
-    for (const sentence of sentences) {
-      try { await speakTextPromise(sentence); await wait(800); }
-      catch (e) { break; }
-    }
+  function shadowAll() {
+    sharedAudioPlay_(currentModel(),$('shadowAudioControls'));
   }
   function configureP1Modes_() {
     const p1 = [1,2,3].includes(state.activePart);
-    $$('.mode-tab').forEach(function(btn) {
+    $$('#speakingModeTabs .mode-tab').forEach(function(btn) {
       const mode = btn.dataset.mode;
       btn.classList.toggle('hidden', p1 && mode === 'learn');
       if (p1) {
@@ -1032,133 +1304,51 @@
     });
     $('speakingModeTabs').classList.toggle('p1-three-steps', p1);
     $('shadowIntro').classList.toggle('hidden', p1);
-    $('memorizeIntro').classList.toggle('hidden', p1);
-    $$('.level-btn').forEach(function(btn) {
-      const n = Number(btn.dataset.level);
-      btn.classList.toggle('hidden', p1 && n === 4);
-      if (p1 && n === 3) btn.textContent = 'Level 3 · Listen & write';
-      if (!p1 && n === 3) btn.textContent = 'Keywords';
-    });
   }
   function setMode(mode) {
     if (state.activePart <= 3 && mode === 'learn') mode = 'shadow';
-    if (state.currentMode !== mode) stopSpeech();
+    if (state.currentMode !== mode) {stopSpeech();stopTimer(true);}
     state.currentMode = mode;
     if([2,3].includes(state.activePart) && currentItem()){
       $('questionText').textContent = mode==='test' ? currentQuestionText() : 'Practise all three questions in this topic';
     }
     configureP1Modes_();
-    $$('.mode-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
+    $$('#speakingModeTabs .mode-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
+    $('speakingMemorizeLevels').classList.toggle('hidden',mode!=='memorize');
     ['learn','shadow','memorize','test'].forEach(name => $(name + 'Mode').classList.toggle('hidden', name !== mode || ([2,3].includes(state.activePart) && mode !== 'test')));
     const unified=$('p2Unified');
     if(unified)unified.classList.toggle('hidden',![2,3].includes(state.activePart)||!['shadow','memorize'].includes(mode));
     if([2,3].includes(state.activePart)){if(mode!=='test')renderP2Unified_();renderP2TestOutline_();}
+    // The timer and manual completion belong to Learn/Test, never Memorize.
+    // Class-driven visibility avoids touching the timer engine or save policy.
+    $('speakingPracticeTimer').classList.toggle('hidden',mode==='memorize');
+    $('markLearnedBtn').closest('.speaking-completion-actions').classList.toggle('hidden',mode==='memorize');
     if (mode === 'test') resetTimerDisplay();
   }
 
   function setMemorizeLevel(level) {
-    if (state.activePart <= 3) stopSpeech();
-    state.memorizeLevel = level;
-    $$('.level-btn').forEach(btn => btn.classList.toggle('active', Number(btn.dataset.level) === level));
+    if(![1,2].includes(Number(level)))return;
+    stopSpeech();
+    state.memorizeLevel=Number(level);
+    $$('#speakingMemorizeLevels .level-btn').forEach(btn=>{
+      const active=Number(btn.dataset.level)===state.memorizeLevel;
+      btn.classList.toggle('active',active);
+      btn.setAttribute('aria-pressed',String(active));
+    });
     renderMemorize();
-    if([2,3].includes(state.activePart) && state.currentMode==='memorize')renderP2Unified_();
+    if([2,3].includes(state.activePart)&&state.currentMode==='memorize')renderP2Unified_();
   }
 
-  let p1RecallTargets_ = [];
-  function tokenizeP1Recall_(value) {
-    return String(value || '').trim().toLowerCase().replace(/[^a-z0-9'-]/g, '');
-  }
+  const p1Drafts_=Object.create(null); // Session only; never stored in Sheets.
   function renderMemorize() {
-    const model = currentModel();
-    const typing = $('p1TypingArea');
-    const actions = $('p1MemorizeActions');
-    if (state.activePart > 3) {
-      typing.classList.add('hidden'); actions.classList.add('hidden');
-      $('memorizeText').classList.remove('hidden');
-      let text = model;
-      if (state.memorizeLevel === 1) text = makeCloze(model, 5);
-      else if (state.memorizeLevel === 2) text = makeCloze(model, 3);
-      else if (state.memorizeLevel === 3) text = currentKeywords();
-      else if (state.memorizeLevel === 4) text = 'Speak from memory. No text support.';
-      $('memorizeText').textContent = text;
-      return;
-    }
-    typing.classList.remove('hidden');
-    actions.classList.remove('hidden');
-    $('memorizeText').classList.add('hidden');
-    $('p1Feedback').textContent = '';
-    typing.replaceChildren();
-    p1RecallTargets_ = [];
-    if (state.memorizeLevel === 3) {
-      const hint = document.createElement('p');
-      hint.textContent = 'Listen, then write the full answer from memory.';
-      typing.appendChild(hint);
-      const audioButton = document.createElement('button');
-      audioButton.type = 'button'; audioButton.className = 'secondary-btn';
-      audioButton.textContent = '▶ Listen';
-      audioButton.addEventListener('click', function(){toggleP1Audio_(model,audioButton);});
-      typing.appendChild(audioButton);
-      const area = document.createElement('textarea');
-      area.id = 'p1DictationInput'; area.rows = 5;
-      area.setAttribute('aria-label', 'Write the answer you hear');
-      area.placeholder = 'Write the answer here...';
-      typing.appendChild(area);
-      return;
-    }
-    const frequency = state.memorizeLevel === 1 ? 5 : 2;
-    const words = String(model || '').match(/[A-Za-z][A-Za-z'-]*|[^A-Za-z]+/g) || [];
-    let count = 0;
-    const line = document.createElement('div');
-    line.className = 'p1-cloze-line';
-    words.forEach(function(piece){
-      if (/^[A-Za-z]/.test(piece)) {
-        count++;
-        if (piece.length > 2 && count % frequency === 0) {
-          const input = document.createElement('input');
-          input.type = 'text'; input.className = 'p1-cloze-input';
-          input.placeholder = '_____';
-          input.setAttribute('aria-label', 'Missing word ' + (p1RecallTargets_.length + 1));
-          input.autocomplete = 'off'; input.spellcheck = false;
-          line.appendChild(input);
-          p1RecallTargets_.push({input:input,expected:piece});
-          return;
-        }
-      }
-      line.appendChild(document.createTextNode(piece));
-    });
-    typing.appendChild(line);
-  }
-  function checkP1Recall_() {
-    if (state.activePart > 3) return;
-    if (state.memorizeLevel === 3) {
-      const value = String($('p1DictationInput')?.value || '').trim();
-      if (!value) { $('p1Feedback').textContent = 'Write an answer first.'; return; }
-      const target = String(currentModel() || '').toLowerCase().match(/[a-z]+(?:'[a-z]+)?/g) || [];
-      const attempt = value.toLowerCase().match(/[a-z]+(?:'[a-z]+)?/g) || [];
-      const counts = {};
-      target.forEach(function(word){counts[word] = (counts[word]||0)+1;});
-      let hits = 0;
-      attempt.forEach(function(word){if(counts[word]>0){hits++;counts[word]--;}});
-      const score = Math.round(100 * hits / Math.max(1,target.length));
-      $('p1Feedback').textContent = 'Word recall: ' + score + '%. Compare the original answer below; clear B1 meaning matters more than exact wording.';
-      return;
-    }
-    let correct = 0;
-    p1RecallTargets_.forEach(function(target){
-      const ok = tokenizeP1Recall_(target.input.value) === tokenizeP1Recall_(target.expected);
-      target.input.classList.toggle('p1-cloze-correct',ok);
-      target.input.classList.toggle('p1-cloze-wrong',!ok);
-      if(ok)correct++;
-    });
-    $('p1Feedback').textContent = correct + '/' + p1RecallTargets_.length + ' words correct.';
-  }
-
-  function makeCloze(text, everyN) {
-    let count = 0;
-    return String(text || '').replace(/[A-Za-z][A-Za-z'-]*/g, word => {
-      count++;
-      if (word.length <= 2) return word;
-      return count % everyN === 0 ? '_____' : word;
+    const item=currentItem(),container=$('p1TypingArea');
+    if(!item||!container)return;
+    const answer=currentModel();
+    speakingRenderMemorize_({
+      container,answer,level:state.memorizeLevel,
+      key:'P1:'+item.id+':L'+state.memorizeLevel,
+      drafts:p1Drafts_,
+      createAudio:()=>createSpeakingAudioControls_(answer,'Memorize full answer')
     });
   }
 
@@ -1463,43 +1653,50 @@
     openPartHome(part);
   }
 
-  function startTimer() {
+
+  let speakingMainPracticeTimer_=null;
+  function p123Timer_(){
+    if(speakingMainPracticeTimer_)return speakingMainPracticeTimer_;
+    speakingMainPracticeTimer_=window.AptisSpeakingTimer.create(function(snap){
+      state.timerElapsed=snap.elapsedSeconds;
+      state.timerRunning=snap.status==='running';
+      $('timer').textContent=window.AptisSpeakingTimer.format(snap.remainingSeconds);
+       $('startTimerBtn').disabled=snap.status==='running';
+      $('startTimerBtn').textContent=snap.status==='paused'?'▶ Resume':'▶ Start speaking';
+      $('pauseTimerBtn').disabled=snap.status!=='running';
+      $('stopTimerBtn').disabled=!['running','paused'].includes(snap.status);
+    },function(){
+      // Timer completion is UI-only. Rating/Mark learned remain explicit learner actions.
+      if(state.currentMode==='test'){
+        $('selfCheck').classList.remove('hidden');
+        toast('Time. Rate your answer if you wish.');
+      }
+    });
+    return speakingMainPracticeTimer_;
+  }
+  function startTimer(){
     stopSpeech();
-    const total = currentTimerSeconds();
-    state.timerStartedAt = Date.now();
-    state.timerElapsed = 0;
-    state.timerRunning = true;
-    $('startTimerBtn').disabled = true;
-    $('stopTimerBtn').disabled = false;
-    $('selfCheck').classList.add('hidden');
-    tickTimer(total);
-    state.timerId = setInterval(() => tickTimer(total), 200);
+    const timer=p123Timer_();
+    if(timer.snapshot().status==='paused')timer.resume();
+    else {$('selfCheck').classList.add('hidden');timer.start(currentTimerSeconds());}
   }
-
-  function tickTimer(total) {
-    const elapsed = Math.min(total, (Date.now() - state.timerStartedAt) / 1000);
-    state.timerElapsed = elapsed;
-    const remaining = Math.max(0, total - elapsed);
-    $('timer').textContent = formatTime(Math.ceil(remaining));
-    $('timerBar').style.width = Math.max(0, remaining / total * 100) + '%';
-    if (remaining <= 0) stopTimer(false);
+  function pauseTimer(){p123Timer_().pause();}
+  function stopTimer(silent){
+    const timer=p123Timer_();
+    if(silent){
+      timer.stop(true);state.timerElapsed=0;
+      $('timer').textContent=window.AptisSpeakingTimer.format(currentTimerSeconds());
+      $('selfCheck').classList.add('hidden');
+      return;
+    }
+    const previous=timer.snapshot().status;
+    timer.stop(false);
+    if(['running','paused'].includes(previous)&&state.currentMode==='test')
+      $('selfCheck').classList.remove('hidden');
   }
-
-  function stopTimer(silent) {
-    if (state.timerId) clearInterval(state.timerId);
-    state.timerId = null;
-    const wasRunning = state.timerRunning;
-    state.timerRunning = false;
-    $('startTimerBtn').disabled = false;
-    $('stopTimerBtn').disabled = true;
-    if (!silent && wasRunning) { $('selfCheck').classList.remove('hidden'); toast('Time. Rate your answer.'); }
-    if (silent) resetTimerDisplay();
-  }
-
-  function resetTimerDisplay() {
-    const total = currentTimerSeconds();
-    $('timer').textContent = formatTime(total);
-    $('timerBar').style.width = '100%';
+  function resetTimerDisplay(){
+    if(speakingMainPracticeTimer_&&['running','paused'].includes(speakingMainPracticeTimer_.snapshot().status))return;
+    $('timer').textContent=window.AptisSpeakingTimer.format(currentTimerSeconds());
     $('selfCheck').classList.add('hidden');
   }
 
@@ -1563,22 +1760,10 @@
     return u;
   }
 
-  function speakText(text) {
-    if (!('speechSynthesis' in window)) return toast('Text-to-speech is not supported by this browser.');
-    stopSpeech(); window.speechSynthesis.speak(makeUtterance(text));
-  }
-
-  function speakTextPromise(text) {
-    return new Promise((resolve, reject) => {
-      if (!('speechSynthesis' in window)) return reject(new Error('No TTS'));
-      const u = makeUtterance(text); u.onend = resolve; u.onerror = reject; window.speechSynthesis.speak(u);
-    });
-  }
-
-  function stopSpeech() { p1SpeechToken++; setP1Button_(p1PlaybackButton, false); p1PlaybackButton = null; p1Speech = null; if ('speechSynthesis' in window) window.speechSynthesis.cancel(); if ($('shadowAllBtn')) $('shadowAllBtn').textContent = '▶ Play'; }
+  function speakText(text){sharedAudioPlay_(text,null);}
   function openAudioSheet() { $('accentSelect').value = state.audio.accent; populateVoiceSelect(); syncSpeedButtons(); $('audioSheet').classList.remove('hidden'); }
   function closeAudioSheet() { stopSpeech(); $('audioSheet').classList.add('hidden'); }
-  function setSpeechRate(rate) { state.audio.rate = clamp(rate,0.5,1.4); writeLocal('aptisRate',String(state.audio.rate)); syncSpeedButtons(); }
+  function setSpeechRate(rate) { stopSpeech(); state.audio.rate = clamp(rate,0.5,1.4); writeLocal('aptisRate',String(state.audio.rate)); syncSpeedButtons(); }
   function syncSpeedButtons() { $$('.speed-btn').forEach(btn => btn.classList.toggle('active', Number(btn.dataset.speed) === Number(state.audio.rate))); }
 
 
@@ -1694,6 +1879,11 @@
   function readLocal(key,fallback) { try { const v=localStorage.getItem(key); return v===null ? fallback : v; } catch(e){ return fallback; } }
   function writeLocal(key,value) { try { localStorage.setItem(key,value); } catch(e){} }
 
+  window.AptisSpeakingAudio = Object.freeze({
+    play:sharedAudioPlay_, pause:sharedAudioPause_, stop:stopSpeech,
+    createControls:createSpeakingAudioControls_,
+    settings:()=>({accent:state.audio.accent,voiceURI:state.audio.voiceURI,rate:state.audio.rate})
+  });
   window.AptisSpeaking = { enter: enter, showHome: showHome };
 
   let toastTimer = null;

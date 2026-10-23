@@ -1,24 +1,88 @@
-<section id="speakingPart4Future" class="p4dev hidden" aria-label="Speaking Part 4">
-  <header class="p4dev-head"><div><small>APTIS ESOL · SPEAKING PART 04</small><h2>Speaking Part 4</h2><p>Learn the teacher's reusable story patterns, then practise your 2-minute answer.</p></div><button id="p4Close" type="button">← Back to Speaking</button></header>
-  <div class="p4-study-tabs" role="group" aria-label="Part 4 learning steps">
-    <button type="button" data-p4-step="learn" class="p4-step-btn active">01 Learn</button>
-    <button type="button" data-p4-step="memorize" class="p4-step-btn">02 Memorize</button>
-    <button type="button" data-p4-step="test" class="p4-step-btn">03 Test</button>
-  </div>
-  <div class="p4dev-controls"><label for="p4Mode">Study path</label><select id="p4Mode"><option value="learn">01–02 · Learn & Memorize</option><option value="exam">03 · Test (approved sets)</option></select><label for="p4Set">Topic</label><select id="p4Set"></select><button id="p4Load" type="button">Load</button></div>
-  <div id="p4LearningTools" class="p4-learning-tools">
-    <label for="p4StudyView">01 Learn / 02 Memorize</label>
-    <select id="p4StudyView"><option value="full">01 Learn · Full teacher-first model</option><option value="formula">02 Memorize · Formula cues</option><option value="recall">02 Memorize · No help</option></select>
-    <label for="p4VoiceRate">Listening speed</label><select id="p4VoiceRate"><option value="0.85" selected>0.85×</option><option value="0.75">0.75×</option><option value="1">1.00×</option></select>
-    <button id="p4StopAudio" type="button">Stop audio</button>
-    <label for="p4MasteryLevel">Memorized</label>
-    <select id="p4MasteryLevel"><option value="0">0 · Not started</option><option value="1">1 · Reading</option><option value="2">2 · Recall with hints</option><option value="3">3 · Speak without looking</option></select>
-    <button id="p4SaveMastery" type="button">Save mastery</button>
+<section id="speakingPart4Future" class="p4dev hidden skill-content-frame" aria-label="Speaking Part 4">
+  <section id="p4TopicLibrary" class="p4-topic-library" aria-label="Part 4 topic library">
+    <p id="p4LibraryStatus" class="p4-feedback" role="status" aria-live="polite"></p>
+    <article class="welcome-card">
+      <div class="welcome-copy">
+        <span class="pill">Speaking Part 4</span>
+        <h2>Tell your story. Speak with confidence.</h2>
+        <p>Practise three related questions, then speak for two minutes after one minute of preparation.</p>
+        <div class="welcome-actions">
+          <button id="p4ContinueLearning" class="primary-btn large" type="button">Continue learning</button>
+          <button id="p4QuickReview" class="secondary-btn large" type="button">Quick review</button>
+        </div>
+      </div>
+      <div class="progress-hero"><div class="progress-ring" id="p4HomeProgressRing"><span id="p4HomeProgressPct">—</span></div><small>topics mastered</small></div>
+    </article>
+    <section class="today-section">
+      <div class="section-title-row"><div><div class="eyebrow">TODAY</div><h3>What to practise</h3></div><button id="p4ReviewPlan" class="text-btn" type="button">Review topics →</button></div>
+      <div class="focus-grid">
+        <button class="focus-card" data-p4-filter="practised" type="button"><span class="focus-icon">↻</span><strong id="p4HomeNew">—</strong><span>Practised</span></button>
+        <button class="focus-card" data-p4-filter="reading" type="button"><span class="focus-icon">◎</span><strong id="p4HomeReading">—</strong><span>Reading</span></button>
+        <button class="focus-card" data-p4-filter="hints" type="button"><span class="focus-icon">★</span><strong id="p4HomeHints">—</strong><span>With hints</span></button>
+        <button class="focus-card" data-p4-filter="independent" type="button"><span class="focus-icon">✓</span><strong id="p4HomeIndependent">—</strong><span>Independent</span></button>
+      </div>
+    </section>
+    <section class="library-section"><div class="section-title-row stack-mobile">
+      <div><div class="eyebrow">PRACTICE BANK</div><h3 id="p4HomeLibraryTitle">Part 4 topics</h3><p class="section-note">Pick a topic and continue from where you left off.</p></div>
+      <div class="library-controls"><div class="search-wrap"><span>⌕</span><input id="p4HomeSearch" type="search" placeholder="Search..." autocomplete="off" aria-label="Search Part 4 topics"></div>
+        <select id="p4HomeFilter" class="select" aria-label="Filter Part 4 topics"><option value="all">All</option><option value="practised">Practised</option><option value="new">New</option><option value="reading">Reading</option><option value="hints">With hints</option><option value="independent">Independent</option></select>
+      </div>
+    </div><div id="p4TopicCards" class="p4-topic-grid"></div></section>
+  </section>
+  <section id="p4TopicDetail" class="p4-topic-detail" hidden aria-label="Part 4 topic detail">
+    <div class="study-topline">
+      <div class="study-top-actions">
+        <button id="p4PrevTopic" class="secondary-btn study-nav-btn" type="button" aria-label="Previous Part 4 topic">← Prev</button>
+        <button id="p4NextTopic" class="secondary-btn study-nav-btn" type="button" aria-label="Next Part 4 topic">Next →</button>
+      </div>
+    </div>
+    <article class="study-card p4-topic-study-card">
+      <div class="study-meta">
+        <span id="p4TopicPosition" class="badge" aria-live="polite"></span>
+        <span id="p4TopicBadge" class="badge badge-soft"></span>
+      </div>
+      <h2 id="p4TopicTitle" class="question-title"></h2>
+      <div class="mode-tabs p1-three-steps" role="group" aria-label="Part 4 learning steps">
+        <button type="button" data-p4-step="learn" class="mode-tab active" aria-pressed="true"><span>01</span> Learn</button>
+        <button type="button" data-p4-step="memorize" class="mode-tab" aria-pressed="false"><span>02</span> Memorize</button>
+        <button type="button" data-p4-step="test" class="mode-tab" aria-pressed="false"><span>03</span> Test</button>
+      </div>
+      <div id="p4MemorizeLevels" class="memorize-levels p4-memorize-levels" role="group" aria-label="Part 4 Memorize levels" hidden>
+        <button class="level-btn active" type="button" data-p4-level="1" aria-pressed="true">LV1 · Fill missing words</button>
+        <button class="level-btn" type="button" data-p4-level="2" aria-pressed="false">LV2 · Listen & write</button>
+      </div>
+  <div class="p4dev-controls p4-internal-controls" hidden aria-hidden="true"><label for="p4Mode">Study path</label><select id="p4Mode"><option value="learn">01–02 · Learn & Memorize</option><option value="exam">03 · Test (approved sets)</option></select><label for="p4Set">Topic</label><select id="p4Set"></select><button id="p4Load" type="button">Load</button></div>
+
+  <p id="p4Status" class="p4-feedback" role="status" aria-live="polite"></p><div id="p4Models" class="p4dev-models"></div><div id="p4Content" class="p4dev-content"></div>
+  <!-- The top Speaking Audio sheet alone owns Accent, Voice and Speed.
+       P4 study view is an internal model for its existing Learn/Memorize modes. -->
+  <div id="p4LearningTools" class="speaking-mastery-controls speaking-completion-actions" aria-label="Part 4 mastery">
+    <select id="p4StudyView" hidden aria-label="Part 4 study visibility">
+      <option value="full">Full teacher model</option>
+      <option value="formula">Formula cues</option>
+      <option value="recall">No help</option>
+    </select>
+    <label for="p4MasteryLevel">My mastery</label>
+    <select id="p4MasteryLevel" class="select" aria-label="Self-assessed mastery">
+      <option value="0">0 · Not started</option>
+      <option value="1">1 · Reading</option>
+      <option value="2">2 · Recall with hints</option>
+      <option value="3">3 · Speak without looking</option>
+    </select>
+    <button id="p4SaveMastery" class="secondary-btn" type="button">Save mastery</button>
     <span id="p4MasterySaved" role="status" aria-live="polite"></span>
-    <div id="p4MasteryOverview" class="p4-mastery-overview"></div>
+    <div id="p4MasteryOverview" class="p4-mastery-overview" hidden></div>
   </div>
-  <p id="p4Status" role="status" aria-live="polite"></p><div id="p4Models" class="p4dev-models"></div><div id="p4Content" class="p4dev-content"></div>
-  <div class="p4dev-time"><span id="p4Stage">Ready</span><strong id="p4Time">01:00</strong><button id="p4Begin" type="button">Start preparation</button><button id="p4Next" type="button" disabled>Start speaking</button><button id="p4Stop" type="button" disabled>Stop</button></div>
+  <div id="p4PracticeTimer" class="p4dev-time speaking-practice-timer" role="group" aria-label="Part 4 preparation and speaking timer">
+    <strong id="p4Time" class="timer" aria-live="off" aria-label="Time remaining">01:00</strong>
+    <div class="speaking-timer-actions">
+      <button id="p4Begin" class="primary-btn" type="button">▶ Start preparation</button>
+      <button id="p4Next" class="primary-btn" type="button" disabled>▶ Start speaking</button>
+      <button id="p4Pause" class="secondary-btn" type="button" disabled>⏸ Pause</button>
+      <button id="p4Stop" class="secondary-btn" type="button" disabled>■ Stop</button>
+    </div>
+  </div>
   <div id="p4Review" class="p4dev-models" hidden><label for="p4Rating">Self-rating (0–5)</label><select id="p4Rating"><option value="0">0 · Not rated</option><option value="1">1 · Difficult</option><option value="2">2 · Needs practice</option><option value="3">3 · Fair</option><option value="4">4 · Good</option><option value="5">5 · Confident</option></select><label for="p4Note">Note</label><input id="p4Note" maxlength="300" placeholder="What should I improve?"><button id="p4Save" type="button">Save practice</button><button id="p4Read" type="button">Check saved progress</button><p id="p4Saved" aria-live="polite"></p></div>
-  <p class="p4dev-disclaimer">Learn mode has listening, formula-only and recall practice. Exam mode hides all model answers. Microphone recording is not enabled.</p>
+    </article>
+  </section>
 </section>

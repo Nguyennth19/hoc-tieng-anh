@@ -37,11 +37,11 @@ button,input,select{font:inherit}button{cursor:pointer}button:disabled{cursor:no
 .topbar h1{margin:1px 0 0;font-size:18px;font-weight:900;letter-spacing:-.025em}.eyebrow{font-size:10px;font-weight:900;letter-spacing:.13em;color:#8a94a7}.top-actions{gap:7px}
 .icon-btn{width:44px;height:44px;border:1px solid var(--border);background:#fff;color:var(--ink);border-radius:14px;display:grid;place-items:center;box-shadow:var(--shadow-soft);font-weight:900;font-size:17px}
 .icon-btn:active,.primary-btn:active,.secondary-btn:active,.success-btn:active,.focus-card:active,.question-item:active{transform:translateY(1px)}
-main{width:min(100%,var(--max));margin:0 auto;padding:20px 16px 38px}.view{animation:fadeIn .18s ease}@keyframes fadeIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+.speaking-shell .speaking-main{min-width:0;padding:0 0 38px}.view{animation:fadeIn .18s ease}@keyframes fadeIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
 .panel{background:#fff;border:1px solid var(--border);border-radius:var(--radius-xl);padding:24px;box-shadow:var(--shadow)}.loading-panel{display:flex;align-items:center;justify-content:center;gap:14px;min-height:190px}.loading-panel p{margin:4px 0 0;color:var(--muted)}.spinner{width:30px;height:30px;border:3px solid #e0e4ed;border-top-color:var(--purple);border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
 
 /* Part selector: KidLearn-style compact run strip */
-.part-switch{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:0 0 14px}.part-tab{min-height:62px;border:1px solid var(--border);border-radius:17px;background:#fff;color:var(--muted);padding:10px 14px;text-align:left;box-shadow:0 4px 12px rgba(48,68,124,.035);transition:.15s ease}.part-tab span,.part-tab small{display:block}.part-tab span{font-weight:900;font-size:15px;color:var(--ink)}.part-tab small{margin-top:2px;font-size:11px;line-height:1.35}.part-tab.active{background:var(--purple-soft);border-color:#d9d1ff;box-shadow:none}.part-tab.active span{color:#5f55e6}.part-tab.active small{color:#7169a4}
+.part-switch{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:0 0 14px}.part-tab{min-height:62px;border:1px solid var(--border);border-radius:17px;background:#fff;color:var(--muted);padding:10px 14px;text-align:left;box-shadow:0 4px 12px rgba(48,68,124,.035);transition:.15s ease}.part-tab span,.part-tab small{display:block}.part-tab span{font-weight:900;font-size:15px;color:var(--ink)}.part-tab small{margin-top:2px;font-size:11px;line-height:1.35}.part-tab.active{background:var(--purple-soft);border-color:#d9d1ff;box-shadow:none}.part-tab.active span{color:#5f55e6}.part-tab.active small{color:#7169a4}
 
 /* Home hero */
 .welcome-card{background:linear-gradient(135deg,#fff 0%,#fbfaff 56%,#efecff 100%);border:1px solid #ded9fb;border-radius:28px;padding:26px;display:grid;grid-template-columns:1fr auto;gap:26px;align-items:center;box-shadow:var(--shadow)}
@@ -63,16 +63,16 @@ main{width:min(100%,var(--max));margin:0 auto;padding:20px 16px 38px}.view{anima
 .part2-visual{margin:14px 0 12px}.image-placeholder,.scene-image{width:100%;aspect-ratio:16/9;border-radius:20px;border:1px solid var(--border);overflow:hidden}.image-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:linear-gradient(135deg,#fbfcff,#eef2ff);padding:26px;color:var(--muted)}.image-placeholder strong{max-width:620px;color:var(--ink);font-size:16px;line-height:1.45}.image-placeholder small{max-width:620px;margin-top:7px;line-height:1.45}.scene-icon{font-size:54px;margin-bottom:9px}.scene-image{display:block;object-fit:cover;background:#eef2f7}
 .part3-visual{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 12px}.compare-image-card{position:relative;background:#fff;border:1px solid var(--border);border-radius:20px;padding:7px}.compare-label{display:inline-block;font-size:11px;font-weight:900;color:var(--muted);padding:4px 7px}.image-placeholder.compact,.part3-visual .scene-image{aspect-ratio:4/3;border-radius:14px}.image-placeholder.compact .scene-icon{font-size:40px}
 .prompt-stepper{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:11px 0}.prompt-step{min-height:44px;border:1px solid var(--border);background:#fff;color:var(--muted);border-radius:13px;padding:9px 8px;font-weight:850;font-size:12px}.prompt-step.active{background:var(--purple-soft);border-color:#d8d0ff;color:#5f55e6}
-.mode-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;background:#eceff4;padding:5px;border-radius:16px;margin-bottom:16px}.mode-tab{min-height:48px;border:0;border-radius:12px;background:transparent;color:#7c8697;padding:9px 8px;font-weight:850}.mode-tab span{color:#a0a8b6;font-size:10px;margin-right:3px}.mode-tab.active{background:#fff;color:#5f55e6;box-shadow:0 3px 9px rgba(48,68,124,.07)}.mode-panel{animation:fadeIn .14s ease}.hint-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:9px}.mini-card,.content-block,.mode-intro{border:1px solid var(--border);background:#fbfcfe;border-radius:17px;padding:15px}.mini-label,.block-label,.test-label{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#8b95a7;font-weight:900;margin-bottom:7px}.mini-card strong{font-size:15px}.content-block{margin-top:9px}.structure-text{margin:0;font-size:15px;line-height:1.65;font-weight:750;color:#4f5d76}.core-block{background:var(--purple-soft);border-color:#ddd6ff}.core-text{margin:0;font-size:20px;font-weight:850;line-height:1.55;color:#4f47b6}.block-row{justify-content:space-between;gap:12px}.model-text{margin:7px 0 0;font-size:18px;line-height:1.74}.listen-pill{background:var(--blue-soft);color:#356ec2;padding:8px 12px}.keyword-chips{display:flex;flex-wrap:wrap;gap:7px}.keyword-chip{padding:7px 10px;border-radius:999px;background:#eef1f6;color:#536078;font-size:12px;font-weight:800}.mode-intro{display:flex;justify-content:space-between;gap:12px;margin-bottom:9px}.mode-intro span{color:var(--muted);font-size:12px}.shadow-list{display:grid;gap:8px}.shadow-sentence{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center;border:1px solid var(--border);background:#fff;border-radius:15px;padding:11px 13px}.shadow-sentence button{width:40px;height:40px;border:0;border-radius:12px;background:var(--blue-soft);color:#356ec2;font-weight:900}.shadow-sentence div{line-height:1.55}.inline-actions{gap:8px;margin-top:12px}.memorize-levels,.speed-buttons{display:flex;gap:7px;flex-wrap:wrap}.level-btn,.speed-btn{min-height:42px;border:1px solid var(--border);background:#fff;color:var(--muted);padding:8px 12px;border-radius:12px;font-weight:850}.level-btn.active,.speed-btn.active{background:var(--purple-soft);border-color:#d8d0ff;color:#5f55e6}.memorize-box{min-height:145px;display:flex;align-items:center}.test-box{border-radius:21px;padding:24px;text-align:center;background:linear-gradient(180deg,#fff,#f5f4ff);border:1px solid #dfdaf8}.timer{font-size:clamp(58px,11vw,82px);font-weight:900;letter-spacing:-.065em;font-variant-numeric:tabular-nums;margin-top:6px}.timer-bar{height:9px;border-radius:999px;background:#e6e8ef;border:1px solid #dfe2e8;overflow:hidden;margin:13px auto;max-width:460px}.timer-bar-fill{width:100%;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--purple),#9b8eff);transition:width .2s linear}.test-instruction,.helper-text{color:var(--muted);line-height:1.55}.test-actions{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}.rating-row{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin:11px 0 5px}.rating-btn{min-height:68px;border:1px solid var(--border);border-radius:14px;background:#fff;color:var(--ink);padding:8px}.rating-btn span,.rating-btn small{display:block}.rating-btn span{font-weight:900}.rating-btn small{color:var(--muted);margin-top:3px;font-size:10px}.rating-btn.strong{border-color:#c7e7d3;background:var(--green-soft);color:#2d8d54}.study-footer{justify-content:space-between;gap:8px;border-top:1px solid var(--border);margin-top:18px;padding-top:15px}
+.mode-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;background:#eceff4;padding:5px;border-radius:16px;margin-bottom:16px}.mode-tab{min-height:48px;border:0;border-radius:12px;background:transparent;color:#7c8697;padding:9px 8px;font-weight:850}.mode-tab span{color:#a0a8b6;font-size:10px;margin-right:3px}.mode-tab.active{background:#fff;color:#5f55e6;box-shadow:0 3px 9px rgba(48,68,124,.07)}.mode-panel{animation:fadeIn .14s ease}.hint-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:9px}.mini-card,.content-block,.mode-intro{border:1px solid var(--border);background:#fbfcfe;border-radius:17px;padding:15px}.mini-label,.block-label,.test-label{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#8b95a7;font-weight:900;margin-bottom:7px}.mini-card strong{font-size:15px}.content-block{margin-top:9px}.structure-text{margin:0;font-size:15px;line-height:1.65;font-weight:750;color:#4f5d76}.core-block{background:var(--purple-soft);border-color:#ddd6ff}.core-text{margin:0;font-size:20px;font-weight:850;line-height:1.55;color:#4f47b6}.block-row{justify-content:space-between;gap:12px}.model-text{margin:7px 0 0;font-size:18px;line-height:1.74}.listen-pill{background:var(--blue-soft);color:#356ec2;padding:8px 12px}.keyword-chips{display:flex;flex-wrap:wrap;gap:7px}.keyword-chip{padding:7px 10px;border-radius:999px;background:#eef1f6;color:#536078;font-size:12px;font-weight:800}.mode-intro{display:flex;justify-content:space-between;gap:12px;margin-bottom:9px}.mode-intro span{color:var(--muted);font-size:12px}.shadow-list{display:grid;gap:8px}.shadow-sentence{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center;border:1px solid var(--border);background:#fff;border-radius:15px;padding:11px 13px}.shadow-sentence button{width:40px;height:40px;border:0;border-radius:12px;background:var(--blue-soft);color:#356ec2;font-weight:900}.shadow-sentence div{line-height:1.55}.inline-actions{gap:8px;margin-top:12px}.memorize-levels,.speed-buttons{display:flex;gap:7px;flex-wrap:wrap}.level-btn,.speed-btn{min-height:42px;border:1px solid var(--border);background:#fff;color:var(--muted);padding:8px 12px;border-radius:12px;font-weight:850}.level-btn.active,.speed-btn.active{background:var(--purple-soft);border-color:#d8d0ff;color:#5f55e6}.memorize-box{min-height:145px;display:flex;align-items:center}.test-box{border-radius:21px;padding:24px;text-align:center;background:linear-gradient(180deg,#fff,#f5f4ff);border:1px solid #dfdaf8}.timer{font-size:clamp(58px,11vw,82px);font-weight:900;letter-spacing:-.065em;font-variant-numeric:tabular-nums;margin-top:6px}.test-instruction,.helper-text{color:var(--muted);line-height:1.55}.test-actions{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}.rating-row{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin:11px 0 5px}.rating-btn{min-height:68px;border:1px solid var(--border);border-radius:14px;background:#fff;color:var(--ink);padding:8px}.rating-btn span,.rating-btn small{display:block}.rating-btn span{font-weight:900}.rating-btn small{color:var(--muted);margin-top:3px;font-size:10px}.rating-btn.strong{border-color:#c7e7d3;background:var(--green-soft);color:#2d8d54}.study-footer{justify-content:space-between;gap:8px;border-top:1px solid var(--border);margin-top:18px;padding-top:15px}
 
 /* Bottom navigation */
-.bottom-nav{position:fixed;left:50%;bottom:8px;z-index:55;transform:translateX(-50%);width:min(calc(100% - 18px),660px);display:grid;grid-template-columns:repeat(6,1fr);gap:3px;padding:6px;border:1px solid rgba(215,220,232,.95);border-radius:21px;background:rgba(255,255,255,.96);backdrop-filter:blur(18px);box-shadow:0 14px 34px rgba(48,68,124,.13)}.nav-btn{min-height:54px;border:0;background:transparent;border-radius:14px;color:#8a93a3;padding:6px 3px;font-size:10px;font-weight:850}.nav-btn span{display:block;font-size:18px;line-height:1.1;margin-bottom:2px}.nav-btn.active{background:var(--purple-soft);color:#5f55e6}
+.bottom-nav{position:fixed;left:50%;bottom:8px;z-index:55;transform:translateX(-50%);width:min(calc(100% - 18px),660px);display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:3px;padding:6px;border:1px solid rgba(215,220,232,.95);border-radius:21px;background:rgba(255,255,255,.96);backdrop-filter:blur(18px);box-shadow:0 14px 34px rgba(48,68,124,.13)}.nav-btn{min-height:54px;border:0;background:transparent;border-radius:14px;color:#8a93a3;padding:6px 3px;font-size:10px;font-weight:850}.nav-btn span{display:block;font-size:18px;line-height:1.1;margin-bottom:2px}.nav-btn.active{background:var(--purple-soft);color:#5f55e6}
 
 /* Audio sheet */
 .sheet-backdrop{position:fixed;inset:0;z-index:80;display:flex;align-items:flex-end;justify-content:center;background:rgba(39,49,77,.33);padding:12px}.bottom-sheet{width:min(100%,620px);background:#fff;border-radius:25px 25px 18px 18px;padding:12px 20px 22px;box-shadow:0 -18px 60px rgba(48,68,124,.2)}.sheet-handle{width:42px;height:4px;background:#d3d8e2;border-radius:999px;margin:0 auto 12px}.sheet-heading{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}.sheet-heading h3{margin:3px 0 0}.setting-row{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:13px 0;border-top:1px solid var(--border)}.setting-row.vertical{align-items:stretch;flex-direction:column;gap:8px}.setting-row span strong,.setting-row span small{display:block}.setting-row span small{color:var(--muted);margin-top:3px}.toast{position:fixed;left:50%;bottom:88px;z-index:100;transform:translateX(-50%);max-width:calc(100% - 28px);padding:11px 14px;border-radius:13px;background:#27314d;color:#fff;box-shadow:var(--shadow);font-size:13px}
 
 @media(max-width:760px){
-  main{padding:14px 10px 30px}.topbar{padding:8px 10px;min-height:60px}.brand-mark{width:38px;height:38px;border-radius:13px}.topbar h1{font-size:16px}.icon-btn{width:42px;height:42px}
+  .speaking-shell .speaking-main{padding:0 0 30px}.topbar{padding:8px 10px;min-height:60px}.brand-mark{width:38px;height:38px;border-radius:13px}.topbar h1{font-size:16px}.icon-btn{width:42px;height:42px}
   .part-switch{gap:6px}.part-tab{padding:9px 8px;min-height:58px}.part-tab span{font-size:14px}.part-tab small{font-size:10px}
   .welcome-card{padding:20px;grid-template-columns:1fr}.progress-hero{display:flex;align-items:center;gap:10px;order:-1;text-align:left}.progress-ring{width:72px;height:72px;margin:0}.progress-ring::after{inset:7px}.progress-ring span{font-size:18px}.welcome-card h2{font-size:28px}.focus-grid{grid-template-columns:1fr 1fr}.focus-card{min-height:112px;padding:14px}.stack-mobile{align-items:stretch;flex-direction:column}.library-controls{width:100%}.search-wrap{min-width:0;flex:1}.question-list{grid-template-columns:1fr}.study-card{padding:14px;border-radius:21px}.question-title{font-size:25px}.mode-tabs{grid-template-columns:repeat(4,1fr);gap:4px}.mode-tab{font-size:12px;padding:8px 3px}.mode-tab span{display:block;margin:0 0 1px}.hint-grid{grid-template-columns:1fr}.mode-intro{flex-direction:column}.rating-row{grid-template-columns:1fr 1fr}.rating-btn.strong{grid-column:1/-1}.study-footer{display:grid;grid-template-columns:1fr 1fr}#markLearnedBtn{grid-column:1/-1;grid-row:1}.setting-row{align-items:stretch;flex-direction:column}.progress-page-head{flex-direction:column}.progress-page-head h2{font-size:27px}.progress-overview-grid{grid-template-columns:1fr 1fr}.part-progress-grid{grid-template-columns:1fr}.topic-thumb{width:72px;height:58px}.part3-visual{gap:7px}.compare-image-card{padding:5px}.compare-label{font-size:10px;padding:3px 5px}.image-placeholder.compact .scene-icon{font-size:32px}.bottom-nav{width:min(calc(100% - 12px),660px);bottom:5px}.nav-btn{font-size:9px;padding:5px 2px;min-height:50px}.nav-btn span{font-size:16px}
 }
@@ -161,8 +161,8 @@ main{width:min(100%,var(--max));margin:0 auto;padding:20px 16px 38px}.view{anima
 .p2-unified{display:block;min-width:0;width:100%;box-sizing:border-box}
 .p2-unified.hidden{display:none!important}
 #p2UnifiedCards{display:grid;grid-template-columns:1fr;gap:14px}
-.p2-topic-card{min-width:0;border:1px solid #e2e7f1;border-radius:16px;background:#fff;padding:clamp(14px,2vw,22px);display:flex;flex-direction:column;align-items:flex-start;gap:12px}
-.p2-topic-card h3{font-size:clamp(1rem,2.2vw,1.22rem);line-height:1.45;color:#253353;margin:0;overflow-wrap:anywhere}
+.p2-topic-card,.speaking-question-card{min-width:0;border:1px solid #e2e7f1;border-radius:16px;background:#fff;padding:clamp(14px,2vw,22px);display:flex;flex-direction:column;align-items:flex-start;gap:12px}
+.p2-topic-card h3,.speaking-question-card h3{font-size:clamp(1rem,2.2vw,1.22rem);line-height:1.45;color:#253353;margin:0;overflow-wrap:anywhere}
 .p2-topic-answer,.p2-cloze-line{width:100%;min-width:0;line-height:1.8;font-size:clamp(1rem,2vw,1.12rem);overflow-wrap:anywhere}
 .p2-memory-hint{color:#66718c;margin:0}
 .p2-topic-card .p2-dictation{display:block;width:100%;max-width:100%;min-height:160px;box-sizing:border-box;padding:14px;resize:vertical;font:inherit;line-height:1.65}
@@ -174,4 +174,259 @@ main{width:min(100%,var(--max));margin:0 auto;padding:20px 16px 38px}.view{anima
 .p2-test-q{text-align:left;border:1px solid #dce3ef;background:#fff;padding:12px;border-radius:10px;color:#465575;overflow-wrap:anywhere;cursor:pointer}
 .p2-test-q.active{background:#f0ecff;border-color:#c8bfff;color:#6247e7;font-weight:700}
 @media(max-width:520px){.p2-topic-card{padding:12px}.p2-memory-actions button{flex:1 1 auto}.p2-topic-card .p2-dictation{min-height:185px}}
+
+/* S6.2: Speaking owns ONE shared content width, matching the usable content
+   inside the 1440px global-stage (24px gutters per side on desktop).
+   Do not add max-width on individual P1/P2/P3/P4 cards or detail sections.
+   Reading/Listening retain their existing --skill-content-max:1120px. */
+.speaking-shell{
+  --skill-content-max:1392px;
+  width:100%;
+  min-width:0;
+}
+.speaking-shell .skill-content-frame{
+  min-width:0;
+  width:min(100%,var(--skill-content-max));
+  max-width:var(--skill-content-max);
+  margin-inline:auto;
+}
+.speaking-shell .speaking-main,
+.speaking-shell #speakingPart4Future{
+  min-width:0;
+  box-sizing:border-box;
+}
+.speaking-shell .study-topline{
+  display:flex;
+  justify-content:flex-end;
+  align-items:center;
+  min-width:0;
+  gap:8px;
+  min-height:44px;
+  margin:0 0 10px;
+}
+.speaking-shell .study-top-actions{
+  display:flex;
+  justify-content:flex-end;
+  align-items:center;
+  gap:8px;
+  width:auto;
+  margin-left:auto;
+  min-width:0;
+}
+.speaking-shell .study-top-actions .study-nav-btn{
+  min-height:44px;
+  flex:0 1 auto;
+  white-space:nowrap;
+}
+.speaking-shell .study-card,
+.speaking-shell .welcome-card,
+.speaking-shell .today-section,
+.speaking-shell .library-section{
+  min-width:0;
+  box-sizing:border-box;
+}
+@media(max-width:650px){
+  .speaking-shell .study-topline{margin-bottom:8px;gap:6px}
+  .speaking-shell .study-top-actions{gap:6px}
+  .speaking-shell .study-top-actions .study-nav-btn{min-width:0;max-width:9rem}
+}
+
+/* S2 shared Speaking layout: all Parts use the same reusable frame from Styles.html.
+   Show the shared selector only on home/library, never inside Topic Detail. */
+.speaking-shell .shared-part-switch{display:none;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:12px auto 16px}
+.speaking-shell .shared-part-switch .part-tab{min-width:0}
+.speaking-shell:not(.p4-mode):has(#homeView:not(.hidden)) .shared-part-switch,
+.speaking-shell.p4-mode:not(.p4-detail-mode) .shared-part-switch{display:grid}
+.speaking-shell .shared-part-switch [data-p4-home].active{background:var(--purple-soft);border-color:#ded9fb;color:var(--purple-2)}
+/* P4 has a different view but uses the same header/selector/content frame.
+   No blanket direct-child hiding: it can hide live settings and error feedback. */
+.speaking-shell.p4-mode > .speaking-main{display:none!important}
+.speaking-shell #speakingPart4Future{padding:0 0 100px;color:var(--ink);font-family:inherit}
+@media(max-width:650px){
+ .speaking-shell .shared-part-switch{gap:5px}
+ .speaking-shell .shared-part-switch .part-tab{padding:8px 5px}
+ .speaking-shell .shared-part-switch .part-tab small{font-size:10px}
+}
+
+
+/* S3 — single Speaking Topic Detail component contract.
+   P1–3 already use .study-topline/.study-card/.mode-tabs/.model-text.
+   P2–3 and P4 reuse the same question-card rule above (no separate P4 card system). */
+.speaking-question-card{min-width:0;width:100%}
+.speaking-answer-panel{width:100%;border-top:1px solid var(--border);padding-top:12px}
+.speaking-answer-panel summary{cursor:pointer;color:var(--purple-2);font-weight:800}
+.speaking-answer-panel .model-text{width:100%;min-width:0;overflow-wrap:anywhere}
+.speaking-answer-panel .inline-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px}
+
+
+/* S4 — One shared audio bar for Speaking Part 1–4.
+   No individual Part owns voice settings, play/pause/stop styling or session status. */
+.speaking-full-answer-row{flex-wrap:wrap}
+.speaking-audio-controls{display:flex;align-items:center;flex-wrap:wrap;gap:8px;max-width:100%;min-width:0}
+.speaking-audio-controls button{display:inline-flex;align-items:center;justify-content:center;min-width:88px;min-height:44px;font:inherit;font-size:13px;font-weight:850;white-space:nowrap}
+.speaking-audio-controls button:disabled{opacity:.5;cursor:not-allowed}
+.speaking-audio-controls button:not(:disabled){cursor:pointer}
+.speaking-mastery-controls{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:16px;padding:16px 0 0;border-top:1px solid var(--border);background:transparent}
+.speaking-mastery-controls>label{font-size:13px;font-weight:850;color:var(--ink)}
+.speaking-mastery-controls>.select{flex:1 1 220px;min-width:0}
+.speaking-mastery-controls>[role="status"]{flex-basis:100%;font-size:12px}
+@media(max-width:650px){
+ .speaking-audio-controls{gap:6px}
+ .speaking-audio-controls button{flex:1 1 82px;min-width:0;padding:9px 7px;font-size:12px}
+ .speaking-mastery-controls>.select{flex-basis:100%}
+}
+
+/* S5: Part 4 Memorize reuses the shared Part1-3 level buttons, cloze inputs,
+   P2/P3 memory hints, dictation textarea, feedback and question card. */
+.p4-memorize-levels{width:100%;margin:4px 0 18px}
+.p4-memorize-levels .level-btn{flex:1 1 180px;min-width:0}
+.p4-memorize-card{width:100%;min-width:0}
+.p4-memorize-card .p2-cloze-line{width:100%}
+.p4-memorize-card .p2-memory-actions{width:100%}
+.p4-memorize-feedback{font-size:13px;line-height:1.6;white-space:pre-wrap}
+@media(max-width:650px){
+ .p4-memorize-levels .level-btn{flex:1 1 100%;min-height:42px}
+ .p4-memorize-card .p2-dictation{width:100%;min-width:0}
+}
+
+/* S6.3 — one shared compact timer row for Speaking 1–4.
+   The same time cell and control geometry apply to each Part; only actual
+   seconds/button count are Part-specific. No stage line, instructions or bar. */
+.speaking-practice-timer{
+  position:static;
+  box-sizing:border-box;
+  display:grid;
+  grid-template-columns:max-content minmax(0,1fr);
+  align-items:center;
+  column-gap:clamp(10px,2vw,20px);
+  width:100%;
+  min-width:0;
+  margin:16px 0 12px;
+  padding:12px clamp(12px,2vw,20px);
+  background:linear-gradient(180deg,#fff,#f5f4ff);
+  border:1px solid #dfdaf8;
+  border-radius:16px;
+}
+.speaking-practice-timer.hidden,
+.speaking-practice-timer[hidden]{display:none!important}
+.speaking-practice-timer .timer{
+  display:block;
+  min-width:92px;
+  margin:0;
+  padding:0;
+  text-align:left;
+  white-space:nowrap;
+  font-size:clamp(26px,3.3vw,38px);
+  font-weight:900;
+  line-height:1.15;
+  letter-spacing:-.035em;
+  font-variant-numeric:tabular-nums;
+}
+.speaking-timer-actions{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:flex-end;
+  gap:8px;
+  min-width:0;
+  width:100%;
+}
+.speaking-timer-actions button{
+  box-sizing:border-box;
+  flex:0 1 auto;
+  min-width:0;
+  min-height:42px;
+  padding:9px 12px;
+  font:inherit;
+  font-size:13px;
+  font-weight:800;
+  line-height:1.2;
+  white-space:nowrap;
+}
+.speaking-timer-actions button:disabled{opacity:.55;cursor:not-allowed}
+@media(max-width:650px){
+  .speaking-practice-timer{column-gap:8px;padding:10px 9px}
+  .speaking-practice-timer .timer{min-width:70px;font-size:clamp(24px,7vw,30px)}
+  .speaking-timer-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  .speaking-timer-actions button{
+    width:100%;
+    min-width:0;
+    min-height:38px;
+    padding:8px 4px;
+    font-size:clamp(10px,2.6vw,12px);
+    white-space:normal;
+    overflow-wrap:anywhere;
+  }
+}
+.speaking-completion-actions{display:flex;align-items:center;justify-content:flex-start;flex-wrap:wrap;gap:10px;min-width:0}
+.speaking-confirm-overlay{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:20px;background:rgba(26,29,52,.48)}
+.speaking-confirm-overlay.hidden{display:none!important}
+.speaking-confirm-card{width:min(100%,450px);box-sizing:border-box;background:var(--card,#fff);border-radius:18px;padding:24px;box-shadow:0 18px 70px rgba(20,25,55,.23)}
+.speaking-confirm-card h3{margin:0 0 10px;font-size:20px}
+.speaking-confirm-card p{margin:0 0 18px;color:var(--muted);line-height:1.6}
+.speaking-confirm-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:9px}
+.speaking-confirm-actions button{min-height:44px}
+@media(max-width:650px){
+ .speaking-confirm-card{padding:18px}
+ .speaking-confirm-actions button{flex:1 1 120px}
+}
+
+/* S6.4 — one responsive Memorize component for Parts 1–4.
+   No duplicated reveal buttons, fixed overlays or independent Part-level controls. */
+.speaking-shared-memorize-levels,.p4-memorize-levels{
+  display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));
+  width:100%;min-width:0;gap:10px;margin:6px 0 16px;
+}
+.speaking-shared-memorize-levels.hidden,.speaking-shared-memorize-levels[hidden],
+.p4-memorize-levels.hidden,.p4-memorize-levels[hidden]{display:none!important}
+.speaking-shared-memorize-levels .level-btn,.p4-memorize-levels .level-btn{
+  box-sizing:border-box;width:100%;min-width:0;min-height:48px;flex:initial!important;
+  padding:9px 8px;white-space:normal;overflow-wrap:anywhere;
+  font-size:clamp(12px,2.6vw,15px);line-height:1.35;
+}
+.speaking-memorize-container,.speaking-memorize-question-card,
+.speaking-memorize-panel{width:100%;min-width:0;box-sizing:border-box}
+.speaking-memorize-panel{display:flex;flex-direction:column;align-items:stretch;gap:12px}
+.speaking-memorize-hint{margin:0;line-height:1.5}
+.speaking-memorize-cloze{width:100%;min-width:0;line-height:2.65;overflow-wrap:anywhere}
+.speaking-memorize-cloze .p1-cloze-input{
+  box-sizing:border-box;min-height:42px;width:clamp(88px,16vw,150px);
+  max-width:min(48vw,170px);margin:3px 5px;padding:8px;
+}
+.speaking-memorize-dictation{
+  display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box;
+  min-height:clamp(190px,27vh,340px);resize:vertical;
+  padding:14px 16px;border:1px solid #c7d0e2;border-radius:12px;
+  background:#fff;color:var(--ink);font:inherit;font-size:16px;line-height:1.7;
+  overflow-wrap:anywhere;
+}
+.speaking-memorize-actions{
+  display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;
+  width:100%;min-width:0;margin:0;
+}
+.speaking-memorize-actions button{
+  box-sizing:border-box;width:100%;min-width:0;min-height:44px;
+  padding:9px 6px;font:inherit;font-size:clamp(12px,2.5vw,14px);
+  font-weight:800;line-height:1.3;white-space:normal;overflow-wrap:anywhere;
+}
+.speaking-memorize-feedback{margin:0;min-height:0;font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+.speaking-memorize-feedback:empty{display:none}
+.speaking-memorize-revealed{
+  display:block;box-sizing:border-box;width:100%;min-width:0;
+  padding:18px 20px;background:#f7f7ff;border:1px solid #dcd9f8;
+  border-radius:15px;overflow-wrap:anywhere;
+}
+.speaking-memorize-revealed[hidden]{display:none!important}
+.speaking-memorize-revealed>strong{display:block;margin-bottom:10px;font-size:14px}
+.speaking-memorize-revealed .model-text{
+  display:block;width:100%;margin:0;font-size:clamp(18px,2.6vw,23px);
+  line-height:1.85;font-weight:600;white-space:pre-wrap;overflow-wrap:anywhere;
+}
+@media(max-width:480px){
+  .speaking-shared-memorize-levels,.p4-memorize-levels{gap:6px}
+  .speaking-memorize-actions{gap:5px}
+  .speaking-memorize-actions button{padding:9px 3px;font-size:12px}
+  .speaking-memorize-revealed{padding:14px 12px}
+  .speaking-memorize-cloze .p1-cloze-input{width:100px;max-width:42vw}
+}
 </style>

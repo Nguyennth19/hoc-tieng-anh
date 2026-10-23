@@ -1,88 +1,25 @@
 <style>
-.p4dev{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:clamp(14px,3vw,30px) 16px 100px;background:transparent;color:#18223c;font:inherit}.speaking-shell.p4-mode > :not(.bottom-nav){display:none!important}.speaking-shell.p4-mode{min-height:0!important;padding:0!important}.speaking-shell .bottom-nav{z-index:65}.speaking-shell .bottom-nav{width:min(calc(100% - 12px),760px)}.p4dev.hidden{display:none!important}.p4dev-head{display:flex;justify-content:space-between;gap:18px;align-items:start;border-bottom:1px solid #d8deef;margin-bottom:20px;padding-bottom:14px}.p4dev-head h2{margin:6px 0;font-size:24px}.p4dev-head small{font-weight:700;letter-spacing:.08em;color:#3b599d}.p4dev button,.p4dev select{padding:10px 14px;border:1px solid #b6c4e0;background:#fff;border-radius:10px;color:#18223c;cursor:pointer}.p4dev button:disabled{opacity:.5;cursor:not-allowed}.p4dev-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}.p4dev-controls label{font-weight:700}.p4dev-content{display:grid;gap:12px}.p4dev-question{padding:16px;background:white;border:1px solid #d9e0ef;border-radius:12px}.p4dev-question b{display:block;color:#324e8d;margin-bottom:6px}.p4dev-time{position:sticky;bottom:8px;padding:14px;background:#ebf1ff;border-radius:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px}.p4dev-time strong{font-size:26px;font-variant-numeric:tabular-nums;margin-right:auto}.p4dev-models{margin-top:14px}.p4dev-models details{border:1px solid #d9e0ef;border-radius:10px;background:white;padding:12px;margin:8px 0}.p4dev-disclaimer{color:#67758f;font-size:12px;margin-top:16px}
-@media(max-width:600px){.p4dev-head{flex-direction:column}.p4dev-controls{align-items:stretch;flex-direction:column}.p4dev-controls>*{width:100%}}
-
-/* Part 4 follows the existing Speaking design system. */
-.p4dev{color:var(--ink,#27314d);font-family:var(--font,inherit);max-width:1020px}
-.p4dev-head{border-color:#e6e7f1}.p4dev-head h2{color:var(--ink,#27314d);font-weight:800}
-.p4dev-head small{color:#7664f7}
-.p4dev-controls,.p4dev-question,.p4dev-models details{background:var(--card,#fff);border:1px solid #e9e8f4;border-radius:18px;box-shadow:0 8px 26px rgba(49,49,93,.045)}
-.p4dev-controls{padding:16px}
-.p4dev button,.p4dev select,.p4dev input{font-family:inherit;border-radius:12px;border-color:#dcddec}
-.p4dev button:hover:not(:disabled){border-color:#8e7afd}
-.p4dev #p4Begin,.p4dev #p4Load,.p4dev #p4Save{background:#7360ff;color:white;border:0;font-weight:700;box-shadow:0 8px 18px rgba(104,82,235,.19)}
-.p4dev #p4Status{color:#6154bb;background:#f1eeff;border-radius:12px;padding:12px 15px;margin-bottom:12px;font-size:13px}
-.p4dev-question b{color:#735cff}.p4dev-time{background:#f0edff;border:1px solid #e1dcff}
-.p4dev-time strong{color:#6756f0}.p4dev-models{margin:0 0 14px}.p4dev-models details{margin:8px 0;box-shadow:none}
-.p4dev-models summary{cursor:pointer;font-weight:700;color:#6250d3}.p4dev-models p{line-height:1.75;color:#34415d}
-.p4dev-topic-label{color:#67718d;font-weight:600;font-size:12px}
-.p4dev #p4Set{min-width:min(460px,100%);max-width:100%;text-overflow:ellipsis}
-.p4dev-disclaimer{margin-bottom:35px}
-
-.p4dev-question .p4dev-prompt{margin:8px 0 12px;line-height:1.65}
-.p4dev-inline-answer{border-top:1px solid #e6e3f7;padding-top:12px;margin-top:12px}
-.p4dev-inline-answer summary{cursor:pointer;color:#6250d3;font-weight:700}
-.p4dev-inline-answer p{margin:12px 0 3px;line-height:1.8;color:#34415d}
-.p4-fixed-formula{color:#C45C08!important;font-weight:800!important;background:transparent!important}
-
-.p4-learning-tools{display:flex;align-items:center;flex-wrap:wrap;gap:9px;padding:14px 16px;margin:10px 0 16px;background:#fff;border:1px solid #e9e8f4;border-radius:16px}
-.p4-learning-tools label{font-weight:700;font-size:13px}
-.p4-mastery-overview{flex-basis:100%;font-size:13px;color:#6656be;padding-top:5px}
-.p4dev .p4-listen{margin:7px 0;background:#f0edff;color:#5443b8;border:1px solid #ded8ff;font-size:13px;font-weight:700}
-.p4-hidden-slot{color:#777e98;font-style:italic}
-.p4-recall-prompt{color:#777e98;font-style:italic}
-.p4dev .p4dev-inline-answer[open] summary{margin-bottom:6px}
-.p4dev .p4dev-inline-answer p{line-height:1.8}
-.p4-learning-tools[hidden]{display:none!important}
-@media(max-width:600px){.p4-learning-tools select,.p4-learning-tools button{flex:1 1 43%}}
-
-/* Part 04: align to the accepted P01–P03 design, keep exam safeguards intact. */
-.p4dev{max-width:1060px;margin-inline:auto;padding-inline:clamp(12px,3vw,28px)}
-.p4dev-head{background:#fff;border:1px solid #e8eaf2;border-radius:22px;padding:clamp(16px,3vw,28px);margin:0 0 14px;box-shadow:0 12px 36px rgba(38,47,79,.055)}
-.p4dev-head h2{font-size:clamp(1.55rem,3vw,2.3rem);letter-spacing:-.025em}
-.p4dev-head p{color:#63708c;line-height:1.6}
-.p4dev #p4Close{white-space:nowrap;flex-shrink:0;background:#f1efff;border-color:#e4dfff;color:#6551cc;font-weight:700}
-.p4dev-controls{display:grid;grid-template-columns:auto minmax(170px,1fr) auto minmax(200px,1.6fr) auto;gap:10px;padding:18px;margin-bottom:14px;box-shadow:0 12px 32px rgba(38,47,79,.055)}
-.p4dev-controls label{white-space:nowrap;font-size:.85rem;color:#52617d}
-.p4dev-controls select{width:100%;min-width:0;max-width:100%;text-overflow:ellipsis}
-.p4dev-controls #p4Load{white-space:nowrap}
-.p4-learning-tools{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));align-items:end;gap:10px 12px;padding:18px;box-shadow:0 12px 32px rgba(38,47,79,.055)}
-.p4-learning-tools label{align-self:end;color:#53627c}
-.p4-learning-tools select,.p4-learning-tools button{width:100%;min-width:0}
-.p4-learning-tools #p4MasterySaved,.p4-learning-tools #p4MasteryOverview{grid-column:1/-1;overflow-wrap:anywhere}
-.p4dev-content{grid-template-columns:1fr;gap:14px}
-.p4dev-question{border-radius:20px;padding:clamp(16px,2.5vw,24px);box-shadow:0 9px 24px rgba(41,48,77,.04)}
-.p4dev-question b{font-size:.8rem;letter-spacing:.03em}
-.p4dev-prompt{font-size:clamp(1rem,2vw,1.23rem);font-weight:700;color:#243251}
-.p4dev-inline-answer{margin-top:14px;padding-top:14px}
-.p4dev .p4-listen{background:#ecf2ff;color:#3652a0}
-.p4dev-time{display:grid;grid-template-columns:minmax(0,1fr) auto repeat(3,auto);gap:10px;align-items:center;padding:14px 18px;border-radius:18px;box-shadow:0 12px 32px rgba(42,45,90,.1)}
-.p4dev-time strong{font-size:clamp(1.35rem,3vw,1.85rem);margin:0}
-.p4dev-time button{white-space:nowrap;font-weight:700}
-.p4dev #p4Next{background:#eaf1ff;border-color:#ccdbfc;color:#3159a2}
-.p4dev #p4Stop{background:#fff1ed;border-color:#f8d1c5;color:#a3442c}
-.p4dev #p4Review{border-radius:18px;padding:16px;background:#fff;border:1px solid #e8eaf2}
-@media(max-width:800px){
- .p4dev-controls{grid-template-columns:1fr 1fr}
- .p4dev-controls label{grid-column:auto}
- .p4dev-controls #p4Mode,.p4dev-controls #p4Set{grid-column:span 1}
- .p4dev-controls #p4Load{grid-column:1/-1}
- .p4-learning-tools{grid-template-columns:repeat(2,minmax(0,1fr))}
- .p4dev-time{grid-template-columns:minmax(0,1fr) auto}
- .p4dev-time button{min-width:0}
-}
-@media(max-width:480px){
- .p4dev-head{flex-direction:column}
- .p4dev-controls{grid-template-columns:1fr}
- .p4dev-controls #p4Mode,.p4dev-controls #p4Set,.p4dev-controls #p4Load{grid-column:1}
- .p4-learning-tools{grid-template-columns:1fr 1fr}
- .p4dev-time{position:relative;bottom:auto;grid-template-columns:1fr 1fr;gap:8px}
- .p4dev-time #p4Begin{grid-column:1/-1}
- .p4dev-time button{padding:10px 8px;white-space:normal}
-}
-
-.p4-study-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;background:#e9ecf3;border-radius:15px;padding:5px;margin:0 0 16px}
-.p4dev .p4-step-btn{border:0;border-radius:12px;min-width:0;padding:13px 6px;background:transparent;color:#778197;font-weight:800;white-space:nowrap;font-size:clamp(.8rem,2vw,1rem);box-shadow:none}
-.p4dev .p4-step-btn.active{background:#fff;color:#6757ef;box-shadow:0 4px 14px rgba(44,44,76,.1)}
-.p4dev .p4-step-btn:focus-visible{outline:2px solid #6757ef;outline-offset:2px}
+/* Part 4-specific Topic Library, Question, timer and mastery controls ONLY.
+   App shell/width/header/part tabs are owned by shared Styles.html & Styles_Speaking.html. */
+.p4dev.hidden,.p4dev [hidden]{display:none!important}
+/* Shared frame and common Home/Detail sections now own widths and gutters.
+   Part 4 controls only its two topic views' visibility, not their geometry. */
+.p4dev .p4-topic-library,.p4dev .p4-topic-detail{min-width:0;box-sizing:border-box}
+.p4dev .p4-topic-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.p4dev .p4-topic-card{position:relative;display:grid;grid-template-columns:36px minmax(0,1fr);align-items:start;gap:12px;text-align:left;min-height:90px;padding:14px;border:1px solid var(--border);border-radius:18px;background:var(--card);box-shadow:0 4px 14px rgba(48,68,124,.035);color:var(--ink);cursor:pointer}
+.p4dev .p4-topic-card>small{display:grid;place-items:center;width:36px;height:36px;background:var(--purple-soft);color:var(--purple-2);font-weight:700;border-radius:11px}
+.p4dev .p4-topic-card-copy{display:flex;flex-direction:column;gap:6px;min-width:0}
+.p4dev .p4-topic-card-copy strong{font-size:15px;line-height:1.4}
+.p4dev .p4-topic-card-copy span{font-size:12px;color:var(--muted)}
+.p4dev .p4-topic-card:hover{border-color:var(--purple)}
+.p4dev button:focus-visible,.p4dev select:focus-visible{outline:3px solid var(--purple);outline-offset:2px}
+.p4dev .p4-topic-study-card{min-width:0}
+.p4dev .p4-internal-controls,.p4dev #p4MasteryOverview{display:none!important}
+.p4dev .p4-feedback:empty{display:none!important}
+.p4dev .p4dev-content{display:grid;gap:14px}
+.p4-fixed-formula{color:#c45c08!important;font-weight:800}
+.p4-hidden-slot,.p4-recall-prompt{font-style:italic;color:var(--muted)}
+.p4dev #p4Begin,.p4dev #p4Save{background:var(--purple);color:#fff;border-color:transparent}
+.p4dev #p4Review{padding:16px;border:1px solid var(--border);border-radius:18px;background:#fff;margin-top:14px}
+@media(max-width:650px){.p4dev .p4-topic-grid{grid-template-columns:1fr}}
 </style>

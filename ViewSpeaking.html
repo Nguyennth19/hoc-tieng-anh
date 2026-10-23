@@ -1,5 +1,5 @@
 <section class="skill-shell speaking-shell app-shell">
-  <div class="skill-page-head">
+  <div class="skill-page-head skill-content-frame">
     <div><div class="eyebrow">APTIS ESOL · SPEAKING</div><h1>Speaking</h1></div>
     <div class="skill-head-actions">
       <button id="progressBtn" class="icon-btn" type="button" title="Speaking progress">▥</button>
@@ -8,7 +8,13 @@
       <span id="syncStatus" class="sync-status" aria-live="polite"></span>
     </div>
   </div>
-  <main class="speaking-main">
+  <div class="part-switch shared-part-switch skill-content-frame" role="tablist" aria-label="Speaking part">
+          <button class="part-tab active" data-part="1" type="button"><span>Part 1</span><small>Personal questions · 30s</small></button>
+          <button class="part-tab" data-part="2" type="button"><span>Part 2</span><small>Photo + 2 questions · 45s</small></button>
+          <button class="part-tab" data-part="3" type="button"><span>Part 3</span><small>2 photos · compare · 45s</small></button>
+          <button class="part-tab" data-p4-home="true" type="button"><span>Part 4</span><small>3 questions · 2 min</small></button>
+        </div>
+  <div class="speaking-main skill-content-frame">
       <section id="loadingView" class="panel loading-panel hidden" style="display:none" hidden aria-hidden="true">
         <div class="spinner"></div>
         <div><strong>Preparing your study plan</strong><p>Checking database and loading Speaking...</p></div>
@@ -83,12 +89,6 @@
       </section>
 
       <section id="homeView" class="view hidden">
-        <div class="part-switch" role="tablist" aria-label="Speaking part">
-          <button class="part-tab active" data-part="1" type="button"><span>Part 1</span><small>Personal questions · 30s</small></button>
-          <button class="part-tab" data-part="2" type="button"><span>Part 2</span><small>Photo + 2 questions · 45s</small></button>
-          <button class="part-tab" data-part="3" type="button"><span>Part 3</span><small>2 photos · compare · 45s</small></button>
-        </div>
-
         <article class="welcome-card">
           <div class="welcome-copy">
             <span id="heroPill" class="pill">Speaking Part 1</span>
@@ -230,6 +230,10 @@
             <button data-mode="test" class="mode-tab" type="button"><span>04</span> Test</button>
           </div>
 
+          <div id="speakingMemorizeLevels" class="memorize-levels speaking-shared-memorize-levels hidden" role="group" aria-label="Memorize levels">
+            <button class="level-btn active" data-level="1" type="button" aria-pressed="true">LV1 · Fill missing words</button>
+            <button class="level-btn" data-level="2" type="button" aria-pressed="false">LV2 · Listen & write</button>
+          </div>
           <section id="p2Unified" class="p2-unified hidden" aria-label="Part 2 whole-topic learning">
             <div id="p2UnifiedCards"></div><div id="p2UnifiedFooter" class="p2-unified-footer"></div>
           </section>
@@ -330,7 +334,12 @@
             </div>
 
             <div class="content-block">
-              <div class="block-row"><span id="fullAnswerLabel" class="block-label">Full answer</span><button id="listenBtn" class="listen-pill" type="button">▶ Listen</button></div>
+              <div class="block-row speaking-full-answer-row"><span id="fullAnswerLabel" class="block-label">Full answer</span>
+                <div id="learnAnswerAudio" class="speaking-audio-controls" role="group" aria-label="Answer audio">
+                  <button id="listenBtn" data-audio-action="play" class="primary-btn" type="button">▶ Play</button>
+                  <button id="listenPauseBtn" data-audio-action="pause" class="secondary-btn" type="button" disabled>⏸ Pause</button>
+                  <button id="listenStopBtn" data-audio-action="stop" class="secondary-btn" type="button" disabled>■ Stop</button>
+                </div></div>
               <p id="modelAnswer" class="model-text"></p>
             </div>
 
@@ -343,30 +352,22 @@
           <div id="shadowMode" class="mode-panel hidden">
             <div class="mode-intro" id="shadowIntro"><strong>Listen → pause → repeat</strong><span>Focus on rhythm, clear endings and natural linking.</span></div>
             <div id="shadowSentences" class="shadow-list"></div>
-            <div class="inline-actions"><button id="shadowAllBtn" class="primary-btn" type="button">▶ Shadow all</button><button id="stopSpeechBtn" class="secondary-btn" type="button">■ Stop</button></div>
+            <div id="shadowAudioControls" class="inline-actions speaking-audio-controls" role="group" aria-label="Learn audio">
+              <button id="shadowAllBtn" data-audio-action="play" class="primary-btn" type="button">▶ Play</button>
+              <button id="shadowPauseBtn" data-audio-action="pause" class="secondary-btn" type="button" disabled>⏸ Pause</button>
+              <button id="stopSpeechBtn" data-audio-action="stop" class="secondary-btn" type="button" disabled>■ Stop</button>
+            </div>
           </div>
 
           <div id="memorizeMode" class="mode-panel hidden">
-            <div class="mode-intro" id="memorizeIntro"><strong>Reduce support step by step</strong><span>Move up only when the previous level feels easy.</span></div>
-            <div class="memorize-levels">
-              <button class="level-btn active" data-level="1" type="button">Level 1</button>
-              <button class="level-btn" data-level="2" type="button">Level 2</button>
-              <button class="level-btn" data-level="3" type="button">Keywords</button>
-              <button class="level-btn" data-level="4" type="button">No help</button>
+            <div class="content-block memorize-box">
+              <div id="p1TypingArea" class="speaking-memorize-container"></div>
             </div>
-            <div class="content-block memorize-box"><p id="memorizeText" class="model-text"></p><div id="p1TypingArea" class="hidden"></div></div><div id="p1MemorizeActions" class="inline-actions hidden"><button id="p1CheckBtn" class="primary-btn" type="button">Check</button><button id="p1TryAgainBtn" class="secondary-btn" type="button">Try again</button><button id="p1RevealBtn" class="secondary-btn" type="button">Show answer</button><span id="p1Feedback" role="status" aria-live="polite"></span></div>
-            <button id="revealBtn" class="secondary-btn" type="button">Reveal full answer</button>
           </div>
 
           <div id="testMode" class="mode-panel hidden">
             <div id="p2TestOutline" class="p2-test-outline hidden"></div>
-            <div class="test-box">
-              <div id="testLabel" class="test-label">APTIS SPEAKING PRACTICE</div>
-              <div id="timer" class="timer">00:30</div>
-              <div class="timer-bar"><div id="timerBar" class="timer-bar-fill"></div></div>
-              <p id="testInstruction" class="test-instruction">Answer aloud without reading the model.</p>
-              <div class="test-actions"><button id="startTimerBtn" class="primary-btn large" type="button">Start test</button><button id="stopTimerBtn" class="secondary-btn large" type="button" disabled>Stop</button></div>
-            </div>
+
 
             <div id="selfCheck" class="content-block hidden">
               <span class="block-label">How did it feel?</span>
@@ -382,12 +383,31 @@
             </div>
           </div>
 
-          <footer class="study-footer">
+          <div id="speakingPracticeTimer" class="speaking-practice-timer" role="group" aria-label="Speaking practice timer">
+            <div id="timer" class="timer" aria-live="off" aria-label="Time remaining">00:30</div>
+            <div class="speaking-timer-actions">
+              <button id="startTimerBtn" class="primary-btn" type="button">▶ Start speaking</button>
+              <button id="pauseTimerBtn" class="secondary-btn" type="button" disabled>⏸ Pause</button>
+              <button id="stopTimerBtn" class="secondary-btn" type="button" disabled>■ Stop</button>
+            </div>
+          </div>
+
+          <footer class="study-footer speaking-completion-actions">
             <button id="markLearnedBtn" class="success-btn" type="button">✓ Mark learned</button>
           </footer>
         </article>
       </section>
-    </main>
+    </div>
+  <div id="speakingCompletionDialog" class="speaking-confirm-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="speakingCompletionTitle" aria-describedby="speakingCompletionDetail">
+      <div class="speaking-confirm-card">
+        <h3 id="speakingCompletionTitle">Confirm completion</h3>
+        <p id="speakingCompletionDetail">Save your self-assessed learning progress?</p>
+        <div class="speaking-confirm-actions">
+          <button id="speakingCompletionCancel" class="secondary-btn" type="button">Cancel</button>
+          <button id="speakingCompletionAccept" class="success-btn" type="button">Confirm</button>
+        </div>
+      </div>
+    </div>
   <nav class="bottom-nav">
       <button class="nav-btn" data-nav="part1" type="button"><span>1</span>Part 1</button>
       <button class="nav-btn" data-nav="part2" type="button"><span>2</span>Part 2</button>
