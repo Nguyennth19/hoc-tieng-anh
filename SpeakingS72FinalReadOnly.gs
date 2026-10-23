@@ -166,10 +166,21 @@ function testSpeakingS72FinalReadOnly() {
         });
         Object.keys(expectedSettingVersions).forEach(function(key){
           var expected=expectedSettingVersions[key],actual=txt(settingMap[key]);
-          details.schemaVersions[key]={matches:!!expected&&actual===expected,
-            configured:Boolean(actual),expected:expected,actual:actual};
-          check('SchemaVersion_'+key,!!expected&&actual===expected,
-            'Expected '+expected+', found '+actual+'. Bootstrap may trigger migrations!');
+          var canonical=!!expected&&actual===expected;
+          var legacyCompatible=key!=='p1_content_version' &&
+            typeof speakingStoredVersionMatches_==='function' &&
+            speakingStoredVersionMatches_(actual,expected)&&!canonical;
+          details.schemaVersions[key]={
+            matches:canonical,legacyCompatible:legacyCompatible,
+            bootstrapProtected:canonical||legacyCompatible,
+            configured:Boolean(actual),expected:expected,actual:actual
+          };
+          if(legacyCompatible)warn(key+' contains a legacy Date-like version. '+ 
+            'Backend now tolerates it, but a controlled TEXT repair is required before release.');
+          check('SchemaVersion_'+key,canonical,
+            legacyCompatible?('Legacy '+actual+' is safe for startup but not canonical TEXT; '+ 
+              'approved SETTINGS repair required.') :
+              ('Expected '+expected+', found '+actual+'. Bootstrap may trigger migrations!'));
         });
       }
       var p1=readTab(db,'SPEAKING',['id','question','model','active','sourceLabel']);
