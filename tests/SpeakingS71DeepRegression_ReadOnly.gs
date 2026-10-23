@@ -128,6 +128,47 @@ function testSpeakingS71DeepRegressionReadOnly(){
     const list=[];const visit=x=>{if(predicate(x))list.push(x);(x.children||[]).forEach(visit);};
     visit(root);return list;
   };
+
+  // Browser-independent audio runtime: silent speech engine verifies controls.
+  const fakeSpeech={
+    plays:0,pauses:0,resumes:0,cancels:0,last:null,
+    speak(u){this.plays++;this.last=u;},pause(){this.pauses++;},
+    resume(){this.resumes++;},cancel(){this.cancels++;}
+  };
+  const audioWin={speechSynthesis:fakeSpeech};
+  const audioDoc={createElement:tag=>{
+    const n=el(tag);
+    n.querySelector=sel=>{
+      const match=sel.match(/data-audio-action="([^"]+)"/);
+      return match ? (find(n,x=>x.dataset && x.dataset.audioAction===match[1])[0]||null) : null;
+    };
+    return n;
+  }};
+  const player=new Function('window','$','makeUtterance','toast','document',
+    audioCode+';return {play:sharedAudioPlay_,pause:sharedAudioPause_,stop:stopSpeech,create:createSpeakingAudioControls_};')(
+      audioWin,()=>el('button'),str=>({text:str}),()=>{},audioDoc);
+  const ag=player.create('I read books.','S71 silent audio');
+  assert('audioRuntime','Audio bar contains three shared buttons',
+    ()=>find(ag,x=>x.tagName==='button').length===3);
+  assert('audioRuntime','Audio initial state is idle',()=>ag.dataset.audioState==='idle');
+  player.play('I read books.',ag);
+  assert('audioRuntime','Play speaks exactly one supplied model',
+    ()=>fakeSpeech.plays===1&&fakeSpeech.last.text==='I read books.');
+  assert('audioRuntime','Playing state enables Pause',
+    ()=>ag.dataset.audioState==='playing'&&
+      find(ag,x=>x.dataset.audioAction==='pause')[0].disabled===false);
+  player.pause(ag);
+  assert('audioRuntime','Pause transitions to paused',
+    ()=>fakeSpeech.pauses===1&&ag.dataset.audioState==='paused');
+  player.play('I read books.',ag);
+  assert('audioRuntime','Play while paused resumes, does not queue twice',
+    ()=>fakeSpeech.resumes===1&&fakeSpeech.plays===1);
+  player.stop();
+  assert('audioRuntime','Stop resets playback controls',
+    ()=>fakeSpeech.cancels>=1&&ag.dataset.audioState==='idle');
+  assert('audioRuntime','Empty text cannot start playback',
+    ()=>player.play('  ',ag)===false);
+
   const wm={};
   const mem=new Function('window','document',clozeCode+';return window.AptisSpeakingMemorize;')(wm,fakeDocument);
   const sample='During a volunteer lesson, the projector stopped working, so we used the whiteboard.';
