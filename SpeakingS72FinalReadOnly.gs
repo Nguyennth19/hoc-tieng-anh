@@ -106,6 +106,25 @@ function testSpeakingS72FinalReadOnly() {
     check('DatabaseConfigured',true);
     try {
       var db=SpreadsheetApp.openById(dbId); // read only
+      var settings=readTab(db,'SETTINGS',['key','value']);
+      if(settings&&settings.validColumns){
+        var settingMap={};
+        settings.rows.forEach(function(row){settingMap[txt(row[0])]=txt(row[1]);});
+        var expectedSettingVersions={
+          schema_version:typeof APP_CONFIG!=='undefined'?txt(APP_CONFIG.SCHEMA_VERSION):'',
+          p1_content_version:typeof PART1_CONTENT_VERSION!=='undefined'?txt(PART1_CONTENT_VERSION):'',
+          p2_description_version:typeof PART2_DESCRIPTION_VERSION!=='undefined'?txt(PART2_DESCRIPTION_VERSION):'',
+          p3_description_version:typeof PART3_DESCRIPTION_VERSION!=='undefined'?txt(PART3_DESCRIPTION_VERSION):''
+        };
+        details.schemaVersions={};
+        Object.keys(expectedSettingVersions).forEach(function(key){
+          var expected=expectedSettingVersions[key],actual=txt(settingMap[key]);
+          details.schemaVersions[key]={matches:!!expected&&actual===expected,
+            configured:Boolean(actual),expected:expected,actual:actual};
+          check('SchemaVersion_'+key,!!expected&&actual===expected,
+            'Expected '+expected+', found '+actual+'. Bootstrap may trigger migrations!');
+        });
+      }
       var p1=readTab(db,'SPEAKING',['id','question','model','active','sourceLabel']);
       var p2=readTab(db,'SPEAKING_P2',['id','question1','question2','question3','model1','model2','model3','active']);
       var p3=readTab(db,'SPEAKING_P3',['id','question1','question2','question3','model1','model2','model3','active']);
