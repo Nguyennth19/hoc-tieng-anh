@@ -1,3 +1,5 @@
+> **S7.1-B updated after staging 117/117 PASS (23 Oct 2026).** The read-only browser probe is now v2. Chrome DevTools must execute the probe in the **`userHtmlFrame` JavaScript context** in Apps Script `/dev`, not the top-level frame. Paste the code in `tests/SpeakingS71BrowserProbe.md` once, then use `S71QA.run()` after each manually selected Learn, Memorize LV1, Memorize LV2, and Test state for Part 1–4. Use `S71QA.report()` for the 16/16 observational coverage. **Sound, user clicks, reload, and Progress/Mastery writes must be checked manually**. Do not install this browser script as an Apps Script `.gs` file.
+
 # S7.1 — Deep Regression Acceptance Protocol (Speaking Part 1–4)
 
 **Status:** QA staging, not production. **Base:** accepted S6.4.  
