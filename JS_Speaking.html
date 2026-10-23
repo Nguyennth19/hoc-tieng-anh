@@ -942,6 +942,8 @@
     // S6.3: the common timer is self-explanatory. Keep the duration at its
     // authoritative per-Part/per-Q source, not duplicated in UI instructions.
     $('startTimerBtn').textContent = '▶ Start speaking';
+    $('startTimerBtn').setAttribute('aria-label','Start speaking');
+    $('startTimerBtn').title='Start speaking';
     $('showAnswerAfterTest').textContent = 'Show model answer';
     $('showAnswerAfterTest').disabled = false;
   }
@@ -1663,6 +1665,9 @@
       $('timer').textContent=window.AptisSpeakingTimer.format(snap.remainingSeconds);
        $('startTimerBtn').disabled=snap.status==='running';
       $('startTimerBtn').textContent=snap.status==='paused'?'▶ Resume':'▶ Start speaking';
+      const actionName=snap.status==='paused'?'Resume speaking timer':'Start speaking';
+      $('startTimerBtn').setAttribute('aria-label',actionName);
+      $('startTimerBtn').title=actionName;
       $('pauseTimerBtn').disabled=snap.status!=='running';
       $('stopTimerBtn').disabled=!['running','paused'].includes(snap.status);
     },function(){
