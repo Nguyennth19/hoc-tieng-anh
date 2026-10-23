@@ -591,74 +591,15 @@ function getPart3DescriptionSeedData_() {
 ];
 }
 
+/**
+ * R1 safety boundary: this historical Q1-only migration is RETIRED.
+ * Never call it to recover a missing/inactive bank: its old implementation
+ * erased curated Q2/Q3, activation choices, and provenance.
+ * Restore an approved backup through a separately reviewed procedure.
+ */
 function upgradeSpeakingPart3Description_(sheet, settings, report) {
-  const current = getSetting_(settings, 'p3_description_version');
-  if (current === PART3_DESCRIPTION_VERSION) return;
-
-  PART3_DESCRIPTION_COLUMNS.forEach(function(header) {
-    ensureColumn_(sheet, header, [], report);
-  });
-
-  const idx = headerIndexMap_(sheet);
-  const values = sheet.getDataRange().getValues();
-  const rowById = {};
-  values.slice(1).forEach(function(row, i) {
-    const id = String(row[idx.id] || '');
-    if (id) rowById[id] = i + 2;
-  });
-
-  // Keep the original prototype topics for history, but remove them from active Part 3 practice.
-  Object.keys(rowById).forEach(function(id) {
-    if (/^SP3-\d{3}$/.test(id)) {
-      sheet.getRange(rowById[id], idx.active + 1).setValue(false);
-    }
-  });
-
-  getPart3DescriptionSeedData_().forEach(function(seed) {
-    let rowNum = rowById[seed.id];
-    if (!rowNum) {
-      rowNum = sheet.getLastRow() + 1;
-      sheet.getRange(rowNum, 1).setValue(seed.id);
-      rowById[seed.id] = rowNum;
-    }
-
-    const set = function(name, value) {
-      if (idx[name] !== undefined) sheet.getRange(rowNum, idx[name] + 1).setValue(value);
-    };
-
-    set('topic', seed.topic);
-    set('examNo', seed.examNo);
-    set('question1', seed.question1);
-    set('question2', '');
-    set('question3', '');
-    set('model1', seed.model1);
-    set('model2', '');
-    set('model3', '');
-    set('keywords1', seed.keywords1);
-    set('keywords2', '');
-    set('keywords3', '');
-    set('structure1', seed.structure1);
-    set('structure2', '');
-    set('structure3', '');
-
-    set('commonPoint', seed.commonPoint);
-    set('comparisonAxis', seed.comparisonAxis);
-    set('mustCommon', seed.mustCommon);
-    set('mustPictureA', seed.mustPictureA);
-    set('mustPictureB', seed.mustPictureB);
-    set('mustDifference', seed.mustDifference);
-    set('sayMore', seed.sayMore);
-    set('descriptionModel', seed.model1);
-    set('descriptionKeywords', seed.keywords1);
-    set('descriptionTemplate', seed.structure1);
-    set('practiceMode', 'description_only');
-    set('contentVersion', PART3_DESCRIPTION_VERSION);
-    set('active', true);
-    set('sourceLabel', seed.sourceLabel);
-  });
-
-  setSetting_(settings, 'p3_description_version', PART3_DESCRIPTION_VERSION);
-  report.push('Speaking Part 3 updated to 32 fact-first B2 compare-two-pictures topics (Q1 only).');
+  throw new Error('R1_MIGRATION_BLOCKED: Part 3 curated bank is protected. ' +
+    'Legacy Q1-only migration is disabled; restore an approved backup if needed.');
 }
 
 function getSpeakingPart3_() {
