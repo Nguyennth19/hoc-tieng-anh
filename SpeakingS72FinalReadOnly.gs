@@ -60,7 +60,7 @@ function testSpeakingS72FinalReadOnly() {
     var speaking=HtmlService.createHtmlOutputFromFile('JS_Speaking').getContent();
     var part4=HtmlService.createHtmlOutputFromFile('JS_SpeakingPart4').getContent();
     var index=HtmlService.createHtmlOutputFromFile('Index').getContent();
-    var stylesheet=HtmlService.createHtmlOutputFromFile('Styles_Speaking').getContent();
+    var stylesheet=speakingCombinedStylesReadOnly_();
     var qa=HtmlService.createHtmlOutputFromFile('QA_ResponsiveStaging').getContent();
     details.sourceFingerprints={
       JS_Speaking:hash(speaking),
