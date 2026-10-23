@@ -46,5 +46,8 @@
   <?!= include('JS_Writing'); ?>
   <?!= include('JS_Grammar'); ?>
   <?!= include('AppJS'); ?>
+  <? if (PropertiesService.getScriptProperties().getProperty('S71_RESPONSIVE_QA_STAGING') === 'enabled-staging-only') { ?>
+    <?!= include('QA_ResponsiveStaging'); ?>
+  <? } ?>
 </body>
 </html>
