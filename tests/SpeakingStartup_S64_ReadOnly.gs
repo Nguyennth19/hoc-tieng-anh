@@ -46,6 +46,7 @@ function testSpeakingStartupS64ReadOnly() {
     startupErrorLogged: init!==null && init.includes('SPEAKING_BOOTSTRAP_INIT_FAILED'),
     startupShowsError: init!==null && init.includes("$('errorView')?.classList.remove('hidden')"),
     enterRespectsStartupFailure: common.includes('if (startupFailure_) {'),
+    enterDoesNotReviveFailedRequest: common.includes("else if (!($('errorView')?.classList.contains('hidden')))"),
     blockingLoaderIsExplicitlyStopped: common.includes('function setLoadingVisible(visible)'),
     loaderHasHardTimeout: loading!==null && loading.includes('LOADER_HARD_TIMEOUT_MS'),
     hardTimeoutIs30Seconds: common.includes('const LOADER_HARD_TIMEOUT_MS = 30000'),
