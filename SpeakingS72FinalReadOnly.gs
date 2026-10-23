@@ -85,8 +85,25 @@ function testSpeakingS72FinalReadOnly() {
       index.indexOf("include('QA_ResponsiveStaging')")>=0);
     check('StagingQANoServerWrites',qa.indexOf('google.script.run')<0 &&
       qa.indexOf('localStorage.setItem')<0);
-    check('ResponsiveMobileAudio',stylesheet.indexOf('S7.1 Responsive Design System: shared answer/audio')>=0 &&
-      stylesheet.indexOf('grid-template-columns:repeat(3,minmax(0,1fr))')>=0);
+    // Inspect real mobile CSS selectors, never depend on a comment marker.
+    var audioSelector='.speaking-shell .speaking-audio-controls{';
+    var audioStart=stylesheet.lastIndexOf(audioSelector);
+    var audioBody=audioStart>=0?stylesheet.slice(audioStart+audioSelector.length,
+      stylesheet.indexOf('}',audioStart+audioSelector.length)):'';
+    var mediaStart=audioStart>=0?stylesheet.lastIndexOf('@media(max-width:650px)',audioStart):-1;
+    var audioStyleChecks={
+      scopedAudioRule:audioStart>=0,
+      insideMobileMedia:mediaStart>=0&&audioStart-mediaStart<850,
+      threeColumnAudioGrid:/display\s*:\s*grid\s*;/.test(audioBody)&&
+        /grid-template-columns\s*:\s*repeat\s*\(\s*3\s*,\s*minmax\s*\(\s*0\s*,\s*1fr\s*\)\s*\)/.test(audioBody),
+      playIcon:stylesheet.indexOf('[data-audio-action="play"]::before')>=0,
+      pauseIcon:stylesheet.indexOf('[data-audio-action="pause"]::before')>=0,
+      stopIcon:stylesheet.indexOf('[data-audio-action="stop"]::before')>=0
+    };
+    details.mobileAudioStyleChecks=audioStyleChecks;
+    check('ResponsiveMobileAudio',Object.keys(audioStyleChecks).every(function(k){
+      return audioStyleChecks[k];
+    }),JSON.stringify(audioStyleChecks));
     details.sourceVersion='S7.1 QA-gated responsive baseline';
   } catch (sourceError) {
     check('SourceInspectionSucceeded',false,txt(sourceError.message||sourceError));
@@ -125,6 +142,26 @@ function testSpeakingS72FinalReadOnly() {
           p3_description_version:typeof PART3_DESCRIPTION_VERSION!=='undefined'?txt(PART3_DESCRIPTION_VERSION):''
         };
         details.schemaVersions={};
+        // Read exact SETTINGS cells to distinguish version text from Date
+        // conversions. The gate must still FAIL a mismatching display string.
+        var settingsSheet=db.getSheetByName('SETTINGS');
+        var positions={};
+        settings.rows.forEach(function(row,i){positions[txt(row[0])]=i+2;});
+        details.schemaCellDiagnostics={};
+        Object.keys(expectedSettingVersions).forEach(function(key){
+          var row=positions[key];
+          if(!row)return;
+          var cell=settingsSheet.getRange(row,2);
+          var raw=cell.getValue();
+          var isDate=Object.prototype.toString.call(raw)==='[object Date]';
+          details.schemaCellDiagnostics[key]={
+            sheetRow:row,rawType:isDate?'Date':typeof raw,
+            rawISO:isDate&&!isNaN(raw.getTime())?raw.toISOString():null,
+            display:txt(cell.getDisplayValue()),
+            numberFormat:txt(cell.getNumberFormat()),
+            probablyAutoConvertedDate:isDate
+          };
+        });
         Object.keys(expectedSettingVersions).forEach(function(key){
           var expected=expectedSettingVersions[key],actual=txt(settingMap[key]);
           details.schemaVersions[key]={matches:!!expected&&actual===expected,
