@@ -13,7 +13,7 @@ function testSpeakingS71DeepRegressionReadOnly(){
   const assert=(category,name,test)=>{
     let ok=false,detail='';
     try{ok=Boolean(test());}catch(e){detail=String(e&&e.message||e);}
-    qa[category]??={passed:0,total:0,failed:[]};
+    if (!qa[category]) qa[category]={passed:0,total:0,failed:[]};
     qa[category].total++;
     if(ok)qa[category].passed++;
     else{qa[category].failed.push(name);issues.push({category,name,detail});}
@@ -224,11 +224,11 @@ function testSpeakingS71DeepRegressionReadOnly(){
     setItem:(k,v)=>{local[k]=v;},removeItem:k=>{delete local[k];}};
   const cw={},FakeDate={now:()=>fakeNow};
   const cache=new Function('window','localStorage','Date',cacheCode+';return window.AptisSpeakingCache;')(cw,storage,FakeDate);
-  const good={items:[1,2]};const validator=x=>Array.isArray(x?.items)&&x.items.length===2;
+  const good={items:[1,2]};const validator=x=>Boolean(x&&Array.isArray(x.items)&&x.items.length===2);
   assert('cacheRuntime','Valid cache write succeeds',()=>cache.write({key:'S71:test',data:good,validate:validator})===true);
-  assert('cacheRuntime','Immediate read is fresh',()=>cache.read({key:'S71:test',freshMs:1000,maxAgeMs:10000,validate:validator})?.stale===false);
+  assert('cacheRuntime','Immediate read is fresh',()=>(cache.read({key:'S71:test',freshMs:1000,maxAgeMs:10000,validate:validator})||{}).stale===false);
   fakeNow+=2500;
-  assert('cacheRuntime','Aged valid read is flagged stale',()=>cache.read({key:'S71:test',freshMs:1000,maxAgeMs:10000,validate:validator})?.stale===true);
+  assert('cacheRuntime','Aged valid read is flagged stale',()=>(cache.read({key:'S71:test',freshMs:1000,maxAgeMs:10000,validate:validator})||{}).stale===true);
   assert('cacheRuntime','Malformed write rejected',()=>cache.write({key:'S71:bad',data:{items:[]},validate:validator})===false);
   assert('cacheRuntime','Malformed entry never read',()=>cache.read({key:'S71:bad',validate:validator})===null);
   fakeNow+=20000;
