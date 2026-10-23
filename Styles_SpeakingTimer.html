@@ -1,0 +1,83 @@
+<style>
+
+/* S6.3 — one shared compact timer row for Speaking 1–4.
+   The same time cell and control geometry apply to each Part; only actual
+   seconds/button count are Part-specific. No stage line, instructions or bar. */
+.speaking-practice-timer{
+  position:static;
+  box-sizing:border-box;
+  display:grid;
+  grid-template-columns:max-content minmax(0,1fr);
+  align-items:center;
+  column-gap:clamp(10px,2vw,20px);
+  width:100%;
+  min-width:0;
+  margin:16px 0 12px;
+  padding:12px clamp(12px,2vw,20px);
+  background:linear-gradient(180deg,#fff,#f5f4ff);
+  border:1px solid #dfdaf8;
+  border-radius:16px;
+}
+.speaking-practice-timer.hidden,
+.speaking-practice-timer[hidden]{display:none!important}
+.speaking-practice-timer .timer{
+  display:block;
+  min-width:92px;
+  margin:0;
+  padding:0;
+  text-align:left;
+  white-space:nowrap;
+  font-size:clamp(26px,3.3vw,38px);
+  font-weight:900;
+  line-height:1.15;
+  letter-spacing:-.035em;
+  font-variant-numeric:tabular-nums;
+}
+.speaking-timer-actions{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:flex-end;
+  gap:8px;
+  min-width:0;
+  width:100%;
+}
+.speaking-timer-actions button{
+  box-sizing:border-box;
+  flex:0 1 auto;
+  min-width:0;
+  min-height:42px;
+  padding:9px 12px;
+  font:inherit;
+  font-size:13px;
+  font-weight:800;
+  line-height:1.2;
+  white-space:nowrap;
+}
+.speaking-timer-actions button:disabled{opacity:.55;cursor:not-allowed}
+@media(max-width:650px){
+  .speaking-practice-timer{column-gap:8px;padding:10px 9px}
+  .speaking-practice-timer .timer{min-width:70px;font-size:clamp(24px,7vw,30px)}
+  .speaking-timer-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  .speaking-timer-actions button{
+    width:100%;
+    min-width:0;
+    min-height:38px;
+    padding:8px 4px;
+    font-size:clamp(10px,2.6vw,12px);
+    white-space:normal;
+    overflow-wrap:anywhere;
+  }
+}
+.speaking-completion-actions{display:flex;align-items:center;justify-content:flex-start;flex-wrap:wrap;gap:10px;min-width:0}
+.speaking-confirm-overlay{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:20px;background:rgba(26,29,52,.48)}
+.speaking-confirm-overlay.hidden{display:none!important}
+.speaking-confirm-card{width:min(100%,450px);box-sizing:border-box;background:var(--card,#fff);border-radius:18px;padding:24px;box-shadow:0 18px 70px rgba(20,25,55,.23)}
+.speaking-confirm-card h3{margin:0 0 10px;font-size:20px}
+.speaking-confirm-card p{margin:0 0 18px;color:var(--muted);line-height:1.6}
+.speaking-confirm-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:9px}
+.speaking-confirm-actions button{min-height:44px}
+@media(max-width:650px){
+ .speaking-confirm-card{padding:18px}
+ .speaking-confirm-actions button{flex:1 1 120px}
+}</style>
