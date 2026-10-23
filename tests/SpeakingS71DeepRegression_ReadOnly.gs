@@ -32,6 +32,7 @@ function testSpeakingS71DeepRegressionReadOnly(){
   const p4Timer=between(p4,'function p4Timer_(){','function p4FormulaHtml(');
   const p2Unified=between(js,'  function renderP2Unified_(){','  function renderP2TestOutline_(){');
   const p4Memory=between(p4,'function p4RenderMemorize_(){','function p4RenderStudyCards_(){');
+  const p4Learn=between(p4,'function p4RenderStudyCards_(){','function renderAnswersOnly_(){');
   const p4Save=between(p4,"byId('p4Save').addEventListener('click',()=>{","byId('p4Read').addEventListener('click',()=>{");
   const saving1=between(js,'  function saveProgress(rating, status) {','  function recalcPart2Aggregate(item) {');
   const mode1=between(js,'  function setMode(mode) {','  function setMemorizeLevel(level) {');
@@ -41,7 +42,7 @@ function testSpeakingS71DeepRegressionReadOnly(){
   assert('learn','P1 one-paragraph teacher model',()=>js.includes("className = 'p1-learn-paragraph'")&&js.includes('renderSharedFormulaText(paragraph, currentModel())'));
   assert('learn','P2 and P3 retain independent Q1-Q3',()=>p2Unified.includes('for(let i=0;i<3;i++)')&&p2Unified.includes('item.questions||[]')&&p2Unified.includes('item.models||[]'));
   assert('learn','P2/P3 show approved teacher model per question',()=>js.includes('renderSharedFormulaText(words,model)')&&p2Unified.includes('p2Card_(i+1,question,answer)'));
-  assert('learn','P4 renders all question cards with model',()=>p4.includes('(S.current?.questions||[]).map((q,i)=>')&&p4.includes('p4AnswerHtml(answer)'));
+  assert('learn','P4 renders all question cards with model',()=>p4Learn.includes('(S.current?.questions||[]).map((q,i)=>')&&p4Learn.includes('p4AnswerHtml(answer)'));
   assert('learn','P4 preserves question text and model escape',()=>p4.includes("escapeHtml(q)")&&p4.includes("escapeHtml(v)")||p4.includes('function escapeHtml(v)'));
   assert('learn','Topic prev and next exist for P1-P4',()=>v.includes('id="prevQuestionBtn"')&&v.includes('id="nextQuestionBtn"')&&v4.includes('id="p4PrevTopic"')&&v4.includes('id="p4NextTopic"'));
   assert('learn','P4 topic navigation stops audio and clock',()=>p4.includes('p4StopAudio();stopClock();')&&p4.includes("byId('p4PrevTopic').addEventListener('click'"));
@@ -202,7 +203,7 @@ function testSpeakingS71DeepRegressionReadOnly(){
   let older=null,newer=null,last='';
   cache.request('S71:force',(s)=>{older=s;},v=>{last='old';},()=>{},false);
   cache.request('S71:force',(s)=>{newer=s;},v=>{last='new';},()=>{},true);
-  older(good);newer(good);
+  newer(good);older(good); // Deliberately deliver cancelled response AFTER fresh result.
   assert('cacheRuntime','Late cancelled response cannot replace new response',()=>last==='new');
   assert('cacheRuntime','Cache always reports metrics',()=>Array.isArray(cache.metrics().inflight)&&cache.metrics().requests['S71:dedup']===1);
   // Other module keys are not cleared during a content-only refresh.
