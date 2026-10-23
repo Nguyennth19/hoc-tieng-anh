@@ -6,7 +6,7 @@ function testSpeakingSharedLayoutS2ReadOnly() {
   const src = function(name) { return HtmlService.createHtmlOutputFromFile(name).getContent(); };
   const app=src('Index'), view=src('ViewSpeaking'), p4=src('ViewSpeakingPart4');
   const globalCss=src('Styles'), commonCss=speakingCombinedStylesReadOnly_(), p4Css=src('Styles_SpeakingPart4');
-  const commonJs=src('JS_Speaking'), p4Js=src('JS_SpeakingPart4');
+  const commonJs=speakingCombinedJSReadOnly_(), p4Js=src('JS_SpeakingPart4');
   const count=function(s,r){return (s.match(r)||[]).length;};
   const has=function(s,k){return s.indexOf(k)>=0;};
   const ids=Array.from(new Set(Array.from(p4Js.matchAll(/\bbyId\(['"]([^'"]+)['"]\)/g),function(x){return x[1];})));
