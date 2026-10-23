@@ -1,0 +1,60 @@
+<style>
+
+/* S6.4 — one responsive Memorize component for Parts 1–4.
+   No duplicated reveal buttons, fixed overlays or independent Part-level controls. */
+.speaking-shared-memorize-levels,.p4-memorize-levels{
+  display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));
+  width:100%;min-width:0;gap:10px;margin:6px 0 16px;
+}
+.speaking-shared-memorize-levels.hidden,.speaking-shared-memorize-levels[hidden],
+.p4-memorize-levels.hidden,.p4-memorize-levels[hidden]{display:none!important}
+.speaking-shared-memorize-levels .level-btn,.p4-memorize-levels .level-btn{
+  box-sizing:border-box;width:100%;min-width:0;min-height:48px;flex:initial!important;
+  padding:9px 8px;white-space:normal;overflow-wrap:anywhere;
+  font-size:clamp(12px,2.6vw,15px);line-height:1.35;
+}
+.speaking-memorize-container,.speaking-memorize-question-card,
+.speaking-memorize-panel{width:100%;min-width:0;box-sizing:border-box}
+.speaking-memorize-panel{display:flex;flex-direction:column;align-items:stretch;gap:12px}
+.speaking-memorize-hint{margin:0;line-height:1.5}
+.speaking-memorize-cloze{width:100%;min-width:0;line-height:2.65;overflow-wrap:anywhere}
+.speaking-memorize-cloze .p1-cloze-input{
+  box-sizing:border-box;min-height:42px;width:clamp(88px,16vw,150px);
+  max-width:min(48vw,170px);margin:3px 5px;padding:8px;
+}
+.speaking-memorize-dictation{
+  display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box;
+  min-height:clamp(190px,27vh,340px);resize:vertical;
+  padding:14px 16px;border:1px solid #c7d0e2;border-radius:12px;
+  background:#fff;color:var(--ink);font:inherit;font-size:16px;line-height:1.7;
+  overflow-wrap:anywhere;
+}
+.speaking-memorize-actions{
+  display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;
+  width:100%;min-width:0;margin:0;
+}
+.speaking-memorize-actions button{
+  box-sizing:border-box;width:100%;min-width:0;min-height:44px;
+  padding:9px 6px;font:inherit;font-size:clamp(12px,2.5vw,14px);
+  font-weight:800;line-height:1.3;white-space:normal;overflow-wrap:anywhere;
+}
+.speaking-memorize-feedback{margin:0;min-height:0;font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+.speaking-memorize-feedback:empty{display:none}
+.speaking-memorize-revealed{
+  display:block;box-sizing:border-box;width:100%;min-width:0;
+  padding:18px 20px;background:#f7f7ff;border:1px solid #dcd9f8;
+  border-radius:15px;overflow-wrap:anywhere;
+}
+.speaking-memorize-revealed[hidden]{display:none!important}
+.speaking-memorize-revealed>strong{display:block;margin-bottom:10px;font-size:14px}
+.speaking-memorize-revealed .model-text{
+  display:block;width:100%;margin:0;font-size:clamp(18px,2.6vw,23px);
+  line-height:1.85;font-weight:600;white-space:pre-wrap;overflow-wrap:anywhere;
+}
+@media(max-width:480px){
+  .speaking-shared-memorize-levels,.p4-memorize-levels{gap:6px}
+  .speaking-memorize-actions{gap:5px}
+  .speaking-memorize-actions button{padding:9px 3px;font-size:12px}
+  .speaking-memorize-revealed{padding:14px 12px}
+  .speaking-memorize-cloze .p1-cloze-input{width:100px;max-width:42vw}
+}</style>
