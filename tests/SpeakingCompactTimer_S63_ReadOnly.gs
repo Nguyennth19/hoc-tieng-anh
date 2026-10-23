@@ -7,7 +7,7 @@ function testSpeakingCompactTimerS63ReadOnly(){
   const src=name=>HtmlService.createHtmlOutputFromFile(name).getContent();
   const common=src('JS_Speaking'),p4=src('JS_SpeakingPart4');
   const v=src('ViewSpeaking'),v4=src('ViewSpeakingPart4');
-  const css=src('Styles_Speaking'),p4css=src('Styles_SpeakingPart4');
+  const css=speakingCombinedStylesReadOnly_(),p4css=src('Styles_SpeakingPart4');
   const has=(s,t)=>s.includes(t);
   const n=(s,re)=>(s.match(re)||[]).length;
   const viewTimer=v.slice(v.indexOf('id="speakingPracticeTimer"'),v.indexOf('id="speakingPracticeTimer"')+800);
