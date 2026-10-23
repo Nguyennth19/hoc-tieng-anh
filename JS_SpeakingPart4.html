@@ -17,6 +17,9 @@ function p4Timer_(){
     byId('p4Next').disabled=S.phase!=='prep'||!['running','paused'].includes(snap.status);
     byId('p4Pause').disabled=!running&&!paused;
     byId('p4Pause').textContent=paused?'▶ Resume':'⏸ Pause';
+    byId('p4Pause').dataset.mobileIcon=paused?'▶':'⏸';
+    byId('p4Pause').setAttribute('aria-label',paused?'Resume Part 4 timer':'Pause Part 4 timer');
+    byId('p4Pause').title=paused?'Resume Part 4 timer':'Pause Part 4 timer';
     byId('p4Stop').disabled=!running&&!paused;
   },function(){
     if(S.phase==='prep')startSpeaking();
