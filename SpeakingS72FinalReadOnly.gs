@@ -87,13 +87,15 @@ function testSpeakingS72FinalReadOnly() {
       qa.indexOf('localStorage.setItem')<0);
     // Inspect real mobile CSS selectors, never depend on a comment marker.
     var audioSelector='.speaking-shell .speaking-audio-controls{';
-    var audioStart=stylesheet.lastIndexOf(audioSelector);
-    var audioBody=audioStart>=0?stylesheet.slice(audioStart+audioSelector.length,
-      stylesheet.indexOf('}',audioStart+audioSelector.length)):'';
-    var mediaStart=audioStart>=0?stylesheet.lastIndexOf('@media(max-width:650px)',audioStart):-1;
+    var mediaStart=stylesheet.lastIndexOf('@media(max-width:650px)');
+    var mediaEnd=mediaStart>=0?stylesheet.indexOf('@media(max-width:380px)',mediaStart):-1;
+    var mobileCss=mediaStart>=0?stylesheet.slice(mediaStart,mediaEnd<0?undefined:mediaEnd):'';
+    var audioStart=mobileCss.indexOf(audioSelector);
+    var audioBody=audioStart>=0?mobileCss.slice(audioStart+audioSelector.length,
+      mobileCss.indexOf('}',audioStart+audioSelector.length)):'';
     var audioStyleChecks={
       scopedAudioRule:audioStart>=0,
-      insideMobileMedia:mediaStart>=0&&audioStart-mediaStart<850,
+      insideMobileMedia:mediaStart>=0&&audioStart>=0,
       threeColumnAudioGrid:/display\s*:\s*grid\s*;/.test(audioBody)&&
         /grid-template-columns\s*:\s*repeat\s*\(\s*3\s*,\s*minmax\s*\(\s*0\s*,\s*1fr\s*\)\s*\)/.test(audioBody),
       playIcon:stylesheet.indexOf('[data-audio-action="play"]::before')>=0,
