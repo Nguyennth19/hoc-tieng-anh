@@ -508,4 +508,81 @@ button,input,select{font:inherit}button{cursor:pointer}button:disabled{cursor:no
     text-align:center;
   }
 }
+
+/* S7.1 Responsive Design System: shared answer/audio and compact mobile cards.
+   Part 1–4 use the same three audio actions even for dynamically rendered Q1–Q3.
+   Keep full text labels in DOM for accessibility; show small icons in mobile UI.
+   Desktop/tablet >650px continue to show text. */
+@media(max-width:650px){
+  .speaking-shell .speaking-full-answer-row{
+    display:flex;flex-direction:column;align-items:stretch;gap:8px;
+  }
+  .speaking-shell .speaking-full-answer-row>.block-label{align-self:flex-start}
+  .speaking-shell .speaking-audio-controls{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    align-items:stretch;
+    flex-wrap:initial;
+    width:min(100%,252px);
+    max-width:100%;
+    min-width:0;
+    gap:6px;
+  }
+  .speaking-shell .speaking-audio-controls button{
+    display:grid;place-items:center;
+    box-sizing:border-box;flex:initial;
+    width:100%;min-width:0;min-height:48px;
+    padding:8px 5px;
+    border-radius:12px;
+    font-size:0!important;line-height:1!important;
+    white-space:nowrap;overflow:hidden;
+  }
+  .speaking-shell .speaking-audio-controls button::before{
+    display:block;font-size:17px;line-height:1;
+    font-weight:850;
+  }
+  .speaking-shell .speaking-audio-controls [data-audio-action="play"]::before{content:"▶"}
+  .speaking-shell .speaking-audio-controls [data-audio-action="pause"]::before{content:"⏸"}
+  .speaking-shell .speaking-audio-controls [data-audio-action="stop"]::before{content:"■"}
+  .speaking-shell .speaking-audio-controls button:focus-visible,
+  .speaking-shell .speaking-timer-actions button:focus-visible{
+    outline:3px solid var(--purple);outline-offset:2px;
+  }
+  .speaking-shell .speaking-practice-timer{
+    padding:10px 9px;column-gap:8px;
+  }
+  .speaking-shell .speaking-practice-timer .timer{
+    font-size:clamp(23px,6vw,29px);
+  }
+  .speaking-shell .speaking-timer-actions button{
+    min-height:48px;border-radius:12px;
+  }
+  .speaking-shell .speaking-timer-actions button::before{font-size:17px}
+  .speaking-shell .speaking-question-card,
+  .speaking-shell .p2-topic-card{padding:clamp(11px,3vw,16px)}
+  .speaking-shell .speaking-answer-panel .model-text,
+  .speaking-shell #shadowSentences .p1-learn-paragraph{
+    font-size:clamp(15px,3.7vw,17px);
+    line-height:1.72;overflow-wrap:anywhere;
+  }
+  .speaking-shell .speaking-memorize-actions button{
+    min-height:46px;
+  }
+  .speaking-shell .bottom-nav{
+    bottom:max(5px,env(safe-area-inset-bottom,5px));
+  }
+}
+@media(max-width:380px){
+  .speaking-shell .speaking-audio-controls{
+    width:min(100%,228px);
+  }
+  .speaking-shell .speaking-memorize-actions{gap:5px}
+  .speaking-shell .speaking-memorize-actions button{
+    font-size:12px;padding-inline:3px;
+  }
+}
+/* Honor platform accessibility settings; no changes to timer cadence. */
+@media(prefers-reduced-motion:reduce){
+  .speaking-shell .view,.speaking-shell .mode-panel{animation:none!important}
+}
 </style>
