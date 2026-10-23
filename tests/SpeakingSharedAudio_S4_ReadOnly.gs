@@ -5,7 +5,7 @@
  */
 function testSpeakingSharedAudioS4ReadOnly(){
   const src=function(n){return HtmlService.createHtmlOutputFromFile(n).getContent();};
-  const common=src('JS_Speaking'),p4=src('JS_SpeakingPart4');
+  const common=speakingCombinedJSReadOnly_(),p4=src('JS_SpeakingPart4');
   const view=src('ViewSpeaking'),v4=src('ViewSpeakingPart4');
   const styles=speakingCombinedStylesReadOnly_(),p4styles=src('Styles_SpeakingPart4');
   const count=function(s,re){return (s.match(re)||[]).length;};
