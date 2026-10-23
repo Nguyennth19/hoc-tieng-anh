@@ -57,7 +57,7 @@ function testSpeakingS72FinalReadOnly() {
 
   // HTML source inspection through Apps Script's read-only HtmlService API.
   try {
-    var speaking=HtmlService.createHtmlOutputFromFile('JS_Speaking').getContent();
+    var speaking=speakingCombinedJSReadOnly_();
     var part4=HtmlService.createHtmlOutputFromFile('JS_SpeakingPart4').getContent();
     var index=HtmlService.createHtmlOutputFromFile('Index').getContent();
     var stylesheet=speakingCombinedStylesReadOnly_();
