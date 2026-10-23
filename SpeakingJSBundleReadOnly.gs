@@ -9,7 +9,7 @@ function speakingCombinedJSReadOnly_() {
   var modules=[
     'JS_Speaking','JS_SpeakingBootstrap','JS_SpeakingTopicFlow',
     'JS_SpeakingAudioTimer','JS_SpeakingMemorize','JS_SpeakingPart23Flow',
-    'JS_SpeakingLearningFlow','JS_SpeakingExamAudio',
+    'JS_SpeakingPart1Flow','JS_SpeakingLearningFlow','JS_SpeakingExamAudio',
     'JS_SpeakingProgressTools'
   ];
   var combined=modules.map(function(name){
