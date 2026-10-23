@@ -30,7 +30,12 @@ function testSpeakingStartupS64ReadOnly() {
   const mode = section(common,'function setMode(mode) {','function setMemorizeLevel(level)');
   const init = section(common,'function init() {','function enter() {');
   const loading = section(common,'function loadData(options) {','function refreshDataInBackground(');
-  const p4Timer = section(p4,'function p4Timer_(){','/** Highlight only approved reusable');
+  // Source boundaries are named functions, not mutable editorial comments.
+  // Missing anchors return null and FAIL safely.
+  const p4ScopeStart=/\bfunction\s+p4Timer_\s*\(\s*\)\s*\{/.exec(p4);
+  const p4ScopeEnd=/\bfunction\s+p4FormulaHtml\s*\(/.exec(p4);
+  const p4Timer=p4ScopeStart && p4ScopeEnd && p4ScopeEnd.index>p4ScopeStart.index
+    ? p4.slice(p4ScopeStart.index,p4ScopeEnd.index) : null;
   let jsSyntaxOK = true,p4SyntaxOK = true,jsSyntaxError = '';
   try { new Function(common.replace(/^\s*<script>/,'').replace(/<\/script>\s*$/,'')); }
   catch (e) {jsSyntaxOK=false;jsSyntaxError='JS_Speaking: '+e.message;}
@@ -74,8 +79,8 @@ function testSpeakingStartupS64ReadOnly() {
         'window.AptisSpeakingMemorize=Object.freeze({')?.includes('google.script.run'),
     part4TimerScopeIsBounded: p4Timer!==null && p4Timer.length<6000,
     part4TimerDoesNotWrite: p4Timer!==null &&
-      !p4Timer.includes('.saveSpeakingPart4Mastery(') &&
-      !p4Timer.includes('.saveSpeakingPart4DevAttempt('),
+      !/\.saveSpeakingPart4Mastery\s*\(/.test(p4Timer) &&
+      !/\.saveSpeakingPart4DevAttempt\s*\(/.test(p4Timer),
     part4ManualSaveStillExists: p4.includes("byId('p4Save').addEventListener('click'"),
     javascriptSyntaxOK: jsSyntaxOK && p4SyntaxOK
   };
@@ -89,6 +94,8 @@ function testSpeakingStartupS64ReadOnly() {
       referencedDomIds:new Set(referencedIds).size,
       markupIds:markupIds.length,
       p4TimerSegmentLength:p4Timer ? p4Timer.length : -1,
+      p4TimerStartLocated:Boolean(p4ScopeStart),
+      p4FormulaEndLocated:Boolean(p4ScopeEnd),
       jsSyntaxError
     },
     note:'Read-only source QA. Runtime load and mobile visual testing remain separate.'
