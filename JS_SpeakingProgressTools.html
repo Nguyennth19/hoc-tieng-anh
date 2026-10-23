@@ -1,0 +1,164 @@
+<script>  function summarizeItems(items) {
+    let learned = 0, due = 0, weak = 0, reviews = 0;
+    (items || []).forEach(item => {
+      const p = item.progress || {};
+      if (p.status === 'learned') learned++;
+      if (isDue(p)) due++;
+      if (Number(p.reviewCount || 0) > 0 && Number(p.rating || 0) > 0 && Number(p.rating || 0) <= 2) weak++;
+      reviews += Number(p.reviewCount || 0);
+    });
+    return {
+      total: (items || []).length,
+      learned, due, weak, reviews,
+      percent: (items || []).length ? Math.round(learned / items.length * 100) : 0
+    };
+  }
+
+  function renderProgressDashboard() {
+    if (!state.data) return;
+    const p1 = summarizeItems(state.data.part1 || []);
+    const p2 = summarizeItems(state.data.part2 || []);
+    const p3 = summarizeItems(state.data.part3 || []);
+    const total = p1.total + p2.total + p3.total;
+    const learned = p1.learned + p2.learned + p3.learned;
+    const pct = total ? Math.round(learned / total * 100) : 0;
+
+    $('overallMasteredPct').textContent = pct + '%';
+    $('overallMasteredText').textContent = learned + ' of ' + total + ' items';
+    $('overallDueCount').textContent = p1.due + p2.due + p3.due;
+    $('overallWeakCount').textContent = p1.weak + p2.weak + p3.weak;
+    $('overallReviewCount').textContent = p1.reviews + p2.reviews + p3.reviews;
+
+    $('p1ProgressPct').textContent = p1.percent + '%';
+    $('p1ProgressBar').style.width = p1.percent + '%';
+    $('p1Learned').textContent = p1.learned;
+    $('p1Due').textContent = p1.due;
+    $('p1Weak').textContent = p1.weak;
+
+    $('p2ProgressPct').textContent = p2.percent + '%';
+    $('p2ProgressBar').style.width = p2.percent + '%';
+    $('p2Learned').textContent = p2.learned;
+    $('p2Due').textContent = p2.due;
+    $('p2Weak').textContent = p2.weak;
+
+    $('p3ProgressPct').textContent = p3.percent + '%';
+    $('p3ProgressBar').style.width = p3.percent + '%';
+    $('p3Learned').textContent = p3.learned;
+    $('p3Due').textContent = p3.due;
+    $('p3Weak').textContent = p3.weak;
+
+    const due = p1.due + p2.due + p3.due;
+    const weak = p1.weak + p2.weak + p3.weak;
+    $('progressRecommendation').textContent = due
+      ? 'You have ' + due + ' item' + (due === 1 ? '' : 's') + ' due. Review those first, then add one new practice item.'
+      : weak
+        ? 'Nothing is due right now. Revisit ' + weak + ' weaker item' + (weak === 1 ? '' : 's') + ' before learning something new.'
+        : 'Your review queue is clear. Practise one new topic and keep the session short.';
+  }
+
+  function showProgress() {
+    if (!isValidBootstrap(state.data)) {
+      switchPart(state.activePart, true);
+      return;
+    }
+    stopSpeech(); stopTimer(true);
+    renderProgressDashboard();
+    $('skillHomeView').classList.add('hidden');
+    $('homeView').classList.add('hidden');
+    $('studyView').classList.add('hidden');
+    $('progressView').classList.remove('hidden');
+    setActiveNav('progress');
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+
+  function handleNav(nav) {
+    if (nav === 'audio') return openAudioSheet();
+    if (nav === 'part1') return switchPart(1);
+    if (nav === 'part2') return switchPart(2);
+    if (nav === 'part3') return switchPart(3);
+    if (nav === 'progress') return showProgress();
+    if (nav === 'home') return showHome();
+  }
+
+  function setActiveNav(nav) { $$('.nav-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.nav === nav)); }
+
+  function indexedItems(predicate) {
+    const out = [];
+    state.items.forEach((item,i) => { if (predicate(item)) out.push({item,i}); });
+    return out;
+  }
+
+  function isDue(p) {
+    if (!p || !p.nextReview) return false;
+    const d = new Date(p.nextReview);
+    return !isNaN(d.getTime()) && d.getTime() <= Date.now();
+  }
+
+  function statusLabel(status) {
+    return status === 'learned' ? 'Learned' : status === 'learning' ? 'Learning' : 'New';
+  }
+
+  function splitKeywords(text) { return String(text || '').split(/\||,|→/).map(x => x.trim()).filter(Boolean); }
+  function splitSentences(text) { return String(text || '').replace(/\n+/g,' ').match(/[^.!?]+[.!?]+|[^.!?]+$/g)?.map(s => s.trim()).filter(Boolean) || [String(text || '')]; }
+  function normalize(value) { return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
+  function safeError(err) { return !err ? 'Unknown error.' : (err.message || String(err)); }
+  function clamp(n,min,max) { return Math.max(min,Math.min(max,n)); }
+  function wait(ms) { return new Promise(resolve => setTimeout(resolve,ms)); }
+  function shuffle(arr) { const a = arr.slice(); for (let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+  function uniqueByIndex(items) { const seen={}; return items.filter(x => seen[x.i] ? false : (seen[x.i]=true)); }
+  function escapeHtml(s) { return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function readLocal(key,fallback) { try { const v=localStorage.getItem(key); return v===null ? fallback : v; } catch(e){ return fallback; } }
+  function writeLocal(key,value) { try { localStorage.setItem(key,value); } catch(e){} }
+
+  window.AptisSpeakingAudio = Object.freeze({
+    play:sharedAudioPlay_, pause:sharedAudioPause_, stop:stopSpeech,
+    createControls:createSpeakingAudioControls_,
+    settings:()=>({accent:state.audio.accent,voiceURI:state.audio.voiceURI,rate:state.audio.rate})
+  });
+  window.AptisSpeaking = { enter: enter, showHome: showHome };
+
+  let toastTimer = null;
+  function toast(message) {
+    const el = $('toast');
+    el.textContent = message;
+    el.classList.remove('hidden');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.add('hidden'), 2400);
+  }
+
+
+  let p3MediaPreparationStarted = false;
+  function schedulePart3MediaPreparation_() {
+    if (p3MediaPreparationStarted) return;
+    p3MediaPreparationStarted = true;
+    setTimeout(function() { preparePart3MediaBatchClient_(0); }, 1000);
+  }
+
+  function preparePart3MediaBatchClient_(startIndex) {
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (!result || result.ok === false) {
+          p3MediaPreparationStarted = false;
+          return;
+        }
+        if (!result.done) {
+          setSyncStatus('Preparing Part 3 images…', 'syncing');
+          setTimeout(function() { preparePart3MediaBatchClient_(result.nextIndex || 0); }, 350);
+        } else {
+          setSyncStatus('Part 3 images ready', 'cached');
+          // Refresh once so newly-created Drive IDs appear in thumbnails/cards.
+          setTimeout(function() {
+            p3MediaPreparationStarted = false;
+            refreshDataInBackground(true);
+          }, 500);
+        }
+      })
+      .withFailureHandler(function() {
+        // Content remains usable even if Drive image preparation is interrupted.
+        p3MediaPreparationStarted = false;
+      })
+      .preparePart3MediaBatch(Number(startIndex || 0), 8);
+  }
+
+})();
+</script>
