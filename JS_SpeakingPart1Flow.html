@@ -1,0 +1,122 @@
+<script>  function renderShadow() {
+    $('shadowAllBtn').textContent = state.activePart === 1 ? '▶ Play' : '▶ Shadow all';
+    const box = $('shadowSentences');
+    box.innerHTML = '';
+    if (state.activePart === 1) {
+      const paragraph = document.createElement('p');
+      paragraph.className = 'p1-learn-paragraph';
+      renderSharedFormulaText(paragraph, currentModel());
+      box.appendChild(paragraph);
+      return;
+    }
+    splitSentences(currentModel()).forEach(function(sentence) {
+      const row = document.createElement('div');
+      row.className = 'shadow-sentence';
+      const audio = createSpeakingAudioControls_(sentence,'Listen to sentence');
+      const div = document.createElement('div');
+      if(state.activePart<=2)renderSharedFormulaText(div,sentence);else div.textContent = sentence;
+      row.appendChild(audio); row.appendChild(div); box.appendChild(row);
+    });
+  }
+  function shadowAll() {
+    sharedAudioPlay_(currentModel(),$('shadowAudioControls'));
+  }
+  function configureP1Modes_() {
+    const p1 = [1,2,3].includes(state.activePart);
+    $$('#speakingModeTabs .mode-tab').forEach(function(btn) {
+      const mode = btn.dataset.mode;
+      btn.classList.toggle('hidden', p1 && mode === 'learn');
+      if (p1) {
+        const label = mode === 'shadow' ? '01 Learn' : mode === 'memorize' ? '02 Memorize' : mode === 'test' ? '03 Test' : '';
+        if (label) btn.textContent = label;
+      } else {
+        const label = {learn:'01 Learn',shadow:'02 Shadow',memorize:'03 Memorize',test:'04 Test'};
+        btn.textContent = label[mode];
+      }
+    });
+    $('speakingModeTabs').classList.toggle('p1-three-steps', p1);
+    $('shadowIntro').classList.toggle('hidden', p1);
+  }
+  function setMode(mode) {
+    if (state.activePart <= 3 && mode === 'learn') mode = 'shadow';
+    if (state.currentMode !== mode) {stopSpeech();stopTimer(true);}
+    state.currentMode = mode;
+    if([2,3].includes(state.activePart) && currentItem()){
+      $('questionText').textContent = mode==='test' ? currentQuestionText() : 'Practise all three questions in this topic';
+    }
+    configureP1Modes_();
+    $$('#speakingModeTabs .mode-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
+    $('speakingMemorizeLevels').classList.toggle('hidden',mode!=='memorize');
+    ['learn','shadow','memorize','test'].forEach(name => $(name + 'Mode').classList.toggle('hidden', name !== mode || ([2,3].includes(state.activePart) && mode !== 'test')));
+    const unified=$('p2Unified');
+    if(unified)unified.classList.toggle('hidden',![2,3].includes(state.activePart)||!['shadow','memorize'].includes(mode));
+    if([2,3].includes(state.activePart)){if(mode!=='test')renderP2Unified_();renderP2TestOutline_();}
+    // The timer and manual completion belong to Learn/Test, never Memorize.
+    // Class-driven visibility avoids touching the timer engine or save policy.
+    $('speakingPracticeTimer').classList.toggle('hidden',mode==='memorize');
+    $('markLearnedBtn').closest('.speaking-completion-actions').classList.toggle('hidden',mode==='memorize');
+    if (mode === 'test') resetTimerDisplay();
+  }
+
+  function setMemorizeLevel(level) {
+    if(![1,2].includes(Number(level)))return;
+    stopSpeech();
+    state.memorizeLevel=Number(level);
+    $$('#speakingMemorizeLevels .level-btn').forEach(btn=>{
+      const active=Number(btn.dataset.level)===state.memorizeLevel;
+      btn.classList.toggle('active',active);
+      btn.setAttribute('aria-pressed',String(active));
+    });
+    renderMemorize();
+    if([2,3].includes(state.activePart)&&state.currentMode==='memorize')renderP2Unified_();
+  }
+
+  const p1Drafts_=Object.create(null); // Session only; never stored in Sheets.
+  function renderMemorize() {
+    const item=currentItem(),container=$('p1TypingArea');
+    if(!item||!container)return;
+    const answer=currentModel();
+    speakingRenderMemorize_({
+      container,answer,level:state.memorizeLevel,
+      key:'P1:'+item.id+':L'+state.memorizeLevel,
+      drafts:p1Drafts_,
+      createAudio:()=>createSpeakingAudioControls_(answer,'Memorize full answer')
+    });
+  }
+
+  function currentItem() { return state.items[state.currentIndex] || null; }
+  function currentQuestionText() {
+    const item = currentItem();
+    return state.activePart >= 2 ? (item.questions[state.currentPrompt - 1] || '') : (item.question || '');
+  }
+  function currentModel() {
+    const item = currentItem();
+    return state.activePart >= 2 ? (item.models[state.currentPrompt - 1] || '') : (item.model || '');
+  }
+  function currentKeywords() {
+    const item = currentItem();
+    return state.activePart >= 2 ? (item.keywords[state.currentPrompt - 1] || '') : (item.keywords || '');
+  }
+  function currentStructure() {
+    const item = currentItem();
+    return state.activePart >= 2 ? (item.structures[state.currentPrompt - 1] || '') : '';
+  }
+  function currentProgress() {
+    const item = currentItem();
+    if (state.activePart >= 2) {
+      const prompts = item.promptProgress || [];
+      return prompts[state.currentPrompt - 1] || prompts[0] || item.progress || {};
+    }
+    return item.progress;
+  }
+  function currentProgressId() {
+    const item = currentItem();
+    return state.activePart >= 2 ? item.id + '-' + state.currentPrompt : item.id;
+  }
+  function currentTimerSeconds() {
+    if (!state.data || !state.data.app || !state.data.app.timers) return state.activePart >= 2 ? 45 : 30;
+    if (state.activePart === 3) return Number(state.data.app.timers.part3 || 45);
+    return state.activePart === 2 ? Number(state.data.app.timers.part2 || 45) : Number(state.data.app.timers.part1 || 30);
+  }
+
+</script>
