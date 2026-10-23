@@ -21,6 +21,7 @@
   const CLIENT_CACHE_FRESH_MS = 6 * 60 * 60 * 1000;
   const CLIENT_CACHE_STALE_MS = 7 * 24 * 60 * 60 * 1000;
   const LOADER_WATCHDOG_MS = 10000;
+  const LOADER_HARD_TIMEOUT_MS = 30000;
 
   // S6.1 — Shared Speaking frontend content cache: ONE owner for P1–P4.
   // Cache policy/validation remain Part-specific; storage, stale fallback,
@@ -121,14 +122,16 @@
   const $$ = selector => Array.from(document.querySelectorAll(selector));
 
   let initialized = false;
+  let startupFailure_ = null;
 
   document.addEventListener('DOMContentLoaded', init);
 
   function init() {
     if (initialized) return;
     initialized = true;
-    bindEvents();
-    initSpeechVoices();
+    try {
+      bindEvents();
+      initSpeechVoices();
 
     const cached = readBootstrapCache();
     // Part 1 release gate: old cached 29-question payload must not render on V2.
@@ -143,6 +146,17 @@
     } else {
       loadData({ force: false, blocking: true });
     }
+    } catch (error) {
+      startupFailure_ = error;
+      console.error('SPEAKING_BOOTSTRAP_INIT_FAILED', error);
+      state.refreshing = false;
+      setLoadingVisible(false);
+      $('skillHomeView')?.classList.add('hidden');
+      $('errorView')?.classList.remove('hidden');
+      if ($('errorText')) $('errorText').textContent =
+        'Speaking initialization error: ' + (error?.message || String(error)) + '. Reload staging.';
+      setSyncStatus('Initialization failed', 'syncing');
+    }
   }
 
   function enter() {
@@ -150,7 +164,10 @@
     $('studyView').classList.add('hidden');
     $('progressView').classList.add('hidden');
     $('homeView').classList.add('hidden');
-    if (state.data) {
+    if (startupFailure_) {
+      setLoadingVisible(false);
+      $('errorView')?.classList.remove('hidden');
+    } else if (state.data) {
       setLoadingVisible(false);
       $('errorView').classList.add('hidden');
       showHome();
@@ -193,7 +210,7 @@
     $('skillRecommendationBtn').addEventListener('click', openRecommendedSpeakingPart);
     $$('.prompt-step').forEach(btn => btn.addEventListener('click', () => setPrompt(Number(btn.dataset.prompt))));
     $$('#speakingModeTabs .mode-tab').forEach(btn => btn.addEventListener('click', () => setMode(btn.dataset.mode)));
-    $('#speakingMemorizeLevels .level-btn').forEach(btn => btn.addEventListener('click', () => setMemorizeLevel(Number(btn.dataset.level))));
+    $$('#speakingMemorizeLevels .level-btn').forEach(btn => btn.addEventListener('click', () => setMemorizeLevel(Number(btn.dataset.level))));
     $$('.rating-btn').forEach(btn => btn.addEventListener('click', () => finishSelfRating(Number(btn.dataset.rating))));
     $$('#homeView .focus-card').forEach(btn => btn.addEventListener('click', () => applyFilter(btn.dataset.filterTarget)));
 
@@ -375,16 +392,32 @@
       }
     }, LOADER_WATCHDOG_MS) : null;
 
-    google.script.run
-      .withSuccessHandler(function(data) {
-        if (watchdog) clearTimeout(watchdog);
-        onBootstrap(data, { background: !blocking });
-      })
-      .withFailureHandler(function(err) {
-        if (watchdog) clearTimeout(watchdog);
-        onError(err, { background: !blocking });
-      })
-      .getBootstrapData(Boolean(opts.force));
+    // A server error must not leave an infinite spinner. Late success may recover.
+    const hardTimeout = blocking ? setTimeout(function() {
+      if (!state.data) onError(new Error(
+        'No Speaking data after 30 seconds. Check Apps Script executions and reload.'
+      ), { background: false });
+    }, LOADER_HARD_TIMEOUT_MS) : null;
+    const clearLoadTimers = () => {
+      if (watchdog) clearTimeout(watchdog);
+      if (hardTimeout) clearTimeout(hardTimeout);
+    };
+    try {
+      if (!google?.script?.run) throw new Error('Google Apps Script runtime unavailable.');
+      google.script.run
+        .withSuccessHandler(function(data) {
+          clearLoadTimers();
+          onBootstrap(data, { background: !blocking });
+        })
+        .withFailureHandler(function(err) {
+          clearLoadTimers();
+          onError(err, { background: !blocking });
+        })
+        .getBootstrapData(Boolean(opts.force));
+    } catch (error) {
+      clearLoadTimers();
+      onError(error, { background: !blocking });
+    }
   }
 
   function refreshDataInBackground(force) {
@@ -1275,7 +1308,7 @@
       $('questionText').textContent = mode==='test' ? currentQuestionText() : 'Practise all three questions in this topic';
     }
     configureP1Modes_();
-    $('#speakingModeTabs .mode-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
+    $$('#speakingModeTabs .mode-tab').forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
     $('speakingMemorizeLevels').classList.toggle('hidden',mode!=='memorize');
     ['learn','shadow','memorize','test'].forEach(name => $(name + 'Mode').classList.toggle('hidden', name !== mode || ([2,3].includes(state.activePart) && mode !== 'test')));
     const unified=$('p2Unified');
