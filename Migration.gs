@@ -1,9 +1,40 @@
+/**
+ * S7.2 version safety. Supports only the historical Google Sheets Date
+ * rendering of X.Y.Z (one-digit patch), e.g. 3.2.0 -> 3.2.2000 and
+ * 2.1.0 -> 2.1.2000. No arbitrary dates/versions are accepted.
+ * Pure function; used by ensureSchema_ and read-only QA.
+ */
+function speakingStoredVersionMatches_(stored, expected) {
+  const actual = String(stored == null ? '' : stored).trim();
+  const target = String(expected == null ? '' : expected).trim();
+  if (actual === target) return true;
+  const parts = target.split('.');
+  return parts.length === 3 && /^\d+$/.test(parts[0]) &&
+    /^\d+$/.test(parts[1]) && /^\d$/.test(parts[2]) &&
+    actual === parts[0] + '.' + parts[1] + '.200' + parts[2];
+}
+
+/**
+ * Fail closed before any migration writes. This is deliberately read-only.
+ * A missing/empty curated bank must be restored from an approved backup,
+ * rather than mutated by a partial migration.
+ */
+function assertSpeakingMigrationBanksReady_(ss) {
+  [SHEET_NAMES.SPEAKING_P1,SHEET_NAMES.SPEAKING_P2,SHEET_NAMES.SPEAKING_P3].forEach(function(name) {
+    const sheet = ss.getSheetByName(name);
+    if (!sheet || sheet.getLastRow() < 2) {
+      throw new Error('Migration blocked: curated Speaking bank missing or empty: '+name);
+    }
+  });
+}
+
 function runMigrations() {
   const ss = getDatabase_();
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
 
   try {
+    assertSpeakingMigrationBanksReady_(ss);
     const report = [];
 
     const settings = ensureSheetWithHeaders_(ss, SHEET_NAMES.SETTINGS, HEADERS.SETTINGS, report);
@@ -29,11 +60,13 @@ function runMigrations() {
     } else {
       report.push('P2 existing bank preserved; no destructive seed replay.');
     }
+    // P3 legacy Q1-only seeding is quarantined, even when the bank is empty.
+    // It can erase Q2/Q3 and revive inactive topics. Populate P3 only through
+    // a separately reviewed restoration procedure against the Phase 0 backup.
     if (p3.getLastRow() < 2) {
-      upgradeSpeakingPart3Description_(p3, settings, report);
-    } else {
-      report.push('P3 existing bank preserved; no destructive seed replay.');
+      throw new Error('P3 bank is empty. Restore the approved bank from backup; automatic Q1-only seed is disabled.');
     }
+    report.push('P3 production bank preserved; legacy Q1-only seed disabled.');
 
     const mediaCount = ensurePart2MediaAssets_(ss, p2, media, report);
     if (mediaCount) report.push('Prepared ' + mediaCount + ' Speaking Part 2 source images in Drive.');
@@ -76,10 +109,10 @@ function ensureSchema_() {
   const currentP2 = settings ? getSetting_(settings, 'p2_description_version') : '';
   const currentP3 = settings ? getSetting_(settings, 'p3_description_version') : '';
 
-  if (currentSchema !== APP_CONFIG.SCHEMA_VERSION ||
+  if (!speakingStoredVersionMatches_(currentSchema, APP_CONFIG.SCHEMA_VERSION) ||
       currentP1 !== PART1_CONTENT_VERSION ||
-      currentP2 !== PART2_DESCRIPTION_VERSION ||
-      currentP3 !== PART3_DESCRIPTION_VERSION) {
+      !speakingStoredVersionMatches_(currentP2, PART2_DESCRIPTION_VERSION) ||
+      !speakingStoredVersionMatches_(currentP3, PART3_DESCRIPTION_VERSION)) {
     runMigrations();
   }
   cache.put(key, expected, APP_CONFIG.CACHE_SECONDS);
