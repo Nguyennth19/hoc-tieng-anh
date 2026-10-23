@@ -9,7 +9,7 @@ function testPart4FullSourceHardQAReadOnly() {
   const speaking = source('ViewSpeaking');
   const p4 = source('ViewSpeakingPart4');
   const js = source('JS_SpeakingPart4');
-  const commonJs = source('JS_Speaking');
+  const commonJs = speakingCombinedJSReadOnly_();
   const style = source('Styles_SpeakingPart4');
   const commonStyle = source('Styles_Speaking');
   const ids = {};
