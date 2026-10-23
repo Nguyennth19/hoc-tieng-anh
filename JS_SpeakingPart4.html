@@ -240,60 +240,21 @@ function p4MakeMemorizeAudio_(index){
 function p4RenderMemorize_(){
   const wrap=byId('p4Content'),api=window.AptisSpeakingMemorize;
   wrap.replaceChildren();
-  if(!api){wrap.textContent='Memorize tools are unavailable. Reload the QA app.';return;}
+  if(!api?.render){wrap.textContent='Memorize tools are unavailable. Reload the QA app.';return;}
   (S.current?.questions||[]).forEach((question,i)=>{
     const answer=String(S.current?.models?.[i]||'');
-    const card=document.createElement('article');card.className='speaking-question-card p4-memorize-card';
+    if(!answer.trim()||!String(question||'').trim())return;
+    const card=document.createElement('article');
+    card.className='speaking-question-card p4-memorize-card speaking-memorize-question-card';
     card.dataset.p4MemCard=String(i);
-    const title=document.createElement('h3');title.textContent='Q'+(i+1)+' · '+question;card.appendChild(title);
-    const prompt=document.createElement('p');prompt.className='p2-memory-hint';
-    prompt.textContent=S.memLevel===3?'Listen, then write the full answer from memory.':'Fill in the missing words (Level '+S.memLevel+').';
-    card.appendChild(prompt);
-    const key=p4MemKey_(i),draft=P4_MEM_DRAFTS[key]||(S.memLevel===3?'':{});
-    if(S.memLevel===3){
-      card.appendChild(p4MakeMemorizeAudio_(i));
-      const area=document.createElement('textarea');area.className='p2-dictation';area.rows=5;
-      area.placeholder='Write the full answer for Q'+(i+1)+' here...';
-      area.setAttribute('aria-label','Part 4 Q'+(i+1)+' dictation');
-      area.value=typeof draft==='string'?draft:'';
-      area.addEventListener('input',()=>{P4_MEM_DRAFTS[key]=area.value;});card.appendChild(area);
-    }else{
-      const plan=api.plan(answer,S.memLevel),line=document.createElement('div');
-      line.className='p2-cloze-line';let blankIndex=0;
-      plan.parts.forEach(piece=>{
-        if(!piece.blank){line.appendChild(document.createTextNode(piece.text));return;}
-        const n=blankIndex++,input=document.createElement('input');input.type='text';
-        input.className='p1-cloze-input';input.autocomplete='off';input.spellcheck=false;
-        input.placeholder='_____';input.dataset.p4Blank=String(n);
-        input.setAttribute('aria-label','Q'+(i+1)+' missing word '+(n+1));
-        input.value=(draft&&typeof draft==='object'?draft[n]:'')||'';
-        input.addEventListener('input',()=>{if(!P4_MEM_DRAFTS[key]||typeof P4_MEM_DRAFTS[key]!=='object')P4_MEM_DRAFTS[key]={};P4_MEM_DRAFTS[key][n]=input.value;});
-        line.appendChild(input);
-      });card.appendChild(line);
-    }
-    const actions=document.createElement('div');actions.className='p2-memory-actions';
-    const check=document.createElement('button');check.className='primary-btn';check.type='button';check.textContent='Check Q'+(i+1);
-    const reveal=document.createElement('button');reveal.className='secondary-btn';reveal.type='button';reveal.textContent='Show answer';
-    const feedback=document.createElement('span');feedback.setAttribute('role','status');feedback.className='p4-memorize-feedback';
-    check.addEventListener('click',()=>{
-      if(S.memLevel===3){
-        const value=card.querySelector('textarea')?.value||'';
-        feedback.textContent=value.trim()?'Word recall '+api.recallScore(answer,value)+'%. Check meaning as well.':'Write an answer first.';
-        return;
-      }
-      const plan=api.plan(answer,S.memLevel);
-      const inputs=Array.from(card.querySelectorAll('[data-p4-blank]'));
-      let correct=0;
-      inputs.forEach((input,n)=>{
-        const ok=api.normalize(input.value)===api.normalize(plan.blanks[n]);
-        input.classList.toggle('p1-cloze-correct',ok);
-        input.classList.toggle('p1-cloze-wrong',!ok);
-        if(ok)correct++;
-      });
-      feedback.textContent=correct+'/'+plan.blanks.length+' words correct.';
+    const title=document.createElement('h3');title.textContent='Q'+(i+1)+' · '+question;
+    card.appendChild(title);
+    api.render({
+      container:card,answer,level:S.memLevel,
+      key:'P4:'+p4MemKey_(i),drafts:P4_MEM_DRAFTS,
+      createAudio:()=>p4MakeMemorizeAudio_(i)
     });
-    reveal.addEventListener('click',()=>{feedback.textContent=answer;});
-    actions.append(check,reveal,feedback);card.appendChild(actions);wrap.appendChild(card);
+    wrap.appendChild(card);
   });
 }
 function p4RenderStudyCards_(){
@@ -504,7 +465,7 @@ function setP4Step_(step) {
   const wantExam=step==='test',nextMode=wantExam?'exam':'learn';
   S.studyStep=step;
   byId('p4Mode').value=nextMode;
-  // Hidden study-mode setting no longer controls Memorize: LV1–LV3 render directly.
+  // Hidden study-mode setting is independent of the two shared Memorize levels.
   if(!wantExam)byId('p4StudyView').value='full';
   document.querySelectorAll('[data-p4-step]').forEach(btn=>{
     const active=btn.dataset.p4Step===step;
@@ -621,7 +582,7 @@ document.addEventListener('DOMContentLoaded',()=>{
  document.querySelectorAll('[data-p4-step]').forEach(btn=>btn.addEventListener('click',()=>setP4Step_(btn.dataset.p4Step)));
  document.querySelectorAll('#p4MemorizeLevels [data-p4-level]').forEach(btn=>btn.addEventListener('click',()=>{
    const level=Number(btn.dataset.p4Level);
-   if(![1,2,3].includes(level)||S.mode!=='learn'||S.studyStep!=='memorize')return;
+   if(![1,2].includes(level)||S.mode!=='learn'||S.studyStep!=='memorize')return;
    p4StopAudio();S.memLevel=level;
    document.querySelectorAll('#p4MemorizeLevels [data-p4-level]').forEach(item=>{
      const active=Number(item.dataset.p4Level)===level;
