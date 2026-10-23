@@ -22,7 +22,7 @@ function testSpeakingS72ModuleParityReadOnly() {
     'Styles_SpeakingTimer','Styles_SpeakingMemorize','Styles_SpeakingMobile'];
   var jsOrder=['JS_Speaking','JS_SpeakingBootstrap','JS_SpeakingTopicFlow',
     'JS_SpeakingAudioTimer','JS_SpeakingMemorize','JS_SpeakingPart23Flow',
-    'JS_SpeakingLearningFlow','JS_SpeakingExamAudio',
+    'JS_SpeakingPart1Flow','JS_SpeakingLearningFlow','JS_SpeakingExamAudio',
     'JS_SpeakingProgressTools'];
   var result={version:'S7.2-STRUCTURE-PARITY-20261023',readOnly:true,
     // User's Apps Script staging snapshot differs from the GitHub source.
