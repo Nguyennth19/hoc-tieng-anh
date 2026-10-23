@@ -1,9 +1,24 @@
+/**
+ * Fail closed before any migration writes. This is deliberately read-only.
+ * A missing/empty curated bank must be restored from an approved backup,
+ * rather than mutated by a partial migration.
+ */
+function assertSpeakingMigrationBanksReady_(ss) {
+  [SHEET_NAMES.SPEAKING_P1,SHEET_NAMES.SPEAKING_P2,SHEET_NAMES.SPEAKING_P3].forEach(function(name) {
+    const sheet = ss.getSheetByName(name);
+    if (!sheet || sheet.getLastRow() < 2) {
+      throw new Error('Migration blocked: curated Speaking bank missing or empty: '+name);
+    }
+  });
+}
+
 function runMigrations() {
   const ss = getDatabase_();
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
 
   try {
+    assertSpeakingMigrationBanksReady_(ss);
     const report = [];
 
     const settings = ensureSheetWithHeaders_(ss, SHEET_NAMES.SETTINGS, HEADERS.SETTINGS, report);
@@ -29,11 +44,13 @@ function runMigrations() {
     } else {
       report.push('P2 existing bank preserved; no destructive seed replay.');
     }
+    // P3 legacy Q1-only seeding is quarantined, even when the bank is empty.
+    // It can erase Q2/Q3 and revive inactive topics. Populate P3 only through
+    // a separately reviewed restoration procedure against the Phase 0 backup.
     if (p3.getLastRow() < 2) {
-      upgradeSpeakingPart3Description_(p3, settings, report);
-    } else {
-      report.push('P3 existing bank preserved; no destructive seed replay.');
+      throw new Error('P3 bank is empty. Restore the approved bank from backup; automatic Q1-only seed is disabled.');
     }
+    report.push('P3 production bank preserved; legacy Q1-only seed disabled.');
 
     const mediaCount = ensurePart2MediaAssets_(ss, p2, media, report);
     if (mediaCount) report.push('Prepared ' + mediaCount + ' Speaking Part 2 source images in Drive.');
@@ -76,10 +93,16 @@ function ensureSchema_() {
   const currentP2 = settings ? getSetting_(settings, 'p2_description_version') : '';
   const currentP3 = settings ? getSetting_(settings, 'p3_description_version') : '';
 
-  if (currentSchema !== APP_CONFIG.SCHEMA_VERSION ||
+  const matchesStoredVersion = function(stored, expected) {
+    if (stored === expected) return true;
+    const parts = String(expected).split('.');
+    return parts.length === 3 && parts[2].length === 1 &&
+      stored === parts[0] + '.' + parts[1] + '.200' + parts[2];
+  };
+  if (!matchesStoredVersion(currentSchema, APP_CONFIG.SCHEMA_VERSION) ||
       currentP1 !== PART1_CONTENT_VERSION ||
-      currentP2 !== PART2_DESCRIPTION_VERSION ||
-      currentP3 !== PART3_DESCRIPTION_VERSION) {
+      !matchesStoredVersion(currentP2, PART2_DESCRIPTION_VERSION) ||
+      !matchesStoredVersion(currentP3, PART3_DESCRIPTION_VERSION)) {
     runMigrations();
   }
   cache.put(key, expected, APP_CONFIG.CACHE_SECONDS);
