@@ -79,6 +79,7 @@ function runMigrations() {
     setSetting_(settings, 'last_migration_at', new Date().toISOString());
 
     CacheService.getScriptCache().remove('schema:' + ss.getId());
+    CacheService.getScriptCache().remove('schema:r1:' + ss.getId());
     CacheService.getScriptCache().remove('bootstrap:' + APP_CONFIG.VERSION);
     clearSpeakingContentCache_();
     clearSpeakingProgressCache_();
@@ -96,25 +97,35 @@ function runMigrations() {
   }
 }
 
+/**
+ * R1 read-only bootstrap gate. Opening /dev (and saving progress) must not
+ * silently migrate curated P1-P3, create media, or rewrite SETTINGS.
+ * An authorized operator can still run runMigrations() explicitly after backup.
+ */
 function ensureSchema_() {
+  const ss = getDatabase_();
   const cache = CacheService.getScriptCache();
-  const key = 'schema:' + getDatabase_().getId();
-  const expected = APP_CONFIG.SCHEMA_VERSION + '|p1:' + PART1_CONTENT_VERSION + '|p2:' + PART2_DESCRIPTION_VERSION + '|p3:' + PART3_DESCRIPTION_VERSION;
+  // New namespace avoids inheriting a positive pre-R1 schema cache hit.
+  const key = 'schema:r1:' + ss.getId();
+  const expected = APP_CONFIG.SCHEMA_VERSION + '|p1:' + PART1_CONTENT_VERSION +
+    '|p2:' + PART2_DESCRIPTION_VERSION + '|p3:' + PART3_DESCRIPTION_VERSION;
   if (cache.get(key) === expected) return;
 
-  const ss = getDatabase_();
   const settings = ss.getSheetByName(SHEET_NAMES.SETTINGS);
   const currentSchema = settings ? getSetting_(settings, 'schema_version') : '';
   const currentP1 = settings ? getSetting_(settings, 'p1_content_version') : '';
   const currentP2 = settings ? getSetting_(settings, 'p2_description_version') : '';
   const currentP3 = settings ? getSetting_(settings, 'p3_description_version') : '';
 
-  if (!speakingStoredVersionMatches_(currentSchema, APP_CONFIG.SCHEMA_VERSION) ||
-      currentP1 !== PART1_CONTENT_VERSION ||
-      !speakingStoredVersionMatches_(currentP2, PART2_DESCRIPTION_VERSION) ||
-      !speakingStoredVersionMatches_(currentP3, PART3_DESCRIPTION_VERSION)) {
-    runMigrations();
+  const mismatch = [];
+  if (!speakingStoredVersionMatches_(currentSchema, APP_CONFIG.SCHEMA_VERSION)) mismatch.push('schema_version');
+  if (currentP1 !== PART1_CONTENT_VERSION) mismatch.push('p1_content_version');
+  if (!speakingStoredVersionMatches_(currentP2, PART2_DESCRIPTION_VERSION)) mismatch.push('p2_description_version');
+  if (!speakingStoredVersionMatches_(currentP3, PART3_DESCRIPTION_VERSION)) mismatch.push('p3_description_version');
+  if (mismatch.length) {
+    throw new Error('R1_SCHEMA_VERSION_MISMATCH: ' + mismatch.join(', ') +
+      '. Automatic migration is blocked. Verify SETTINGS and the approved backup; ' +
+      'do not repair or reseed curated banks during bootstrap.');
   }
   cache.put(key, expected, APP_CONFIG.CACHE_SECONDS);
 }
-
