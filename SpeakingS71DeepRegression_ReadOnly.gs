@@ -19,24 +19,71 @@ function testSpeakingS71DeepRegressionReadOnly(){
     else{qa[category].failed.push(name);issues.push({category,name,detail});}
     return ok;
   };
-  const between=(text,start,end)=>{
-    const i=text.indexOf(start),j=i<0?-1:text.indexOf(end,i+start.length);
-    if(i<0||j<=i)throw new Error('Missing boundary '+start.slice(0,50));
+  // Diagnostic always prints before any source slice. If Apps Script staging
+  // has an older/different JS_Speaking.html, explain the mismatch (do not
+  // pretend the current test's 117 checks have run against that version).
+  const sourceProbe={
+    jsSpeakingBytes:js.length,jsPart4Bytes:p4.length,
+    speakingMemorizePlan:/\bfunction\s+speakingMemorizePlan_\s*\(/.test(js),
+    sharedMemorizeModule:/window\.AptisSpeakingMemorize\s*=/.test(js),
+    sharedCache:/window\.AptisSpeakingCache\s*=/.test(js),
+    sharedTimer:/window\.AptisSpeakingTimer\s*=/.test(js),
+    part2Unified:/\bfunction\s+renderP2Unified_\s*\(/.test(js),
+    part4Timer:/\bfunction\s+p4Timer_\s*\(/.test(p4),
+    part4Renderer:/\bfunction\s+p4RenderMemorize_\s*\(/.test(p4)
+  };
+  console.log('SPEAKING_S71_SOURCE_PREFLIGHT '+JSON.stringify(sourceProbe));
+  const findMarker=(text,marker,offset)=>{
+    if(typeof marker==='string')return text.indexOf(marker,offset);
+    // A regex anchor is independent of indentation, line endings and comments.
+    const flags=marker.flags.replace(/g/g,'').replace(/y/g,'');
+    const re=new RegExp(marker.source,flags);
+    const match=re.exec(text.slice(offset));
+    return match?offset+match.index:-1;
+  };
+  const between=(text,start,end,label)=>{
+    const i=findMarker(text,start,0);
+    const j=i<0?-1:findMarker(text,end,i+1);
+    if(i<0||j<=i){
+      const diagnostic={
+        section:label,startFound:i>=0,endFound:j>=0,
+        jsSpeakingBytes:sourceProbe.jsSpeakingBytes,
+        jsPart4Bytes:sourceProbe.jsPart4Bytes,
+        missingS64MemorizeHelper:!sourceProbe.speakingMemorizePlan,
+        sharedMemorizeModule:sourceProbe.sharedMemorizeModule,
+        part4Timer:sourceProbe.part4Timer
+      };
+      console.error('SPEAKING_S71_SOURCE_MISMATCH '+JSON.stringify(diagnostic));
+      throw new Error('S71_SOURCE_MISMATCH ['+label+']: '+(i<0?'start anchor missing':'end anchor missing')+
+        '. Compare JS_Speaking/JS_SpeakingPart4 with accepted S6.4. See SOURCE_PREFLIGHT.');
+    }
     return text.slice(i,j);
   };
   const strip=text=>text.replace(/^\s*<script>/,'').replace(/<\/script>\s*$/,'');
-  const clozeCode=between(js,'  function speakingMemorizePlan_(answer){','  // Shared P2/P3 whole-topic study:');
-  const cacheCode=between(js,'  function createSpeakingContentCache_(){','  const state = {');
-  const timerCode=between(js,'  let speakingActiveTimer_ = null;','  /* Shared confirmation UI');
-  const audioCode=between(js,'  const speakingPlayback_ =','  /* S6: one reusable deadline-safe practice timer engine');
-  const p4Timer=between(p4,'function p4Timer_(){','function p4FormulaHtml(');
-  const p2Unified=between(js,'  function renderP2Unified_(){','  function renderP2TestOutline_(){');
-  const p4Memory=between(p4,'function p4RenderMemorize_(){','function p4RenderStudyCards_(){');
-  const p4Learn=between(p4,'function p4RenderStudyCards_(){','function renderAnswersOnly_(){');
-  const p4Save=between(p4,"byId('p4Save').addEventListener('click',()=>{","byId('p4Read').addEventListener('click',()=>{");
-  const saving1=between(js,'  function saveProgress(rating, status) {','  function recalcPart2Aggregate(item) {');
-  const mode1=between(js,'  function setMode(mode) {','  function setMemorizeLevel(level) {');
-  const p4Apply=between(p4,'function p4ApplyStudyMode(){','function p4ApplyMastery_(');
+  const clozeCode=between(js,/\bfunction\s+speakingMemorizePlan_\s*\(/,
+    /\bfunction\s+p2Card_\s*\(/,'shared Memorize P1-P4');
+  const cacheCode=between(js,/\bfunction\s+createSpeakingContentCache_\s*\(/,
+    /\bconst\s+state\s*=/,'shared cache');
+  const timerCode=between(js,/\blet\s+speakingActiveTimer_\s*=/,
+    /\blet\s+speakingConfirmPending_\s*=/,'shared Timer');
+  const audioCode=between(js,/\bconst\s+speakingPlayback_\s*=/,
+    /\blet\s+speakingActiveTimer_\s*=/,'shared Audio');
+  const p4Timer=between(p4,/\bfunction\s+p4Timer_\s*\(/,
+    /\bfunction\s+p4FormulaHtml\s*\(/,'Part 4 Timer');
+  const p2Unified=between(js,/\bfunction\s+renderP2Unified_\s*\(/,
+    /\bfunction\s+renderP2TestOutline_\s*\(/,'P2/P3 topic render');
+  const p4Memory=between(p4,/\bfunction\s+p4RenderMemorize_\s*\(/,
+    /\bfunction\s+p4RenderStudyCards_\s*\(/,'P4 Memorize');
+  const p4Learn=between(p4,/\bfunction\s+p4RenderStudyCards_\s*\(/,
+    /\bfunction\s+renderAnswersOnly_\s*\(/,'P4 Learn');
+  const p4Save=between(p4,/byId\s*\(\s*['"]p4Save['"]\s*\)\.addEventListener\s*\(\s*['"]click['"]/,
+    /byId\s*\(\s*['"]p4Read['"]\s*\)\.addEventListener\s*\(\s*['"]click['"]/,'P4 save action');
+  const saving1=between(js,/\bfunction\s+saveProgress\s*\(/,
+    /\bfunction\s+recalcPart2Aggregate\s*\(/,'P1-P3 Progress');
+  const mode1=between(js,/\bfunction\s+setMode\s*\(/,
+    /\bfunction\s+setMemorizeLevel\s*\(/,'P1-P3 Mode');
+  const p4Apply=between(p4,/\bfunction\s+p4ApplyStudyMode\s*\(/,
+    /\bfunction\s+p4ApplyMastery_\s*\(/,'P4 Modes');
 
   // A. UI and integration contract — source-level, no fake visual acceptance.
   assert('learn','P1 one-paragraph teacher model',()=>js.includes("className = 'p1-learn-paragraph'")&&js.includes('renderSharedFormulaText(paragraph, currentModel())'));
@@ -68,7 +115,7 @@ function testSpeakingS71DeepRegressionReadOnly(){
   assert('timer','Mode switch stops old P1-P3 timer',()=>mode1.includes("stopSpeech();stopTimer(true);"));
   assert('timer','P1-P3 Memorize hides timer',()=>mode1.includes("$('speakingPracticeTimer').classList.toggle('hidden',mode==='memorize')"));
   assert('timer','P4 Memorize hides timer',()=>p4Apply.includes("byId('p4PracticeTimer').hidden=memorizing;"));
-  assert('timer','P1-P3 timer performs no writes',()=>!timerCode.includes('google.script.run')&&!between(js,'  let speakingMainPracticeTimer_=null;','  function formatTime(seconds)').includes('google.script.run'));
+  assert('timer','P1-P3 timer performs no writes',()=>!timerCode.includes('google.script.run')&&!between(js,/\blet\s+speakingMainPracticeTimer_\s*=/,/\bfunction\s+formatTime\s*\(/,'P1-P3 Timer').includes('google.script.run'));
   assert('timer','P4 timer performs no writes',()=>!p4Timer.includes('google.script.run')&&!p4Timer.includes('.saveSpeakingPart4'));
   assert('timer','P4 active exam survives background cache update',()=>p4.includes("if(['prep','speak'].includes(S.phase))return;"));
   assert('timer','P4 switches mode with active clock cleanup',()=>p4.includes("if(['prep','speak'].includes(S.phase)){"));
