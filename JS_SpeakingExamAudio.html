@@ -1,0 +1,113 @@
+<script>  function p123Timer_(){
+    if(speakingMainPracticeTimer_)return speakingMainPracticeTimer_;
+    speakingMainPracticeTimer_=window.AptisSpeakingTimer.create(function(snap){
+      state.timerElapsed=snap.elapsedSeconds;
+      state.timerRunning=snap.status==='running';
+      $('timer').textContent=window.AptisSpeakingTimer.format(snap.remainingSeconds);
+       $('startTimerBtn').disabled=snap.status==='running';
+      $('startTimerBtn').textContent=snap.status==='paused'?'▶ Resume':'▶ Start speaking';
+      $('pauseTimerBtn').disabled=snap.status!=='running';
+      $('stopTimerBtn').disabled=!['running','paused'].includes(snap.status);
+    },function(){
+      // Timer completion is UI-only. Rating/Mark learned remain explicit learner actions.
+      if(state.currentMode==='test'){
+        $('selfCheck').classList.remove('hidden');
+        toast('Time. Rate your answer if you wish.');
+      }
+    });
+    return speakingMainPracticeTimer_;
+  }
+  function startTimer(){
+    stopSpeech();
+    const timer=p123Timer_();
+    if(timer.snapshot().status==='paused')timer.resume();
+    else {$('selfCheck').classList.add('hidden');timer.start(currentTimerSeconds());}
+  }
+  function pauseTimer(){p123Timer_().pause();}
+  function stopTimer(silent){
+    const timer=p123Timer_();
+    if(silent){
+      timer.stop(true);state.timerElapsed=0;
+      $('timer').textContent=window.AptisSpeakingTimer.format(currentTimerSeconds());
+      $('selfCheck').classList.add('hidden');
+      return;
+    }
+    const previous=timer.snapshot().status;
+    timer.stop(false);
+    if(['running','paused'].includes(previous)&&state.currentMode==='test')
+      $('selfCheck').classList.remove('hidden');
+  }
+  function resetTimerDisplay(){
+    if(speakingMainPracticeTimer_&&['running','paused'].includes(speakingMainPracticeTimer_.snapshot().status))return;
+    $('timer').textContent=window.AptisSpeakingTimer.format(currentTimerSeconds());
+    $('selfCheck').classList.add('hidden');
+  }
+
+  function formatTime(seconds) {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  }
+
+  function initSpeechVoices() {
+    if (!('speechSynthesis' in window)) return;
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    $('accentSelect').value = state.audio.accent;
+    syncSpeedButtons();
+  }
+
+  function loadVoices() {
+    state.voices = window.speechSynthesis.getVoices() || [];
+    populateVoiceSelect();
+  }
+
+  function populateVoiceSelect() {
+    const select = $('voiceSelect');
+    const accent = state.audio.accent || 'en-GB';
+    let voices = state.voices.filter(v => accent === 'en' ? /^en/i.test(v.lang) : v.lang.toLowerCase().startsWith(accent.toLowerCase()));
+    if (!voices.length) voices = state.voices.filter(v => /^en/i.test(v.lang));
+    select.innerHTML = '';
+
+    if (!voices.length) {
+      const opt = document.createElement('option'); opt.value = ''; opt.textContent = 'Browser default English voice'; select.appendChild(opt); return;
+    }
+
+    voices.forEach(v => {
+      const opt = document.createElement('option'); opt.value = v.voiceURI || v.name; opt.textContent = v.name + ' · ' + v.lang; select.appendChild(opt);
+    });
+
+    const storedExists = voices.some(v => (v.voiceURI || v.name) === state.audio.voiceURI);
+    if (!storedExists) {
+      const preferred = voices.find(v => /google|microsoft|samantha|daniel|serena|natural/i.test(v.name)) || voices[0];
+      state.audio.voiceURI = preferred.voiceURI || preferred.name;
+      writeLocal('aptisVoiceURI', state.audio.voiceURI);
+    }
+    select.value = state.audio.voiceURI;
+  }
+
+  function selectedVoice() {
+    return state.voices.find(v => (v.voiceURI || v.name) === state.audio.voiceURI)
+      || state.voices.find(v => v.lang.toLowerCase().startsWith((state.audio.accent || 'en-GB').toLowerCase()))
+      || state.voices.find(v => /^en/i.test(v.lang))
+      || null;
+  }
+
+  function makeUtterance(text) {
+    const u = new SpeechSynthesisUtterance(text);
+    const voice = selectedVoice();
+    if (voice) { u.voice = voice; u.lang = voice.lang; }
+    else u.lang = state.audio.accent === 'en' ? 'en-GB' : state.audio.accent;
+    u.rate = clamp(Number(state.audio.rate || 0.9), 0.5, 1.4);
+    u.pitch = 1;
+    return u;
+  }
+
+  function speakText(text){sharedAudioPlay_(text,null);}
+  function openAudioSheet() { $('accentSelect').value = state.audio.accent; populateVoiceSelect(); syncSpeedButtons(); $('audioSheet').classList.remove('hidden'); }
+  function closeAudioSheet() { stopSpeech(); $('audioSheet').classList.add('hidden'); }
+  function setSpeechRate(rate) { stopSpeech(); state.audio.rate = clamp(rate,0.5,1.4); writeLocal('aptisRate',String(state.audio.rate)); syncSpeedButtons(); }
+  function syncSpeedButtons() { $$('.speed-btn').forEach(btn => btn.classList.toggle('active', Number(btn.dataset.speed) === Number(state.audio.rate))); }
+
+
+</script>
