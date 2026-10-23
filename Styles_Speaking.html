@@ -454,4 +454,56 @@ button,input,select{font:inherit}button{cursor:pointer}button:disabled{cursor:no
     margin-left:auto;
   }
 }
+
+/* S7.1-B icon-only timer controls on small screens.
+   Preserve original button text in DOM; a mobile-only pseudo-element shows an
+   icon while aria-label/title keeps Start/Resume/Pause/Stop accessible.
+   P1–3 use 3 equal buttons. P4 uses 4 equal buttons.
+   No global clipping and no writes to user progress. */
+@media (max-width:650px){
+  .speaking-shell .speaking-timer-actions{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:5px;
+    align-items:stretch;
+    width:100%;
+    min-width:0;
+  }
+  .speaking-shell #p4PracticeTimer .speaking-timer-actions{
+    grid-template-columns:repeat(4,minmax(0,1fr));
+  }
+  .speaking-shell .speaking-timer-actions button{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    width:100%;
+    min-width:0;
+    min-height:44px;
+    padding:7px 3px;
+    font-size:0!important;
+    line-height:1;
+    white-space:nowrap;
+    overflow:hidden;
+  }
+  .speaking-shell .speaking-timer-actions button::before{
+    content:attr(data-mobile-icon);
+    display:block;
+    font-size:21px;
+    line-height:1;
+    font-weight:850;
+    flex:0 0 auto;
+  }
+}
+@media (max-width:420px){
+  /* Four 44px touch targets cannot reliably fit beside a 60-second clock on
+     a 315px iframe: keep a SINGLE action row below the clock for P4. */
+  .speaking-shell #p4PracticeTimer{
+    grid-template-columns:minmax(0,1fr);
+    row-gap:8px;
+  }
+  .speaking-shell #p4PracticeTimer .timer{
+    min-width:0;
+    text-align:center;
+  }
+}
 </style>
