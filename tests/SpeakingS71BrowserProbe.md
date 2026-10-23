@@ -1,4 +1,4 @@
-# S7.1-B — Chrome /dev Browser Probe v2 (read-only)
+# S7.1-B — Chrome /dev Browser Probe v3 (read-only, includes overflow tracing)
 
 Use **Chrome DevTools → Console → JavaScript context: `userHtmlFrame`** in `APTIS_B2_PART4_UI01_STAGING` `/dev` (not the top-level frame).
 
@@ -6,7 +6,8 @@ Use **Chrome DevTools → Console → JavaScript context: `userHtmlFrame`** in `
 2. Switch Part and Learn / Memorize LV1 / Memorize LV2 / Test **manually**. After each state change execute `S71QA.run()`.
 3. Test desktop and Chrome Device Toolbar widths 360px, 768px, >=1200px.
 4. Execute `S71QA.report()` to view state coverage and problems. Expected **16/16 mode-level states**; viewport confirmations are additional.
-5. Manually listen to audio and test Check / Try again / Show answer; inspect Progress/Mastery before/after only on isolated staging data. This probe never triggers server writes or clicks.
+5. **If horizontal overflow is reported**, run `S71QA.overflow()` in the same `userHtmlFrame` Console context and share `SPEAKING_S71_OVERFLOW_DIAG` to identify the exact out-of-bounds element. This is inspection only—do not hide overflow globally.
+6. Manually listen to audio and test Check / Try again / Show answer; inspect Progress/Mastery before/after only on isolated staging data. This probe never triggers server writes or clicks.
 
 A `WRONG_CONTEXT` result means DevTools is evaluating in the wrong Google Apps Script frame. No application source or Google Sheet is modified. The browser probe is **not** an Apps Script `.gs` file.
 
@@ -155,6 +156,43 @@ A `WRONG_CONTEXT` result means DevTools is evaluating in the wrong Google Apps S
     if(failed.length)console.warn('S7.1 visual issues:',failed);
     return result;
   }
+  function overflow(){
+    var html=document.documentElement;
+    var width=html.clientWidth;
+    var rectData=function(el){
+      var r=el.getBoundingClientRect(),s=getComputedStyle(el);
+      var name=el.tagName.toLowerCase();
+      if(el.id)name+='#'+el.id;
+      else if(el.className&&typeof el.className==='string')name+='.'+el.className.trim().replace(/\s+/g,'.').slice(0,84);
+      var parent=el.parentElement,ancestry=[];
+      for(var i=0;parent&&i<3;i++,parent=parent.parentElement){
+        ancestry.push(parent.id?'#'+parent.id:parent.className&&typeof parent.className==='string'?'.'+parent.className.trim().replace(/\s+/g,'.').slice(0,32):parent.tagName);
+      }
+      return {element:name,parent:ancestry.join(' < '),right:Math.round(r.right*10)/10,
+        left:Math.round(r.left*10)/10,width:Math.round(r.width*10)/10,
+        overflowRight:Math.round((r.right-width)*10)/10,
+        scrollWidth:el.scrollWidth,clientWidth:el.clientWidth,
+        minWidth:s.minWidth,display:s.display,flexShrink:s.flexShrink,
+        whiteSpace:s.whiteSpace,overflowX:s.overflowX};
+    };
+    var offenders=all('body *').filter(function(el){
+      if(!show(el))return false;
+      var r=el.getBoundingClientRect();
+      return (r.right>width+2||r.left< -2)&&r.width>0;
+    }).map(rectData).sort(function(a,b){return b.overflowRight-a.overflowRight;}).slice(0,25);
+    var focus=['.global-topbar','.global-brand','.global-nav',
+      '.global-stage','.skill-page-head','.skill-head-actions',
+      '.speaking-shell','#speakingPart4Future','#p4TopicDetail',
+      '.p4-topic-study-card','.bottom-nav'].map(function(s){
+        var e=q(s);return e&&show(e)?rectData(e):null;
+      }).filter(Boolean);
+    var out={viewport:window.innerWidth,clientWidth:width,scrollWidth:html.scrollWidth,
+      overflowX:Math.max(0,html.scrollWidth-width),
+      offenders:offenders,layoutFocus:focus,readOnly:true};
+    console.log('SPEAKING_S71_OVERFLOW_DIAG '+JSON.stringify(out,null,2));
+    return out;
+  }
+
   function report(){
     var required=[],widths=[360,768,1200];
     for(var part=1;part<=4;part++){
@@ -177,7 +215,7 @@ A `WRONG_CONTEXT` result means DevTools is evaluating in the wrong Google Apps S
     console.log('SPEAKING_S71_BROWSER_REPORT '+JSON.stringify(summary,null,2));
     return summary;
   }
-  window.S71QA=Object.freeze({run:run,report:report,samples:samples,version:'s7.1-browser-v2-20261023'});
+  window.S71QA=Object.freeze({run:run,report:report,overflow:overflow,samples:samples,version:'s7.1-browser-v3-20261023'});
   console.log('S71QA installed. Navigate to a Speaking topic; run S71QA.run(). After collecting states run S71QA.report().');
   return run();
 })();
