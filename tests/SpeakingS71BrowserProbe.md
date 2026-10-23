@@ -1,4 +1,4 @@
-# S7.1-B — Chrome /dev Browser Probe v3 (read-only, includes overflow tracing)
+# S7.1-B — Chrome /dev Browser Probe v4 (read-only, excludes clipped nav descendants from overflow attribution)
 
 Use **Chrome DevTools → Console → JavaScript context: `userHtmlFrame`** in `APTIS_B2_PART4_UI01_STAGING` `/dev` (not the top-level frame).
 
@@ -175,8 +175,23 @@ A `WRONG_CONTEXT` result means DevTools is evaluating in the wrong Google Apps S
         minWidth:s.minWidth,display:s.display,flexShrink:s.flexShrink,
         whiteSpace:s.whiteSpace,overflowX:s.overflowX};
     };
+    // Descendants of a deliberately scrolling/clipping parent may have
+    // huge off-screen rectangles without increasing document scrollWidth.
+    // Ignore these for page-overflow attribution, but retain the parent itself.
+    var insideHorizontalScroller=function(el){
+      var elRect=el.getBoundingClientRect(),parent=el.parentElement;
+      while(parent&&parent!==document.body){
+        var style=getComputedStyle(parent);
+        if(/^(auto|scroll|hidden|clip)$/.test(style.overflowX)){
+          var rect=parent.getBoundingClientRect();
+          if(elRect.right>rect.right+2||elRect.left<rect.left-2)return true;
+        }
+        parent=parent.parentElement;
+      }
+      return false;
+    };
     var offenders=all('body *').filter(function(el){
-      if(!show(el))return false;
+      if(!show(el)||insideHorizontalScroller(el))return false;
       var r=el.getBoundingClientRect();
       return (r.right>width+2||r.left< -2)&&r.width>0;
     }).map(rectData).sort(function(a,b){return b.overflowRight-a.overflowRight;}).slice(0,25);
@@ -215,7 +230,7 @@ A `WRONG_CONTEXT` result means DevTools is evaluating in the wrong Google Apps S
     console.log('SPEAKING_S71_BROWSER_REPORT '+JSON.stringify(summary,null,2));
     return summary;
   }
-  window.S71QA=Object.freeze({run:run,report:report,overflow:overflow,samples:samples,version:'s7.1-browser-v3-20261023'});
+  window.S71QA=Object.freeze({run:run,report:report,overflow:overflow,samples:samples,version:'s7.1-browser-v4-20261023'});
   console.log('S71QA installed. Navigate to a Speaking topic; run S71QA.run(). After collecting states run S71QA.report().');
   return run();
 })();
