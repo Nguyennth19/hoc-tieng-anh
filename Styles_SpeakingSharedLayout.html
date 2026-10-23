@@ -1,0 +1,102 @@
+<style>
+
+/* S6.2: Speaking owns ONE shared content width, matching the usable content
+   inside the 1440px global-stage (24px gutters per side on desktop).
+   Do not add max-width on individual P1/P2/P3/P4 cards or detail sections.
+   Reading/Listening retain their existing --skill-content-max:1120px. */
+.speaking-shell{
+  --skill-content-max:1392px;
+  width:100%;
+  min-width:0;
+}
+.speaking-shell .skill-content-frame{
+  min-width:0;
+  width:min(100%,var(--skill-content-max));
+  max-width:var(--skill-content-max);
+  margin-inline:auto;
+}
+.speaking-shell .speaking-main,
+.speaking-shell #speakingPart4Future{
+  min-width:0;
+  box-sizing:border-box;
+}
+.speaking-shell .study-topline{
+  display:flex;
+  justify-content:flex-end;
+  align-items:center;
+  min-width:0;
+  gap:8px;
+  min-height:44px;
+  margin:0 0 10px;
+}
+.speaking-shell .study-top-actions{
+  display:flex;
+  justify-content:flex-end;
+  align-items:center;
+  gap:8px;
+  width:auto;
+  margin-left:auto;
+  min-width:0;
+}
+.speaking-shell .study-top-actions .study-nav-btn{
+  min-height:44px;
+  flex:0 1 auto;
+  white-space:nowrap;
+}
+.speaking-shell .study-card,
+.speaking-shell .welcome-card,
+.speaking-shell .today-section,
+.speaking-shell .library-section{
+  min-width:0;
+  box-sizing:border-box;
+}
+@media(max-width:650px){
+  .speaking-shell .study-topline{margin-bottom:8px;gap:6px}
+  .speaking-shell .study-top-actions{gap:6px}
+  .speaking-shell .study-top-actions .study-nav-btn{min-width:0;max-width:9rem}
+}
+
+/* S2 shared Speaking layout: all Parts use the same reusable frame from Styles.html.
+   Show the shared selector only on home/library, never inside Topic Detail. */
+.speaking-shell .shared-part-switch{display:none;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:12px auto 16px}
+.speaking-shell .shared-part-switch .part-tab{min-width:0}
+.speaking-shell:not(.p4-mode):has(#homeView:not(.hidden)) .shared-part-switch,
+.speaking-shell.p4-mode:not(.p4-detail-mode) .shared-part-switch{display:grid}
+.speaking-shell .shared-part-switch [data-p4-home].active{background:var(--purple-soft);border-color:#ded9fb;color:var(--purple-2)}
+/* P4 has a different view but uses the same header/selector/content frame.
+   No blanket direct-child hiding: it can hide live settings and error feedback. */
+.speaking-shell.p4-mode > .speaking-main{display:none!important}
+.speaking-shell #speakingPart4Future{padding:0 0 100px;color:var(--ink);font-family:inherit}
+@media(max-width:650px){
+ .speaking-shell .shared-part-switch{gap:5px}
+ .speaking-shell .shared-part-switch .part-tab{padding:8px 5px}
+ .speaking-shell .shared-part-switch .part-tab small{font-size:10px}
+}
+
+
+/* S3 — single Speaking Topic Detail component contract.
+   P1–3 already use .study-topline/.study-card/.mode-tabs/.model-text.
+   P2–3 and P4 reuse the same question-card rule above (no separate P4 card system). */
+.speaking-question-card{min-width:0;width:100%}
+.speaking-answer-panel{width:100%;border-top:1px solid var(--border);padding-top:12px}
+.speaking-answer-panel summary{cursor:pointer;color:var(--purple-2);font-weight:800}
+.speaking-answer-panel .model-text{width:100%;min-width:0;overflow-wrap:anywhere}
+.speaking-answer-panel .inline-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px}
+
+
+/* S4 — One shared audio bar for Speaking Part 1–4.
+   No individual Part owns voice settings, play/pause/stop styling or session status. */
+.speaking-full-answer-row{flex-wrap:wrap}
+.speaking-audio-controls{display:flex;align-items:center;flex-wrap:wrap;gap:8px;max-width:100%;min-width:0}
+.speaking-audio-controls button{display:inline-flex;align-items:center;justify-content:center;min-width:88px;min-height:44px;font:inherit;font-size:13px;font-weight:850;white-space:nowrap}
+.speaking-audio-controls button:disabled{opacity:.5;cursor:not-allowed}
+.speaking-audio-controls button:not(:disabled){cursor:pointer}
+.speaking-mastery-controls{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:16px;padding:16px 0 0;border-top:1px solid var(--border);background:transparent}
+.speaking-mastery-controls>label{font-size:13px;font-weight:850;color:var(--ink)}
+.speaking-mastery-controls>.select{flex:1 1 220px;min-width:0}
+.speaking-mastery-controls>[role="status"]{flex-basis:100%;font-size:12px}
+@media(max-width:650px){
+ .speaking-audio-controls{gap:6px}
+ .speaking-audio-controls button{flex:1 1 82px;min-width:0;padding:9px 7px;font-size:12px}
+ .speaking-mastery-controls>.select{flex-basis:100%}
+}</style>
