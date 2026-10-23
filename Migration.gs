@@ -1,4 +1,20 @@
 /**
+ * S7.2 version safety. Supports only the historical Google Sheets Date
+ * rendering of X.Y.Z (one-digit patch), e.g. 3.2.0 -> 3.2.2000 and
+ * 2.1.0 -> 2.1.2000. No arbitrary dates/versions are accepted.
+ * Pure function; used by ensureSchema_ and read-only QA.
+ */
+function speakingStoredVersionMatches_(stored, expected) {
+  const actual = String(stored == null ? '' : stored).trim();
+  const target = String(expected == null ? '' : expected).trim();
+  if (actual === target) return true;
+  const parts = target.split('.');
+  return parts.length === 3 && /^\d+$/.test(parts[0]) &&
+    /^\d+$/.test(parts[1]) && /^\d$/.test(parts[2]) &&
+    actual === parts[0] + '.' + parts[1] + '.200' + parts[2];
+}
+
+/**
  * Fail closed before any migration writes. This is deliberately read-only.
  * A missing/empty curated bank must be restored from an approved backup,
  * rather than mutated by a partial migration.
@@ -93,16 +109,10 @@ function ensureSchema_() {
   const currentP2 = settings ? getSetting_(settings, 'p2_description_version') : '';
   const currentP3 = settings ? getSetting_(settings, 'p3_description_version') : '';
 
-  const matchesStoredVersion = function(stored, expected) {
-    if (stored === expected) return true;
-    const parts = String(expected).split('.');
-    return parts.length === 3 && parts[2].length === 1 &&
-      stored === parts[0] + '.' + parts[1] + '.200' + parts[2];
-  };
-  if (!matchesStoredVersion(currentSchema, APP_CONFIG.SCHEMA_VERSION) ||
+  if (!speakingStoredVersionMatches_(currentSchema, APP_CONFIG.SCHEMA_VERSION) ||
       currentP1 !== PART1_CONTENT_VERSION ||
-      !matchesStoredVersion(currentP2, PART2_DESCRIPTION_VERSION) ||
-      !matchesStoredVersion(currentP3, PART3_DESCRIPTION_VERSION)) {
+      !speakingStoredVersionMatches_(currentP2, PART2_DESCRIPTION_VERSION) ||
+      !speakingStoredVersionMatches_(currentP3, PART3_DESCRIPTION_VERSION)) {
     runMigrations();
   }
   cache.put(key, expected, APP_CONFIG.CACHE_SECONDS);
