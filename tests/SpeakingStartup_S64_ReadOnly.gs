@@ -6,7 +6,7 @@
  */
 function testSpeakingStartupS64ReadOnly() {
   const read = name => HtmlService.createHtmlOutputFromFile(name).getContent();
-  const common = read('JS_Speaking');
+  const common = speakingCombinedJSReadOnly_();
   const p4 = read('JS_SpeakingPart4');
   const views = ['ViewSpeaking','ViewSpeakingPart1','ViewSpeakingPart2',
     'ViewSpeakingPart3','ViewSpeakingPart4','AppShell'].map(read);
