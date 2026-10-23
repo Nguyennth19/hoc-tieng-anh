@@ -167,6 +167,11 @@
     if (startupFailure_) {
       setLoadingVisible(false);
       $('errorView')?.classList.remove('hidden');
+    } else if (!($('errorView')?.classList.contains('hidden'))) {
+      // A failed Apps Script request may finish before the global router
+      // activates Speaking. Do not resurrect the spinner on navigation.
+      $('skillHomeView')?.classList.add('hidden');
+      setLoadingVisible(false);
     } else if (state.data) {
       setLoadingVisible(false);
       $('errorView').classList.add('hidden');
