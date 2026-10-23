@@ -38,7 +38,7 @@ function s6QaForbiddenWrites_(text){
 }
 /** Zero writes. Compares staging file boundaries, not production data. */
 function diagnoseSpeakingSharedTimerS6ReadOnly(){
-  const c=HtmlService.createHtmlOutputFromFile('JS_Speaking').getContent();
+  const c=speakingCombinedJSReadOnly_();
   const p=HtmlService.createHtmlOutputFromFile('JS_SpeakingPart4').getContent();
   const names=['p4Timer_','stopClock','clock','startSpeaking','endSpeaking'];
   const found=Object.fromEntries(names.map(n=>[n,Boolean(s6QaFunction_(p,n))]));
@@ -64,7 +64,7 @@ function diagnoseSpeakingSharedTimerS6ReadOnly(){
 
 function testSpeakingSharedTimerS6ReadOnly(){
   const src=function(n){return HtmlService.createHtmlOutputFromFile(n).getContent();};
-  const common=src('JS_Speaking'),p4=src('JS_SpeakingPart4');
+  const common=speakingCombinedJSReadOnly_(),p4=src('JS_SpeakingPart4');
   const view=src('ViewSpeaking'),v4=src('ViewSpeakingPart4');
   const styles=speakingCombinedStylesReadOnly_(),p4Styles=src('Styles_SpeakingPart4');
   const has=function(s,t){return s.indexOf(t)!==-1;};
