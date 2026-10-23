@@ -52,7 +52,7 @@ Once done run `S71ResponsiveAudit.report()`. This collects only this browser ses
      if(mobile){
        check(label+index+'SingleRow',b.every(function(x){return Math.abs(x.y-b[0].y)<=2}),
          JSON.stringify(b.map(function(x){return x.y})));
-       check(label+index+'TouchTargets',b.every(function(x){return x.width>=44&&x.height>=44}),
+       check(label+index+'TouchTargets',b.every(function(x){return x.width>=48&&x.height>=48}),
          JSON.stringify(b.map(function(x){return [Math.round(x.width),Math.round(x.height)]})));
        check(label+index+'InsideContainer',b.every(function(x){return x.right<=bounds.right+2}));
        var icon=getComputedStyle(buttons[0],'::before');
