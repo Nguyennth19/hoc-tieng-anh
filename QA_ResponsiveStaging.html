@@ -1,0 +1,128 @@
+<style>
+/* S7.1 staging audit shell, present only when explicit script property is enabled. */
+#s71qa-launch{position:fixed;right:12px;bottom:86px;z-index:2147483000;border:1px solid #4c57aa;background:#333c86;color:white;border-radius:22px;font:700 12px/1 system-ui;padding:12px 14px;box-shadow:0 4px 20px #1114;min-width:48px;min-height:48px;cursor:pointer}
+#s71qa-panel{position:fixed;right:8px;bottom:142px;z-index:2147483001;width:min(420px,calc(100vw - 16px));max-height:min(75vh,650px);display:flex;flex-direction:column;gap:8px;box-sizing:border-box;padding:14px;border:1px solid #b9c5eb;background:#fff;color:#172044;border-radius:16px;box-shadow:0 12px 38px #0004;font:13px/1.5 system-ui}
+#s71qa-panel[hidden]{display:none!important}
+#s71qa-panel h3{margin:0;font-size:16px}#s71qa-panel p{margin:0;color:#55627b}
+#s71qa-panel .s71-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+#s71qa-panel button{font:600 12px system-ui;border:1px solid #b7c1e0;border-radius:9px;background:#f4f6ff;color:#172044;padding:9px 5px;min-height:44px;cursor:pointer}
+#s71qa-panel pre{min-width:0;overflow:auto;max-height:190px;margin:0;padding:8px;border-radius:8px;background:#f5f6fa;font:11px/1.4 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}
+#s71qa-panel textarea{width:100%;min-height:88px;max-height:150px;resize:vertical;box-sizing:border-box;font:12px/1.4 ui-monospace,monospace}
+#s71qa-panel .s71-status{font-weight:700}#s71qa-panel .s71-status[data-ok="false"]{color:#bb3434}
+@media(max-width:420px){#s71qa-launch{right:7px;bottom:76px}#s71qa-panel{right:4px;bottom:131px;width:calc(100vw - 8px)}}
+</style>
+<script>
+(function(){
+'use strict';
+if(window.S71ResponsiveAudit&&window.S71ResponsiveAudit.version==='s71-staging-qa-v1')return;
+var records=[],last=null,activated=false,pending=0,enabled=false;
+var sel=function(s,root){return(root||document).querySelector(s);};
+var list=function(s,root){return Array.prototype.slice.call((root||document).querySelectorAll(s));};
+var visible=function(el){
+ if(!el||!el.isConnected)return false;
+ for(var cur=el;cur&&cur.nodeType===1;cur=cur.parentElement){
+  var style=getComputedStyle(cur);
+  if(cur.hidden||cur.classList.contains('hidden')||style.display==='none'||style.visibility==='hidden')return false;
+ }
+ var r=el.getBoundingClientRect();return r.width>0&&r.height>0;
+};
+var dims=function(el){var r=el.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height,right:r.right,bottom:r.bottom};};
+var note=function(msg){var target=sel('#s71qa-summary');if(target)target.textContent=msg;};
+function inspect(){
+ var problems=[],checks=[];
+ function test(key,ok,detail){var entry={key:key,pass:Boolean(ok),detail:detail||''};checks.push(entry);if(!ok)problems.push(entry);}
+ var html=document.documentElement,client=html.clientWidth;
+ var current=list('.app-page.active')[0],page=current?current.id.replace(/^page-/,''):'unknown';
+ test('appMounted',!!sel('#globalApp'));test('pageIdentified',page!=='unknown');
+ test('noDocumentOverflow',html.scrollWidth-client<=2,'overflow='+Math.max(0,html.scrollWidth-client)+'px');
+ var groups=page==='speaking'?list('.speaking-audio-controls,.speaking-timer-actions',current).filter(visible):[];
+ var mobile=window.innerWidth<=650;
+ groups.forEach(function(group,n){
+  var buttons=list('button',group).filter(visible);if(!buttons.length)return;
+  var kind=group.classList.contains('speaking-audio-controls')?'Audio':'Timer';
+  test(kind+n+'Controls',buttons.length>=3&&buttons.length<=4,'count='+buttons.length);
+  if(mobile){
+   var r=buttons.map(dims),container=dims(group);
+   test(kind+n+'SingleRow',r.every(function(x){return Math.abs(x.y-r[0].y)<3;}));
+   test(kind+n+'Touch',r.every(function(x){return x.width>=48&&x.height>=48;}),JSON.stringify(r.map(function(x){return [Math.round(x.width),Math.round(x.height)]})));
+   test(kind+n+'Fits',r.every(function(x){return x.right<=container.right+2;}));
+   var icon=getComputedStyle(buttons[0],'::before');
+   test(kind+n+'Icon',icon.content!=='none'&&parseFloat(icon.fontSize)<=20,icon.content+' '+icon.fontSize);
+  }
+  if(kind==='Audio')test('Audio'+n+'HasNames',buttons.every(function(x){return !!(x.getAttribute('aria-label')||x.textContent.trim()||x.title)}));
+ });
+ if(page==='writing')list('textarea,select',current).filter(visible).forEach(function(x,i){
+  test('Writing'+i+'InputFont',parseFloat(getComputedStyle(x).fontSize)>=16);
+  test('Writing'+i+'Fits',dims(x).right<=client+2);
+ });
+ var part=0,mode='library',level=0;
+ if(page==='speaking'){
+  var p4=visible(sel('#speakingPart4Future'));
+  var activeNav=list('.bottom-nav [data-nav]').find(function(x){return x.classList.contains('active')||x.getAttribute('aria-current')==='page';});
+  var activePart=list('.shared-part-switch [data-part]').find(function(x){return x.classList.contains('active');});
+  part=p4?4:Number(activeNav&&String(activeNav.dataset.nav||'').replace('part','')||activePart&&activePart.dataset.part||0);
+  if(p4){
+   var step=list('[data-p4-step]',sel('#p4TopicDetail')||document).find(function(x){return x.classList.contains('active');});
+   mode=visible(sel('#p4TopicDetail'))?(step&&step.dataset.p4Step||'learn'):'library';
+   if(mode==='memorize'){var l=sel('#p4MemorizeLevels .level-btn.active');level=Number(l&&l.dataset.p4Level||0);}
+  }else if(visible(sel('#studyView'))){
+   var tab=sel('#speakingModeTabs .mode-tab.active');
+   mode=tab&&tab.dataset.mode==='shadow'?'learn':tab&&tab.dataset.mode||'learn';
+   if(mode==='memorize'){var lvl=sel('#speakingMemorizeLevels .level-btn.active');level=Number(lvl&&lvl.dataset.level||0);}
+  }
+ }
+ var result={ok:problems.length===0,version:'s71-staging-qa-v1',page:page,part:part,mode:mode,level:level,
+  viewport:innerWidth,clientWidth:client,overflowX:Math.max(0,html.scrollWidth-client),
+  passed:checks.length-problems.length,total:checks.length,failed:problems,readOnly:true,
+  timestamp:new Date().toISOString()};
+ records.push(result);last=result;
+ note((result.ok?'PASS':'FAIL')+' · '+page+(part?' Part '+part:'')+' · '+mode+' · '+result.passed+'/'+result.total+
+  (result.overflowX?' · overflow '+result.overflowX+'px':''));
+ return result;
+}
+function report(){
+ var pages=['home','overview','speaking','listening','reading','writing','grammar'];
+ var states=[];for(var p=1;p<=4;p++)for(var mode of ['learn','memorize','test']){
+  var levels=mode==='memorize'?[1,2]:[0];
+  levels.forEach(function(level){states.push({part:p,mode:mode,level:level,
+   observed:records.some(function(r){return r.ok&&r.page==='speaking'&&r.part===p&&r.mode===mode&&r.level===level;})});});
+ }
+ return{version:'s71-staging-qa-v1',samples:records.length,passing:records.filter(function(r){return r.ok}).length,
+  failing:records.filter(function(r){return !r.ok}).length,
+  pages:pages.map(function(p){return{page:p,observed:records.some(function(r){return r.ok&&r.page===p})}}),
+  states:states,coverage:states.filter(function(x){return x.observed}).length+'/16',
+  last:last,limitations:['No audible sound validation','No actual click behavior validation','No reload persistence validation','No Sheets or server write validation']};
+}
+function showReport(){
+ var output=report(),target=sel('#s71qa-output');if(target)target.value=JSON.stringify(output,null,2);
+ note('Report · '+output.coverage+' states · '+output.samples+' checks');
+ console.log('S71_QA_REPORT '+JSON.stringify(output));
+ return output;
+}
+function schedule(){
+ if(pending)clearTimeout(pending);
+ pending=setTimeout(function(){pending=0;if(document.visibilityState!=='hidden'){inspect();}},250);
+}
+function mount(){
+ if(activated)return;activated=true;
+ var launch=document.createElement('button');launch.id='s71qa-launch';launch.type='button';
+ launch.textContent='QA';launch.setAttribute('aria-label','Open staging responsive QA');
+ var panel=document.createElement('section');panel.id='s71qa-panel';panel.hidden=true;panel.setAttribute('aria-label','Staging responsive QA tools');
+ panel.innerHTML='<h3>Responsive QA · STAGING</h3><p>Read-only checks. No Apps Script or Sheets writes.</p>'+
+  '<div class="s71-actions"><button type="button" id="s71qa-run">Run</button><button type="button" id="s71qa-report">Report</button><button type="button" id="s71qa-close">Close</button></div>'+
+  '<div class="s71-status" id="s71qa-summary" role="status">Ready</div>'+
+  '<pre>Open each page or Speaking mode to collect checks.</pre>'+
+  '<textarea id="s71qa-output" readonly aria-label="Copy QA report"></textarea>';
+ document.body.appendChild(launch);document.body.appendChild(panel);
+ launch.addEventListener('click',function(){panel.hidden=!panel.hidden;if(!panel.hidden){inspect();}});
+ sel('#s71qa-close').addEventListener('click',function(){panel.hidden=true;});
+ sel('#s71qa-run').addEventListener('click',function(){var data=inspect();console.log('S71_QA_RESULT '+JSON.stringify(data));});
+ sel('#s71qa-report').addEventListener('click',showReport);
+ document.addEventListener('click',function(e){if(e.target.closest('#s71qa-panel,#s71qa-launch'))return;schedule();});
+ window.addEventListener('resize',schedule);
+ inspect();
+}
+window.S71ResponsiveAudit=Object.freeze({run:inspect,report:report,showReport:showReport,records:records,version:'s71-staging-qa-v1'});
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);else mount();
+})();
+</script>
