@@ -1,0 +1,48 @@
+<script>  // Shared P2/P3 whole-topic study: one Learn/Memorize/Test flow, stable prompt IDs.
+  const p2Drafts_ = Object.create(null);
+  function p2Card_(slot, heading, model) {
+    const card=document.createElement('section'); card.className='p2-topic-card';
+    const title=document.createElement('h3');title.textContent='Q'+slot+' · '+heading;card.appendChild(title);
+    const words=document.createElement('div');words.className='p2-topic-answer';card.appendChild(words);
+    renderSharedFormulaText(words,model);
+    card.appendChild(createSpeakingAudioControls_(model,'Listen Q'+slot));return card;
+  }
+  function renderP2Unified_(){
+    const wrapper=$('p2Unified'),list=$('p2UnifiedCards'),footer=$('p2UnifiedFooter'),item=currentItem();
+    if(!wrapper||!item||![2,3].includes(state.activePart))return;
+    list.replaceChildren();footer.replaceChildren();
+    const q=item.questions||[],m=item.models||[],isMemory=state.currentMode==='memorize';
+    for(let i=0;i<3;i++){
+      const question=String(q[i]||'').trim(),answer=String(m[i]||'').trim();
+      if(!question||!answer)continue;
+      if(!isMemory){list.appendChild(p2Card_(i+1,question,answer));continue;}
+      const card=document.createElement('section');card.className='p2-topic-card speaking-memorize-question-card';
+      const title=document.createElement('h3');title.textContent='Q'+(i+1)+' · '+question;
+      card.appendChild(title);
+      speakingRenderMemorize_({
+        container:card,answer,level:state.memorizeLevel,
+        key:'P'+state.activePart+':'+item.id+':Q'+(i+1)+':L'+state.memorizeLevel,
+        drafts:p2Drafts_,
+        createAudio:()=>createSpeakingAudioControls_(answer,'Memorize Q'+(i+1))
+      });
+      list.appendChild(card);
+    }
+  }
+  function renderP2TestOutline_(){
+    const area=$('p2TestOutline');if(!area)return;
+    area.replaceChildren();area.classList.toggle('hidden',![2,3].includes(state.activePart)||state.currentMode!=='test');
+    if(![2,3].includes(state.activePart))return;
+    const item=currentItem();if(!item)return;
+    (item.questions||[]).slice(0,3).forEach((q,i)=>{
+      if(!q||!item.models[i])return;
+      const btn=document.createElement('button');btn.type='button';btn.className='p2-test-q';
+      btn.classList.toggle('active',state.currentPrompt===i+1);
+      btn.textContent='Q'+(i+1)+' · '+q;
+      btn.addEventListener('click',()=>{
+        stopTimer(true);stopSpeech();state.currentPrompt=i+1;
+        renderPromptStepper();renderPromptContent();renderP2TestOutline_();resetTimerDisplay();
+      });area.appendChild(btn);
+    });
+  }
+
+</script>
