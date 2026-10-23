@@ -71,18 +71,65 @@ function getBootstrapData(forceRefresh) {
   };
 }
 
+/**
+ * R1 bounded cache: Apps Script CacheService enforces ~100 KB per value.
+ * Chunk values into conservative <=18,000 UTF-16-code-unit pieces (~54 KB
+ * worst-case UTF-8), publish a manifest only AFTER chunks are stored.
+ * An incomplete/corrupt hit always falls back to the source loader.
+ */
+function readSpeakingCachedPayload_(cache, key) {
+  const hit = cache.get(key);
+  if (!hit) return null;
+  if (hit.indexOf('speaking-chunks:v1:') !== 0) return JSON.parse(hit);
+  const match = /^speaking-chunks:v1:([a-zA-Z0-9-]+):(\d+)$/.exec(hit);
+  if (!match) return null;
+  const count = Number(match[2]);
+  if (!count || count > 16) return null;
+  const keys = [];
+  for (let i = 0; i < count; i++) keys.push(key + ':r1:' + match[1] + ':' + i);
+  const stored = cache.getAll(keys);
+  if (!keys.every(function(k) { return typeof stored[k] === 'string'; })) return null;
+  return JSON.parse(keys.map(function(k) { return stored[k]; }).join(''));
+}
+
+function putSpeakingCachedPayload_(cache, key, data, seconds) {
+  const serialized = JSON.stringify(data);
+  // No buffer expansion for small banks and existing cache readers.
+  if (serialized.length <= 18000) {
+    cache.put(key, serialized, seconds);
+    return;
+  }
+  const chunks = [];
+  let offset = 0;
+  while (offset < serialized.length) {
+    let end = Math.min(offset + 18000, serialized.length);
+    // Do not split a UTF-16 surrogate pair across CacheService values.
+    if (end < serialized.length &&
+        serialized.charCodeAt(end - 1) >= 0xD800 &&
+        serialized.charCodeAt(end - 1) <= 0xDBFF) end--;
+    chunks.push(serialized.slice(offset, end));
+    if (chunks.length > 16) return; // Not worth exceeding bounded cache entries.
+    offset = end;
+  }
+  const nonce = Utilities.getUuid();
+  const values = {};
+  chunks.forEach(function(chunk, i) { values[key + ':r1:' + nonce + ':' + i] = chunk; });
+  cache.putAll(values, seconds);
+  cache.put(key, 'speaking-chunks:v1:' + nonce + ':' + chunks.length, seconds);
+}
+
 function getCachedSpeakingContent_(partKey, forceRefresh, loaderFn) {
   const cache = CacheService.getScriptCache();
   const dbId = getDatabase_().getId();
   const key = 'speak-content:' + APP_CONFIG.SCHEMA_VERSION + ':' + getSpeakingContentVersion_(partKey) + ':' + dbId + ':' + partKey;
   if (!forceRefresh) {
-    const hit = cache.get(key);
-    if (hit) {
-      try { return JSON.parse(hit); } catch (e) {}
-    }
+    try {
+      const cached = readSpeakingCachedPayload_(cache, key);
+      if (cached !== null) return cached;
+    } catch (e) { /* cache is best effort; reload from the authoritative bank */ }
   }
   const data = loaderFn();
-  try { cache.put(key, JSON.stringify(data), APP_CONFIG.CACHE_SECONDS); } catch (e) {}
+  try { putSpeakingCachedPayload_(cache, key, data, APP_CONFIG.CACHE_SECONDS); } catch (e) {}
   return data;
 }
 
@@ -91,13 +138,13 @@ function getCachedProgressMap_(forceRefresh) {
   const dbId = getDatabase_().getId();
   const key = 'speak-progress:' + dbId;
   if (!forceRefresh) {
-    const hit = cache.get(key);
-    if (hit) {
-      try { return JSON.parse(hit); } catch (e) {}
-    }
+    try {
+      const cached = readSpeakingCachedPayload_(cache, key);
+      if (cached !== null) return cached;
+    } catch (e) { /* optional cache; authoritative progress remains in Sheets */ }
   }
   const data = getProgressMap_();
-  try { cache.put(key, JSON.stringify(data), APP_CONFIG.PROGRESS_CACHE_SECONDS || 120); } catch (e) {}
+  try { putSpeakingCachedPayload_(cache, key, data, APP_CONFIG.PROGRESS_CACHE_SECONDS || 120); } catch (e) {}
   return data;
 }
 
@@ -130,26 +177,26 @@ function getSpeakingContentVersion_(partKey) {
  * If the active exam bank is not present, seed content only (fast) and leave images to background batches.
  */
 function ensurePart3ExamBankReady_() {
-  try {
-    const ss = getDatabase_();
-    const p3 = ss.getSheetByName(SHEET_NAMES.SPEAKING_P3);
-    const settings = ss.getSheetByName(SHEET_NAMES.SETTINGS);
-    if (!p3 || !settings) return;
-    const currentVersion = getSetting_(settings, 'p3_description_version');
-    const idx = headerIndexMap_(p3);
-    const values = p3.getDataRange().getValues();
-    let activeExamCount = 0;
-    values.slice(1).forEach(function(row) {
-      const id = String(row[idx.id] || '');
-      const active = idx.active === undefined ? true : !(row[idx.active] === false || String(row[idx.active]).toLowerCase() === 'false');
-      if (/^SP3-EX-\d{3}$/.test(id) && active) activeExamCount++;
-    });
-    if (activeExamCount === 0) { // Seed only an empty exam bank; never overwrite curated Q2/Q3.
-      upgradeSpeakingPart3Description_(p3, settings, []);
-      clearSpeakingContentCache_();
-    }
-  } catch (e) {
-    // Bootstrap should remain resilient; the normal migration/error path can surface real failures.
+  // R1: READ ONLY. Opening Speaking must never seed, reactivate, or erase P3.
+  // Fail visibly when the bank is unavailable instead of masking a data issue.
+  const ss = getDatabase_();
+  const p3 = ss.getSheetByName(SHEET_NAMES.SPEAKING_P3);
+  if (!p3 || p3.getLastRow() < 2) {
+    throw new Error('R1_P3_BANK_NOT_READY: Speaking Part 3 is missing or empty. ' +
+      'Restore its approved backup; no automatic seeding is allowed.');
+  }
+  const idx = headerIndexMap_(p3);
+  const values = p3.getDataRange().getValues();
+  let activeExamCount = 0;
+  values.slice(1).forEach(function(row) {
+    const id = String(row[idx.id] || '');
+    const active = idx.active === undefined ? true :
+      !(row[idx.active] === false || String(row[idx.active]).toLowerCase() === 'false');
+    if (/^SP3-EX-\d{3}$/.test(id) && active) activeExamCount++;
+  });
+  if (activeExamCount === 0) {
+    throw new Error('R1_P3_NO_ACTIVE_EXAM: No active Part 3 exam topic was found. ' +
+      'Review the curated bank; automatic reseeding is prohibited.');
   }
 }
 
