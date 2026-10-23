@@ -8,4 +8,35 @@
    The global stage alone owns viewport gutters. Nested skill content owns no horizontal padding. */
 :root{--skill-content-max:1120px}
 .skill-content-frame{box-sizing:border-box;width:min(100%,var(--skill-content-max));max-width:var(--skill-content-max);min-width:0;margin-inline:auto}
+
+/* S7.1 Responsive Design System: global shell for Home / Overview / Speaking /
+   Listening / Reading / Writing / Grammar. No hidden document overflow. */
+@media (max-width:760px){
+  .global-app,.global-stage,.app-page,.skill-content-frame{min-width:0;max-width:100%}
+  .global-topbar{min-width:0;gap:10px}
+  .global-brand{flex:0 0 auto}
+  .global-nav{
+    flex:1 1 auto;min-width:0;max-width:100%;
+    overflow-x:auto;overflow-y:hidden;
+    overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;
+    scroll-snap-type:x proximity;
+  }
+  .global-nav-btn{flex:0 0 auto;min-height:44px;scroll-snap-align:start}
+  .global-page-head,.skill-page-head{min-width:0;flex-wrap:wrap;gap:10px}
+  .global-page-head>div,.skill-page-head>div:first-child{
+    flex:1 1 210px;min-width:0;
+  }
+  .skill-head-actions{flex:0 0 auto;min-width:0;max-width:100%;margin-left:auto}
+  .global-page-head h1,.skill-page-head h1{overflow-wrap:anywhere}
+}
+@media(max-width:420px){
+  .global-stage{padding-inline:10px}
+  .global-topbar{gap:8px}
+  .global-brand{gap:7px}
+  .global-brand strong{font-size:14px}
+  .global-brand-mark{width:36px;height:36px;border-radius:12px}
+  .global-nav{min-width:0}
+  .global-nav-btn{padding-inline:9px;font-size:12px}
+  .skill-page-head>div:first-child{flex-basis:100%}
+}
 </style>
