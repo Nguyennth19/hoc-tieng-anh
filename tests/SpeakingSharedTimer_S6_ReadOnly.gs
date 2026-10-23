@@ -66,7 +66,7 @@ function testSpeakingSharedTimerS6ReadOnly(){
   const src=function(n){return HtmlService.createHtmlOutputFromFile(n).getContent();};
   const common=src('JS_Speaking'),p4=src('JS_SpeakingPart4');
   const view=src('ViewSpeaking'),v4=src('ViewSpeakingPart4');
-  const styles=src('Styles_Speaking'),p4Styles=src('Styles_SpeakingPart4');
+  const styles=speakingCombinedStylesReadOnly_(),p4Styles=src('Styles_SpeakingPart4');
   const has=function(s,t){return s.indexOf(t)!==-1;};
   const count=function(s,re){return (s.match(re)||[]).length;};
   const commonTimer=s6QaFunction_(common,'createSpeakingPracticeTimer_')||'';
