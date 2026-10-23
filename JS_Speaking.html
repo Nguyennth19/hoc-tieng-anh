@@ -912,15 +912,9 @@
     renderMemorize();
     resetTimerDisplay();
 
-    $('testLabel').textContent = state.activePart === 3 ? 'APTIS PART 3 · COMPARE TWO PICTURES' : (state.activePart === 2 ? 'APTIS PART 2 · PICTURE DESCRIPTION' : 'APTIS PART 1 PRACTICE');
-
-    const seconds = currentTimerSeconds();
-    $('testInstruction').textContent = state.activePart === 2
-      ? 'Describe the picture for up to ' + seconds + ' seconds. Say the yellow MUST SAY block first; add the blue SAY MORE ideas only if there is time.'
-      : (state.activePart === 3
-        ? 'Compare the two pictures for up to ' + seconds + ' seconds. Follow COMMON → PICTURE 1 → PICTURE 2 → DIFFERENCE first; add the blue SAY MORE idea only if there is time.'
-        : 'Answer aloud without reading the model. Keep speaking until the timer ends.');
-    $('startTimerBtn').textContent = 'Start ' + seconds + '-second test';
+    // S6.3: the common timer is self-explanatory. Keep the duration at its
+    // authoritative per-Part/per-Q source, not duplicated in UI instructions.
+    $('startTimerBtn').textContent = '▶ Start speaking';
     $('showAnswerAfterTest').textContent = 'Show model answer';
     $('showAnswerAfterTest').disabled = false;
   }
@@ -1238,6 +1232,10 @@
     const unified=$('p2Unified');
     if(unified)unified.classList.toggle('hidden',![2,3].includes(state.activePart)||!['shadow','memorize'].includes(mode));
     if([2,3].includes(state.activePart)){if(mode!=='test')renderP2Unified_();renderP2TestOutline_();}
+    // The timer and manual completion belong to Learn/Test, never Memorize.
+    // Class-driven visibility avoids touching the timer engine or save policy.
+    $('speakingPracticeTimer').classList.toggle('hidden',mode==='memorize');
+    $('markLearnedBtn').closest('.speaking-completion-actions').classList.toggle('hidden',mode==='memorize');
     if (mode === 'test') resetTimerDisplay();
   }
 
@@ -1646,12 +1644,10 @@
       state.timerElapsed=snap.elapsedSeconds;
       state.timerRunning=snap.status==='running';
       $('timer').textContent=window.AptisSpeakingTimer.format(snap.remainingSeconds);
-      $('timerBar').style.width=Math.max(0,Math.min(100,100*snap.remainingSeconds/Math.max(1,snap.totalSeconds)))+'%';
-      $('startTimerBtn').disabled=snap.status==='running';
+       $('startTimerBtn').disabled=snap.status==='running';
       $('startTimerBtn').textContent=snap.status==='paused'?'▶ Resume':'▶ Start speaking';
       $('pauseTimerBtn').disabled=snap.status!=='running';
       $('stopTimerBtn').disabled=!['running','paused'].includes(snap.status);
-      $('speakingTimerStage').textContent=({idle:'Ready to practise',running:'Speaking',paused:'Paused',stopped:'Stopped',done:'Time finished'})[snap.status]||'Ready';
     },function(){
       // Timer completion is UI-only. Rating/Mark learned remain explicit learner actions.
       if(state.currentMode==='test'){
@@ -1673,7 +1669,6 @@
     if(silent){
       timer.stop(true);state.timerElapsed=0;
       $('timer').textContent=window.AptisSpeakingTimer.format(currentTimerSeconds());
-      $('timerBar').style.width='100%';
       $('selfCheck').classList.add('hidden');
       return;
     }
@@ -1685,9 +1680,7 @@
   function resetTimerDisplay(){
     if(speakingMainPracticeTimer_&&['running','paused'].includes(speakingMainPracticeTimer_.snapshot().status))return;
     $('timer').textContent=window.AptisSpeakingTimer.format(currentTimerSeconds());
-    $('timerBar').style.width='100%';
     $('selfCheck').classList.add('hidden');
-    $('speakingTimerStage').textContent='Ready to practise';
   }
 
   function formatTime(seconds) {
