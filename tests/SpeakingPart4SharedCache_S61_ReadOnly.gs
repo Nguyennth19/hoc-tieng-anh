@@ -5,7 +5,7 @@
  */
 function testSpeakingPart4SharedCacheS61ReadOnly(){
   const source=name=>HtmlService.createHtmlOutputFromFile(name).getContent();
-  const shared=source('JS_Speaking');
+  const shared=speakingCombinedJSReadOnly_();
   const p4=source('JS_SpeakingPart4');
   const p4View=source('ViewSpeakingPart4');
   const speakingView=source('ViewSpeaking');
