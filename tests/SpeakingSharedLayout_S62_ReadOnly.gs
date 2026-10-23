@@ -5,7 +5,7 @@
  */
 function testSpeakingSharedLayoutS62ReadOnly(){
   const src=name=>HtmlService.createHtmlOutputFromFile(name).getContent();
-  const shared=src('Styles_Speaking');
+  const shared=speakingCombinedStylesReadOnly_();
   const p4Css=src('Styles_SpeakingPart4');
   const global=src('Styles');
   const view=src('ViewSpeaking');
