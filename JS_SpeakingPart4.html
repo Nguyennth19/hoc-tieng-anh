@@ -168,7 +168,9 @@ function p4ApplyStudyMode(){
  const memorizing=learn&&S.studyStep==='memorize';
  byId('p4LearningTools').hidden=!learn||memorizing;
  byId('p4PracticeTimer').hidden=memorizing;
- if(memorizing)byId('p4Review').hidden=true;
+ // Preserve an already-finished speaking review when returning to Learn/Test,
+ // but never show the review form during Memorize.
+ byId('p4Review').hidden=memorizing||S.phase!=='done'||!S.current||!S.session;
  if(!learn){p4StopAudio();byId('p4StudyView').value='recall';}
  else if(byId('p4StudyView').value==='recall'&&S.phase==='ready'){} 
 }
