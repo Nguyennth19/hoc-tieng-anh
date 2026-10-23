@@ -82,13 +82,19 @@ function styleHeader_(sheet, cols) {
 
 function setSetting_(sheet, key, value) {
   const values = sheet.getDataRange().getValues();
+  let targetRow = sheet.getLastRow() + 1;
   for (let i = 1; i < values.length; i++) {
     if (String(values[i][0] || '') === key) {
-      sheet.getRange(i + 1, 2).setValue(value);
-      return;
+      targetRow = i + 1;
+      break;
     }
   }
-  sheet.appendRow([key, value]);
+  // SETTINGS stores identifiers/versions as literal strings, never dates.
+  // Format before writing: Sheets otherwise converts 3.2.0 -> 3.2.2000.
+  const cell = sheet.getRange(targetRow, 2);
+  cell.setNumberFormat('@');
+  if (targetRow > sheet.getLastRow()) sheet.getRange(targetRow, 1).setValue(key);
+  cell.setValue(String(value == null ? '' : value));
 }
 
 function getSetting_(sheet, key) {
