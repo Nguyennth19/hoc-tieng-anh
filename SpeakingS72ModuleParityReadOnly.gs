@@ -2,7 +2,7 @@
  * S7.2 Speaking modular refactor — source parity/manifest QA (READ ONLY).
  * No RPC, workbook access or modifications; run BEFORE opening /dev.
  * Compares the combined JS/CSS to the exact S7.2 staging source hashes
- * collected 2026-10-23 by the user, thus guarding against lost functionality.
+ * measured from the EXACT GitHub S7.2 base source before refactor, thus guarding against lost functionality.
  */
 function testSpeakingS72ModuleParityReadOnly() {
   var failed=[],checks=[];
@@ -25,8 +25,14 @@ function testSpeakingS72ModuleParityReadOnly() {
     'JS_SpeakingLearningFlow','JS_SpeakingExamAudio',
     'JS_SpeakingProgressTools'];
   var result={version:'S7.2-STRUCTURE-PARITY-20261023',readOnly:true,
-    acceptedSourceHashes:{JS_Speaking:'7b568ebe105fa78beaa944a50b7b31ca0c15af479841cf43b3df83732e597575',
-      Styles_Speaking:'18a11a03577f166289c0beab43313e32dae21355142ffe675a32e0f859db9ca4'}};
+    // User's Apps Script staging snapshot differs from the GitHub source.
+    // These must be reconciled separately before Pull; do not confuse
+    // GitHub lossless-source parity with real staging deployment parity.
+    prePullStagingHashes:{JS_Speaking:'7b568ebe105fa78beaa944a50b7b31ca0c15af479841cf43b3df83732e597575',
+      Styles_Speaking:'18a11a03577f166289c0beab43313e32dae21355142ffe675a32e0f859db9ca4'},
+    stagingSourceReconciliationRequired:true,
+    acceptedSourceHashes:{JS_Speaking:'8c21642fa4b103e84cd5a22630e5ad2bcf1530c2be5f00380abf1727507510fd',
+      Styles_Speaking:'9574a0faa9124f5a500380ec9ba8d2bb3b7316d49488bbfeee9fd88f8178f9a9'}};
   try{
     var source=HtmlService.createHtmlOutputFromFile('Index').getContent();
     var coreJS=speakingCombinedJSReadOnly_();
