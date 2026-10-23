@@ -1,0 +1,444 @@
+<script>  function init() {
+    if (initialized) return;
+    initialized = true;
+    try {
+      bindEvents();
+      initSpeechVoices();
+
+    const cached = readBootstrapCache();
+    // Part 1 release gate: old cached 29-question payload must not render on V2.
+    if (cached && cached.data) {
+      state.hydratedFromCache = true;
+      applyBootstrap(cached.data, { fromCache: true, stale: cached.stale });
+      setSyncStatus('Saved data', 'cached');
+
+      // Paint saved UI first, then perform a very light version check.
+      // Full Speaking data is fetched only when the revision changed.
+      setTimeout(checkForUpdatesInBackground, 180);
+    } else {
+      loadData({ force: false, blocking: true });
+    }
+    } catch (error) {
+      startupFailure_ = error;
+      console.error('SPEAKING_BOOTSTRAP_INIT_FAILED', error);
+      state.refreshing = false;
+      setLoadingVisible(false);
+      $('skillHomeView')?.classList.add('hidden');
+      $('errorView')?.classList.remove('hidden');
+      if ($('errorText')) $('errorText').textContent =
+        'Speaking initialization error: ' + (error?.message || String(error)) + '. Reload staging.';
+      setSyncStatus('Initialization failed', 'syncing');
+    }
+  }
+
+  function enter() {
+    if (!initialized) init();
+    $('studyView').classList.add('hidden');
+    $('progressView').classList.add('hidden');
+    $('homeView').classList.add('hidden');
+    if (startupFailure_) {
+      setLoadingVisible(false);
+      $('errorView')?.classList.remove('hidden');
+    } else if (!($('errorView')?.classList.contains('hidden'))) {
+      // A failed Apps Script request may finish before the global router
+      // activates Speaking. Do not resurrect the spinner on navigation.
+      $('skillHomeView')?.classList.add('hidden');
+      setLoadingVisible(false);
+    } else if (state.data) {
+      setLoadingVisible(false);
+      $('errorView').classList.add('hidden');
+      showHome();
+    } else {
+      $('skillHomeView').classList.add('hidden');
+      setLoadingVisible(true);
+    }
+  }
+
+  function bindEvents() {
+    $('refreshBtn').addEventListener('click', forceRefreshFromButton);
+    $('progressBtn').addEventListener('click', showProgress);
+    $('progressBackBtn').addEventListener('click', showHome);
+    $$('.progress-jump').forEach(btn => btn.addEventListener('click', () => { switchPart(Number(btn.dataset.jumpPart)); }));
+    $('continueBtn').addEventListener('click', continueLearning);
+    $('quickStudyBtn').addEventListener('click', startQuickStudy);
+    $('reviewDueBtn').addEventListener('click', startDueReview);
+    $('searchInput').addEventListener('input', renderList);
+    $('filterSelect').addEventListener('change', renderList);
+    $('backBtn').addEventListener('click', showPartHome);
+    $('prevQuestionBtn').addEventListener('click', () => navigateItem(-1));
+    $('nextQuestionBtn').addEventListener('click', () => navigateItem(1));
+    $('markLearnedBtn').addEventListener('click', () => requestSpeakingCompletion_({
+      title:'Confirm learned response',
+      detail:'You are confirming that you can answer this question independently. Your existing review schedule will be updated only after confirmation.',
+      confirmLabel:'✓ Mark learned',
+      onConfirm:()=>saveProgress(5,'learned')
+    }));
+    $('speakingCompletionCancel').addEventListener('click',closeSpeakingCompletion_);
+    $('speakingCompletionAccept').addEventListener('click',()=>{
+      const accept=speakingConfirmPending_;
+      closeSpeakingCompletion_();
+      if(typeof accept==='function')accept();
+    });
+    $('favoriteBtn').addEventListener('click', toggleFavorite);
+
+    $$('.part-tab[data-part]').forEach(btn => btn.addEventListener('click', () => switchPart(Number(btn.dataset.part))));
+    $$('[data-open-speaking-part]').forEach(btn => btn.addEventListener('click', () => openPartHome(Number(btn.dataset.openSpeakingPart))));
+    $('skillProgressLink').addEventListener('click', showProgress);
+    $('skillRecommendationBtn').addEventListener('click', openRecommendedSpeakingPart);
+    $$('.prompt-step').forEach(btn => btn.addEventListener('click', () => setPrompt(Number(btn.dataset.prompt))));
+    $$('#speakingModeTabs .mode-tab').forEach(btn => btn.addEventListener('click', () => setMode(btn.dataset.mode)));
+    $$('#speakingMemorizeLevels .level-btn').forEach(btn => btn.addEventListener('click', () => setMemorizeLevel(Number(btn.dataset.level))));
+    $$('.rating-btn').forEach(btn => btn.addEventListener('click', () => finishSelfRating(Number(btn.dataset.rating))));
+    $$('#homeView .focus-card').forEach(btn => btn.addEventListener('click', () => applyFilter(btn.dataset.filterTarget)));
+
+    $('listenBtn').addEventListener('click', () => sharedAudioPlay_(currentModel(), $('learnAnswerAudio')));
+    $('listenPauseBtn').addEventListener('click', () => sharedAudioPause_($('learnAnswerAudio')));
+    $('listenStopBtn').addEventListener('click', stopSpeech);
+    $('shadowAllBtn').addEventListener('click', shadowAll);
+    $('shadowPauseBtn').addEventListener('click', () => sharedAudioPause_($('shadowAudioControls')));
+    $('stopSpeechBtn').addEventListener('click', stopSpeech);
+    $('startTimerBtn').addEventListener('click', startTimer);
+    $('pauseTimerBtn').addEventListener('click', pauseTimer);
+    $('stopTimerBtn').addEventListener('click', () => stopTimer(false));
+    $('showAnswerAfterTest').addEventListener('click', () => {
+      $('showAnswerAfterTest').textContent = currentModel();
+      $('showAnswerAfterTest').disabled = true;
+    });
+
+    $('audioSettingsBtn').addEventListener('click', openAudioSheet);
+    $('closeAudioBtn').addEventListener('click', closeAudioSheet);
+    $('audioSheet').addEventListener('click', e => { if (e.target === $('audioSheet')) closeAudioSheet(); });
+    $('accentSelect').addEventListener('change', () => {
+      stopSpeech();state.audio.accent = $('accentSelect').value;
+      writeLocal('aptisAccent', state.audio.accent);
+      populateVoiceSelect();
+    });
+    $('voiceSelect').addEventListener('change', () => {
+      stopSpeech();state.audio.voiceURI = $('voiceSelect').value;
+      writeLocal('aptisVoiceURI', state.audio.voiceURI);
+    });
+    $$('.speed-btn').forEach(btn => btn.addEventListener('click', () => setSpeechRate(Number(btn.dataset.speed))));
+    $('previewVoiceBtn').addEventListener('click', () => speakText('Hello. This is your APTIS speaking practice voice.'));
+
+    $$('.nav-btn').forEach(btn => btn.addEventListener('click', () => handleNav(btn.dataset.nav)));
+  }
+
+  function setLoadingVisible(visible) {
+    const el = $('loadingView');
+    if (!el) return;
+    const show = Boolean(visible);
+    el.hidden = !show;
+    el.setAttribute('aria-hidden', show ? 'false' : 'true');
+    el.classList.toggle('hidden', !show);
+    el.style.setProperty('display', show ? 'flex' : 'none', 'important');
+  }
+
+  function setSyncStatus(text, mode) {
+    const el = $('syncStatus');
+    if (!el) return;
+    el.textContent = text || '';
+    el.classList.toggle('is-syncing', mode === 'syncing');
+    el.classList.toggle('is-cached', mode === 'cached');
+  }
+
+  function getCachedRevision_() {
+    if (!state.data || !state.data.app) return '';
+    return String(state.data.app.contentRevision || '');
+  }
+
+  function checkForUpdatesInBackground() {
+    if (state.refreshing) return;
+    setSyncStatus('Checking updates…', 'syncing');
+
+    google.script.run
+      .withSuccessHandler(function(manifest) {
+        const serverRevision = manifest && manifest.contentRevision
+          ? String(manifest.contentRevision)
+          : '';
+        const localRevision = getCachedRevision_();
+
+        // Old cache without revision, or a real content change: refresh once.
+        if (!serverRevision || !localRevision || serverRevision !== localRevision) {
+          setSyncStatus('New content found · updating…', 'syncing');
+          refreshDataInBackground(true);
+          return;
+        }
+
+        setSyncStatus('Up to date', 'cached');
+        setTimeout(function() { setSyncStatus('', ''); }, 1400);
+      })
+      .withFailureHandler(function() {
+        // App remains fully usable from the saved payload.
+        setSyncStatus('Saved data', 'cached');
+      })
+      .getSpeakingCacheManifest();
+  }
+
+  function clearAptisSpeakingBootstrapCache_() {
+    window.AptisSpeakingCache.clear([CLIENT_CACHE_KEY, CLIENT_CACHE_BACKUP_KEY].concat(LEGACY_CACHE_KEYS));
+  }
+
+  function forceRefreshFromButton() {
+    if (state.refreshing) {
+      toast('A refresh is already running.');
+      return;
+    }
+
+    stopTimer(true);
+    stopSpeech();
+
+    // Delete ONLY this app's Speaking payload cache.
+    // Preferences such as accent, voice and active Part are preserved.
+    clearAptisSpeakingBootstrapCache_();
+
+    state.refreshing = true;
+    setLoadingVisible(false);
+    $('errorView').classList.add('hidden');
+    setSyncStatus('Force refreshing…', 'syncing');
+
+    google.script.run
+      .withSuccessHandler(function(data) {
+        state.refreshing = false;
+        setLoadingVisible(false);
+
+        if (!isValidBootstrap(data)) {
+          onError(new Error('Speaking data returned an invalid payload.'), { background: Boolean(state.data) });
+          return;
+        }
+
+        writeBootstrapCache(data);
+        applyBootstrap(data, { fromCache: false, background: true });
+        setSyncStatus('Updated just now', 'cached');
+        toast('Speaking content updated.');
+        setTimeout(function() { setSyncStatus('', ''); }, 1800);
+      })
+      .withFailureHandler(function(err) {
+        state.refreshing = false;
+        setLoadingVisible(false);
+
+        // Keep the already-rendered in-memory copy if refresh fails.
+        if (state.data) {
+          writeBootstrapCache(state.data);
+          setSyncStatus('Refresh failed · using current data', 'cached');
+          toast('Could not refresh. Current data is still available.');
+          return;
+        }
+        onError(err, { background: false });
+      })
+      .forceRefreshSpeaking();
+  }
+
+  function loadData(options) {
+    const opts = options || {};
+    const blocking = opts.blocking !== false && !state.data;
+    stopTimer(true);
+    stopSpeech();
+
+    if (blocking) {
+      setLoadingVisible(true);
+      $('skillHomeView').classList.add('hidden');
+      $('homeView').classList.add('hidden');
+      $('studyView').classList.add('hidden');
+      $('progressView').classList.add('hidden');
+    } else {
+      setLoadingVisible(false);
+      setSyncStatus('Refreshing', 'syncing');
+    }
+    $('errorView').classList.add('hidden');
+    state.refreshing = true;
+
+    // A loader should never occupy the screen forever. If Apps Script is slow,
+    // try the last-good cache and keep the server request running in background.
+    const watchdog = blocking ? setTimeout(function() {
+      if (state.data) {
+        setLoadingVisible(false);
+        return;
+      }
+      const fallback = readBootstrapCache(true);
+      if (fallback && fallback.data) {
+        state.hydratedFromCache = true;
+        applyBootstrap(fallback.data, { fromCache: true, stale: true });
+        setSyncStatus('Saved data · syncing', 'cached');
+      } else {
+        // Keep the progress panel visible while Google Sheets is still loading.
+        // Hiding it here produced a blank page until another navigation event.
+        setLoadingVisible(true);
+        const msg = $('loadingView').querySelector('p');
+        if (msg) msg.textContent = 'Loading Speaking data is taking longer than usual…';
+        setSyncStatus('Still syncing…', 'syncing');
+      }
+    }, LOADER_WATCHDOG_MS) : null;
+
+    // A server error must not leave an infinite spinner. Late success may recover.
+    const hardTimeout = blocking ? setTimeout(function() {
+      if (!state.data) onError(new Error(
+        'No Speaking data after 30 seconds. Check Apps Script executions and reload.'
+      ), { background: false });
+    }, LOADER_HARD_TIMEOUT_MS) : null;
+    const clearLoadTimers = () => {
+      if (watchdog) clearTimeout(watchdog);
+      if (hardTimeout) clearTimeout(hardTimeout);
+    };
+    try {
+      if (!google?.script?.run) throw new Error('Google Apps Script runtime unavailable.');
+      google.script.run
+        .withSuccessHandler(function(data) {
+          clearLoadTimers();
+          onBootstrap(data, { background: !blocking });
+        })
+        .withFailureHandler(function(err) {
+          clearLoadTimers();
+          onError(err, { background: !blocking });
+        })
+        .getBootstrapData(Boolean(opts.force));
+    } catch (error) {
+      clearLoadTimers();
+      onError(error, { background: !blocking });
+    }
+  }
+
+  function refreshDataInBackground(force) {
+    if (state.refreshing) return;
+    loadData({ force: Boolean(force), blocking: false });
+  }
+
+  function onBootstrap(data, options) {
+    state.refreshing = false;
+    setLoadingVisible(false);
+    if (!isValidBootstrap(data)) {
+      onError(new Error('Speaking data returned an invalid payload.'), { background: Boolean(state.data) });
+      return;
+    }
+    if (!hasCurrentSpeakingQuestionCoverage_(data)) {
+      // Show usable content rather than a blank page while alerting about incomplete questions.
+      setSyncStatus('Speaking questions incomplete — check deployment', 'cached');
+      toast('Speaking data: P1=' + data.part1.length + ', P2=' + data.part2.length + ', P3=' + data.part3.length + '. Some Q2/Q3 may be missing.');
+      applyBootstrap(data, { fromCache: false, background: options && options.background });
+      return;
+    }
+    writeBootstrapCache(data);
+    applyBootstrap(data, { fromCache: false, background: options && options.background });
+    if (Array.isArray(data.part3) && data.part3.length >= 32) schedulePart3MediaPreparation_();
+    setSyncStatus('Up to date', 'cached');
+    setTimeout(function() { setSyncStatus('', ''); }, 1600);
+  }
+
+  function applyBootstrap(data, meta) {
+    // Always close blocking UI first, even if the payload is rejected.
+    setLoadingVisible(false);
+    if (!isValidBootstrap(data)) return false;
+    state.data = data;
+    // S6.1 hard-fix: old #appTitle was removed when the app received the
+    // shared global B2 Coach shell. Never dereference a deleted DOM node.
+    // The visible Speaking heading is owned by ViewSpeaking.html.
+    $('errorView').classList.add('hidden');
+    const wasStudying = !$('studyView').classList.contains('hidden');
+    const wasProgress = !$('progressView').classList.contains('hidden');
+    const wasPartHome = !$('homeView').classList.contains('hidden');
+    const previousId = state.items && state.items[state.currentIndex] && state.items[state.currentIndex].id;
+    const previousPrompt = state.currentPrompt;
+    const previousMode = state.currentMode;
+    // Keep a visible fallback before slower statistics are rendered.
+    if (!wasStudying && !wasProgress && !wasPartHome) $('skillHomeView').classList.remove('hidden');
+    try {
+      switchPart(state.activePart, true);
+      renderProgressDashboard();
+      renderSkillHome();
+    } catch (error) {
+      console.error('Speaking bootstrap render failed:', error);
+      $('skillHomeView').classList.remove('hidden');
+      setSyncStatus('Some panels could not load. Choose a Part tab.', 'cached');
+      return true;
+    }
+    if (wasStudying && previousId) {
+      const newIndex = state.items.findIndex(function(item){ return item.id === previousId; });
+      if (newIndex >= 0) {
+        state.currentIndex = newIndex;
+        state.currentPrompt = previousPrompt;
+        $('skillHomeView').classList.add('hidden');
+        $('homeView').classList.add('hidden');
+        $('studyView').classList.remove('hidden');
+        $('progressView').classList.add('hidden');
+        renderCurrentItem();
+        setMode(previousMode);
+      } else showHome();
+    } else if (wasProgress) showProgress();
+    else if (wasPartHome) showPartHome();
+    else showHome();
+    if (meta && meta.fromCache) {
+      setSyncStatus(meta.stale ? 'Saved data · refreshing' : 'Saved data', 'cached');
+    }
+    return true;
+  }
+
+  // Cache usable source data even when individual Q2/Q3 remain intentionally
+  // missing. Exam coverage is a separate QA indicator, not a cache gate.
+  function isUsableSpeakingPayload_(data) {
+    return isValidBootstrap(data) &&
+      data.part1.length >= 49 && data.part2.length >= 30 && data.part3.length >= 32;
+  }
+
+  function hasCurrentSpeakingQuestionCoverage_(data) {
+    if (!isValidBootstrap(data)) return false;
+    const p2Complete = data.part2.filter(function(item) {
+      return /^SP2-EX-/.test(item.id) && item.id !== 'SP2-EX-012' &&
+        Array.isArray(item.questions) && item.questions.length >= 3;
+    }).length;
+    const p3Complete = data.part3.filter(function(item) {
+      return /^SP3-EX-/.test(item.id) && item.id !== 'SP3-EX-012' &&
+        item.id !== 'SP3-EX-017' && Array.isArray(item.questions) &&
+        item.questions.length >= 3;
+    }).length;
+    return data.part1.length === 49 && data.part2.length >= 51 &&
+      data.part3.length >= 52 && p2Complete >= 51 && p3Complete >= 52;
+  }
+
+  function isValidBootstrap(data) {
+    return Boolean(data && data.app && Array.isArray(data.part1) && Array.isArray(data.part2) && Array.isArray(data.part3));
+  }
+
+  function onError(err, options) {
+    state.refreshing = false;
+    setLoadingVisible(false);
+
+    // Never replace already-rendered cached data with a blocking error screen.
+    if (state.data) {
+      $('errorView').classList.add('hidden');
+      setSyncStatus('Using saved data', 'cached');
+      toast('Could not refresh. Using saved data.');
+      return;
+    }
+
+    const fallback = readBootstrapCache(true);
+    if (fallback && fallback.data && applyBootstrap(fallback.data, { fromCache: true, stale: true })) {
+      setSyncStatus('Using saved data', 'cached');
+      return;
+    }
+
+    $('errorView').classList.remove('hidden');
+    $('errorText').textContent = safeError(err);
+  }
+
+  function readBootstrapCache(allowVeryStale) {
+    return window.AptisSpeakingCache.read({
+      keys:[CLIENT_CACHE_KEY,CLIENT_CACHE_BACKUP_KEY],
+      freshMs:CLIENT_CACHE_FRESH_MS,
+      maxAgeMs:CLIENT_CACHE_STALE_MS,
+      validate:isUsableSpeakingPayload_
+    });
+  }
+
+  function writeBootstrapCache(data) {
+    window.AptisSpeakingCache.write({
+      keys:[CLIENT_CACHE_KEY,CLIENT_CACHE_BACKUP_KEY],
+      data,
+      validate:isUsableSpeakingPayload_
+    });
+  }
+
+  function persistCurrentBootstrapCache() {
+    if (state.data) writeBootstrapCache(state.data);
+  }
+
+
+</script>
