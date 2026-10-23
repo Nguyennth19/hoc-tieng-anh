@@ -8,7 +8,7 @@
 function testSpeakingS71DeepRegressionReadOnly(){
   const src=name=>HtmlService.createHtmlOutputFromFile(name).getContent();
   const js=src('JS_Speaking'),p4=src('JS_SpeakingPart4');
-  const v=src('ViewSpeaking'),v4=src('ViewSpeakingPart4'),css=src('Styles_Speaking');
+  const v=src('ViewSpeaking'),v4=src('ViewSpeakingPart4'),css=speakingCombinedStylesReadOnly_();
   const qa={};const issues=[];
   const assert=(category,name,test)=>{
     let ok=false,detail='';
