@@ -42,7 +42,7 @@ The modified source was used **in memory only** during these controls.
 
 ## B. Browser visual/runtime QA — mandatory
 
-Open the current Apps Script **/dev** staging URL on Chrome desktop. In DevTools Console, paste the entire source of **`tests/SpeakingS71BrowserProbe.js`**. The probe only reads DOM, geometry and shared client API. It does **not** click controls, play audio, use `google.script.run` or update localStorage.
+Open the current Apps Script **/dev** staging URL on Chrome desktop. In DevTools Console, paste the entire source of **`tests/SpeakingS71BrowserProbe.md`**. The probe only reads DOM, geometry and shared client API. It does **not** click controls, play audio, use `google.script.run` or update localStorage.
 
 Run the probe after each of the following state changes. Save the console output `SPEAKING_S71_BROWSER_RESULT` (or screenshot of text logs) for each state.
 
