@@ -15,7 +15,12 @@ function testSpeakingCompactTimerS63ReadOnly(){
   const mode=common.slice(common.indexOf('function setMode(mode) {'),common.indexOf('function setMemorizeLevel(level)'));
   const p4Modes=p4.slice(p4.indexOf('function p4ApplyStudyMode(){'),p4.indexOf('function p4ApplyMastery_('));
   const timerCommon=common.slice(common.indexOf('let speakingMainPracticeTimer_=null;'),common.indexOf('function formatTime(seconds)'));
-  const timerP4=p4.slice(p4.indexOf('function p4Timer_(){'),p4.indexOf('/** Highlight only approved reusable'));
+  // Timer lifecycle spans named functions; never use a mutable comment marker.
+  // Do not silently turn a missing anchor into a whole-file substring.
+  const p4ScopeStart=/\bfunction\s+p4Timer_\s*\(\s*\)\s*\{/.exec(p4);
+  const p4ScopeEnd=/\bfunction\s+p4FormulaHtml\s*\(/.exec(p4);
+  const timerP4=p4ScopeStart && p4ScopeEnd && p4ScopeEnd.index>p4ScopeStart.index
+    ? p4.slice(p4ScopeStart.index,p4ScopeEnd.index) : null;
   const checks={
     commonEngineRetained:has(common,'window.AptisSpeakingTimer=Object.freeze({')&&has(p4,'window.AptisSpeakingTimer.create(function(snap)'),
     durationsUnchanged:has(common,'part1:30,part2:45,part3:45,part4Preparation:60,part4Speaking:120'),
@@ -60,13 +65,17 @@ function testSpeakingCompactTimerS63ReadOnly(){
     p4StillManualMastery:has(p4,".saveSpeakingPart4Mastery({questionId:id,level"),
     part4AttemptOnlyExplicit:has(p4,"byId('p4Save').addEventListener('click'")&&has(p4,'.saveSpeakingPart4DevAttempt({'),
     p123TimeHasNoWrites:!has(timerCommon,'.saveQuestionProgress('),
-    p4TimerHasNoWrites:!has(timerP4,'.saveSpeakingPart4Mastery(')&&!has(timerP4,'.saveSpeakingPart4DevAttempt('),
+    p4TimerHasNoWrites:timerP4!==null &&
+      !/\.saveSpeakingPart4Mastery\s*\(/.test(timerP4) &&
+      !/\.saveSpeakingPart4DevAttempt\s*\(/.test(timerP4),
     p4ReviewManualSaveOnly:has(v4,'id="p4Save"')&&has(v4,'id="p4Rating"')
   };
   const failed=Object.keys(checks).filter(k=>!checks[k]);
   const result={ok:failed.length===0,totalChecks:Object.keys(checks).length,
     passed:Object.keys(checks).length-failed.length,failed,
     timings:{part1SecondsPerQuestion:30,part2SecondsPerQuestion:45,part3SecondsPerQuestion:45,part4PreparationSeconds:60,part4SpeakingSecondsAcrossThreeQuestions:120},
+    p4TimerDiagnostic:{scopeFound:timerP4!==null,scopeLength:timerP4?timerP4.length:-1,
+      startFound:Boolean(p4ScopeStart),endFound:Boolean(p4ScopeEnd)},
     note:'Source QA only. Browser countdown, pause/resume and responsive visual acceptance are separate.'};
   console.log('SPEAKING_S63_COMPACT_TIMER_QA_RESULT '+JSON.stringify(result,null,2));
   if(failed.length)throw new Error('S63_COMPACT_TIMER_QA_FAILED: '+failed.join(', '));
