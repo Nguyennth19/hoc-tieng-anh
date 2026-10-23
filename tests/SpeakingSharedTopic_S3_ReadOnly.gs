@@ -6,7 +6,7 @@
 function testSpeakingSharedTopicS3ReadOnly() {
   const src = function(name){return HtmlService.createHtmlOutputFromFile(name).getContent();};
   const view=src('ViewSpeaking'), p4=src('ViewSpeakingPart4');
-  const shared=src('Styles_Speaking'), p4Css=src('Styles_SpeakingPart4');
+  const shared=speakingCombinedStylesReadOnly_(), p4Css=src('Styles_SpeakingPart4');
   const sharedJs=src('JS_Speaking'), p4Js=src('JS_SpeakingPart4');
   const count=function(s,re){return (s.match(re)||[]).length;};
   const has=function(s,t){return s.indexOf(t)!==-1;};
