@@ -429,4 +429,29 @@ button,input,select{font:inherit}button{cursor:pointer}button:disabled{cursor:no
   .speaking-memorize-revealed{padding:14px 12px}
   .speaking-memorize-cloze .p1-cloze-input{width:100px;max-width:42vw}
 }
+
+/* S7.1-B mobile hard fix — verified DevTools at clientWidth 315px:
+   The Speaking title and three 42px head-action buttons require more width
+   than one row; #refreshBtn exceeded the viewport by 22px.
+   Keep all controls usable by placing actions on a second row on very narrow
+   screens. Do not mask document overflow or change global scrolling nav. */
+@media (max-width:380px){
+  .speaking-shell .skill-page-head{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    column-gap:8px;
+    row-gap:8px;
+  }
+  .speaking-shell .skill-page-head > div:first-child{
+    flex:1 1 100%;
+    min-width:0;
+  }
+  .speaking-shell .skill-head-actions{
+    flex:0 0 auto;
+    min-width:0;
+    max-width:100%;
+    margin-left:auto;
+  }
+}
 </style>
