@@ -429,4 +429,83 @@ button,input,select{font:inherit}button{cursor:pointer}button:disabled{cursor:no
   .speaking-memorize-revealed{padding:14px 12px}
   .speaking-memorize-cloze .p1-cloze-input{width:100px;max-width:42vw}
 }
+
+/* S7.1-B mobile hard fix — verified DevTools at clientWidth 315px:
+   The Speaking title and three 42px head-action buttons require more width
+   than one row; #refreshBtn exceeded the viewport by 22px.
+   Keep all controls usable by placing actions on a second row on very narrow
+   screens. Do not mask document overflow or change global scrolling nav. */
+@media (max-width:380px){
+  .speaking-shell .skill-page-head{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    column-gap:8px;
+    row-gap:8px;
+  }
+  .speaking-shell .skill-page-head > div:first-child{
+    flex:1 1 100%;
+    min-width:0;
+  }
+  .speaking-shell .skill-head-actions{
+    flex:0 0 auto;
+    min-width:0;
+    max-width:100%;
+    margin-left:auto;
+  }
+}
+
+/* S7.1-B: mobile timer controls — icons only, all controls in ONE row.
+   Underlying button text remains in the DOM for accessibility and automatic
+   Pause/Resume naming. Scope to the TIMER ONLY; Audio buttons stay unchanged. */
+@media (max-width:650px) {
+  .speaking-shell .speaking-timer-actions{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    align-items:stretch;
+    gap:5px;
+    width:100%;
+    min-width:0;
+  }
+  .speaking-shell #p4PracticeTimer .speaking-timer-actions{
+    grid-template-columns:repeat(4,minmax(0,1fr));
+  }
+  .speaking-shell .speaking-timer-actions button{
+    display:grid;
+    place-items:center;
+    width:100%;
+    min-width:0;
+    min-height:44px;
+    padding:7px 3px;
+    font-size:0!important;
+    line-height:1!important;
+    white-space:nowrap;
+    overflow:hidden;
+  }
+  .speaking-shell .speaking-timer-actions button::before{
+    display:block;
+    font-size:21px;
+    line-height:1;
+    font-weight:850;
+  }
+  .speaking-shell #startTimerBtn::before,
+  .speaking-shell #p4Next::before {content:"▶";}
+  .speaking-shell #p4Begin::before {content:"⏱";}
+  .speaking-shell #pauseTimerBtn::before,
+  .speaking-shell #p4Pause::before {content:"⏯";}
+  .speaking-shell #stopTimerBtn::before,
+  .speaking-shell #p4Stop::before {content:"■";}
+}
+@media (max-width:420px) {
+  /* At 315px available width, 4 touch targets cannot fit alongside 01:00.
+     Keep the countdown above ONE 4-button row, never wrap an individual button. */
+  .speaking-shell #p4PracticeTimer{
+    grid-template-columns:minmax(0,1fr);
+    row-gap:8px;
+  }
+  .speaking-shell #p4PracticeTimer .timer{
+    min-width:0;
+    text-align:center;
+  }
+}
 </style>
