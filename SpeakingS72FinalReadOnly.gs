@@ -92,6 +92,14 @@ function testSpeakingS72FinalReadOnly() {
     check('SourceInspectionSucceeded',false,txt(sourceError.message||sourceError));
   }
 
+  // Backend function-availability checks only. Never invoke these loaders:
+  // loading bootstrap can call ensureSchema_() and migrate the workbook.
+  check('P3ServerLoaderAvailable',typeof getSpeakingPart3_==='function',
+    'Missing getSpeakingPart3_(): repository SkillSpeakingPart3.gs may be incomplete.');
+  check('P4ServerLoaderAvailable',typeof getSpeakingPart4Dev==='function',
+    'Missing Part 4 DEV content loader.');
+  details.stagingQaSwitch=txt(PropertiesService.getScriptProperties()
+    .getProperty('S71_RESPONSIVE_QA_STAGING'))==='enabled-staging-only'?'enabled':'disabled';
   // Do not call getDatabase_(): it may write a bridging Script Property.
   // This code reads the already-configured ID and NEVER sets it.
   var dbId=txt(PropertiesService.getScriptProperties().getProperty('APTIS_DATABASE_ID'));
