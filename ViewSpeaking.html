@@ -230,6 +230,10 @@
             <button data-mode="test" class="mode-tab" type="button"><span>04</span> Test</button>
           </div>
 
+          <div id="speakingMemorizeLevels" class="memorize-levels speaking-shared-memorize-levels hidden" role="group" aria-label="Memorize levels">
+            <button class="level-btn active" data-level="1" type="button" aria-pressed="true">LV1 · Fill missing words</button>
+            <button class="level-btn" data-level="2" type="button" aria-pressed="false">LV2 · Listen & write</button>
+          </div>
           <section id="p2Unified" class="p2-unified hidden" aria-label="Part 2 whole-topic learning">
             <div id="p2UnifiedCards"></div><div id="p2UnifiedFooter" class="p2-unified-footer"></div>
           </section>
@@ -356,15 +360,9 @@
           </div>
 
           <div id="memorizeMode" class="mode-panel hidden">
-            <div class="mode-intro" id="memorizeIntro"><strong>Reduce support step by step</strong><span>Move up only when the previous level feels easy.</span></div>
-            <div class="memorize-levels">
-              <button class="level-btn active" data-level="1" type="button">Level 1</button>
-              <button class="level-btn" data-level="2" type="button">Level 2</button>
-              <button class="level-btn" data-level="3" type="button">Keywords</button>
-              <button class="level-btn" data-level="4" type="button">No help</button>
+            <div class="content-block memorize-box">
+              <div id="p1TypingArea" class="speaking-memorize-container"></div>
             </div>
-            <div class="content-block memorize-box"><p id="memorizeText" class="model-text"></p><div id="p1TypingArea" class="hidden"></div></div><div id="p1MemorizeActions" class="inline-actions hidden"><button id="p1CheckBtn" class="primary-btn" type="button">Check</button><button id="p1TryAgainBtn" class="secondary-btn" type="button">Try again</button><button id="p1RevealBtn" class="secondary-btn" type="button">Show answer</button><span id="p1Feedback" role="status" aria-live="polite"></span></div>
-            <button id="revealBtn" class="secondary-btn" type="button">Reveal full answer</button>
           </div>
 
           <div id="testMode" class="mode-panel hidden">
