@@ -26,4 +26,25 @@
 .writing-sources{margin-top:20px;border-top:1px solid #e1e5ed;padding-top:16px}
 .writing-sources select{width:100%;padding:12px;border:1px solid #bdc9df;border-radius:9px;background:#fff}
 .writing-source-preview{font:13px/1.6 inherit;white-space:pre-wrap;color:#5b6682}
+
+/* S7.1 Responsive Design System: preserve readable Writing forms on iOS/Android. */
+@media(max-width:650px){
+  .writing-coach{min-width:0;max-width:100%;padding:14px 0 64px}
+  .writing-hero{padding:18px 16px;border-radius:16px}
+  .writing-hero h1{font-size:clamp(22px,6vw,29px);line-height:1.2}
+  .writing-layout,.writing-library,.writing-workspace{min-width:0}
+  .writing-layout{gap:12px}
+  .writing-library,.writing-workspace{padding:14px}
+  .writing-parts{gap:8px}
+  .writing-part{min-width:0;min-height:48px;padding:12px 9px;overflow-wrap:anywhere}
+  .writing-workspace textarea,#writingPractice select,.writing-sources select{
+    min-width:0;max-width:100%;font-size:16px;
+  }
+  .writing-toolbar{gap:8px}
+  .writing-coach button.writing-action{
+    flex:1 1 135px;min-width:0;min-height:44px;
+    overflow-wrap:anywhere;
+  }
+  .writing-prompt,.writing-model,.writing-source-preview{overflow-wrap:anywhere}
+}
 </style>
